@@ -1,6 +1,7 @@
 package com.samourai.soroban.client;
 
 import com.samourai.soroban.client.rpc.RpcClient;
+import org.bitcoinj.core.ECKey;
 
 public final class SorobanClient {
 
@@ -37,9 +38,9 @@ public final class SorobanClient {
     try {
       while (true) {
         if ("initiator".equals(role.toLowerCase())) {
-          SorobanPingPong.initiator(rpc, directoryName, numIter);
+          SorobanPingPong.initiator(rpc, directoryName, new ECKey(), numIter);
         } else {
-          SorobanPingPong.contributor(rpc, directoryName, numIter);
+          SorobanPingPong.contributor(rpc, directoryName, new ECKey(), numIter);
         }
       }
     } finally {

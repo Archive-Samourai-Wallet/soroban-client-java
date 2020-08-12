@@ -1,22 +1,25 @@
 package com.samourai.soroban.client.dialog;
 
-import com.codahale.xsalsa20poly1305.Keys;
-import org.apache.commons.codec.DecoderException;
-import org.apache.commons.codec.binary.Hex;
+import org.bitcoinj.core.ECKey;
+import org.bouncycastle.util.encoders.Hex;
 
 public class User {
-  byte[] privateKey = Keys.generatePrivateKey();
+  ECKey privateKey;
 
-  public String publicKey() {
-    return Hex.encodeHexString(Keys.generatePublicKey(privateKey));
+  public User(ECKey privateKey) {
+    this.privateKey = privateKey;
   }
 
-  public Box box(String otherPublicKey) throws DecoderException {
-    return new Box(privateKey, Hex.decodeHex(otherPublicKey));
+  public String publicKey() {
+    return this.privateKey.getPublicKeyAsHex();
+  }
+
+  public Box box(byte[] otherPublicKey) {
+    return new Box(privateKey.getPrivKeyBytes(), otherPublicKey);
   }
 
   public String sharedSecret(Box box) {
     byte[] sharedSecret = box.sharedSecret();
-    return Hex.encodeHexString(sharedSecret);
+    return Hex.toHexString(sharedSecret);
   }
 }

@@ -15,7 +15,7 @@
  */
 package com.codahale.xsalsa20poly1305;
 
-import java.nio.charset.StandardCharsets;
+import com.google.common.base.Charsets;
 import org.bouncycastle.crypto.engines.Salsa20Engine;
 import org.bouncycastle.util.Pack;
 
@@ -26,7 +26,7 @@ class HSalsa20 {
     // singleton
   }
 
-  private static final byte[] SIGMA = "expand 32-byte k".getBytes(StandardCharsets.US_ASCII);
+  private static final byte[] SIGMA = "expand 32-byte k".getBytes(Charsets.US_ASCII);
   private static final int SIGMA_0 = Pack.littleEndianToInt(SIGMA, 0);
   private static final int SIGMA_4 = Pack.littleEndianToInt(SIGMA, 4);
   private static final int SIGMA_8 = Pack.littleEndianToInt(SIGMA, 8);

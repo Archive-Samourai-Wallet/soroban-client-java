@@ -3,18 +3,17 @@ package com.samourai.soroban.client.rpc;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Charsets;
 import com.samourai.soroban.client.tor.TorHttpHelper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
-import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
-import org.apache.commons.codec.binary.Hex;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
@@ -22,6 +21,7 @@ import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
+import org.bouncycastle.util.encoders.Hex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -168,8 +168,8 @@ public class RpcClient {
 
   public static String encodeDirectory(String name) throws Exception {
     MessageDigest digest = MessageDigest.getInstance("SHA-256");
-    byte[] hash = digest.digest(name.getBytes(StandardCharsets.UTF_8));
-    String result = Hex.encodeHexString(hash);
+    byte[] hash = digest.digest(name.getBytes(Charsets.UTF_8));
+    String result = Hex.toHexString(hash);
     if (result.isEmpty()) {
       throw new Exception("Invalid encodeDirectory value");
     }

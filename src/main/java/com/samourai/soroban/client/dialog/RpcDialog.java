@@ -1,6 +1,8 @@
 package com.samourai.soroban.client.dialog;
 
 import com.samourai.soroban.client.rpc.RpcClient;
+import org.bitcoinj.core.ECKey;
+import org.bouncycastle.util.encoders.Hex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -11,17 +13,18 @@ public class RpcDialog {
   private Box box;
   private String nextDirectory;
 
-  private RpcDialog(RpcClient rpc, User user, String pubKey) throws Exception {
+  private RpcDialog(RpcClient rpc, User user, byte[] pubKey) throws Exception {
     this.rpc = rpc;
     this.box = user.box(pubKey);
     this.nextDirectory = RpcClient.encodeDirectory(user.sharedSecret(box));
   }
 
-  public static RpcDialog initiator(RpcClient rpc, String directoryName) throws Exception {
+  public static RpcDialog initiator(RpcClient rpc, String directoryName, ECKey pkey)
+      throws Exception {
+    User user = new User(pkey);
     directoryName = RpcClient.encodeDirectory(directoryName);
 
     // send public key
-    User user = new User();
     rpc.directoryAdd(directoryName, user.publicKey(), "long");
     if (log.isDebugEnabled()) {
       log.debug("initiator is ready");
@@ -37,10 +40,13 @@ public class RpcDialog {
     }
 
     // instanciate
-    return new RpcDialog(rpc, user, candidatePublicKey);
+    byte[] pubKey = Hex.decode(candidatePublicKey);
+    return new RpcDialog(rpc, user, pubKey);
   }
 
-  public static RpcDialog contributor(RpcClient rpc, String directoryName) throws Exception {
+  public static RpcDialog contributor(RpcClient rpc, String directoryName, ECKey pkey)
+      throws Exception {
+    User user = new User(pkey);
     directoryName = RpcClient.encodeDirectory(directoryName);
 
     // get initiator public key
@@ -53,14 +59,14 @@ public class RpcDialog {
     privateDirectory = RpcClient.encodeDirectory(privateDirectory);
 
     // send public key
-    User user = new User();
     rpc.directoryAdd(privateDirectory, user.publicKey(), "default");
     if (log.isDebugEnabled()) {
       log.debug("publickey sent");
     }
 
     // instanciate
-    return new RpcDialog(rpc, user, initiatorPublicKey);
+    byte[] pubKey = Hex.decode(initiatorPublicKey);
+    return new RpcDialog(rpc, user, pubKey);
   }
 
   public String receive() throws Exception {

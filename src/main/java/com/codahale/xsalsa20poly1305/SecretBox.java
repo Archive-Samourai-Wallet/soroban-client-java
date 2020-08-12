@@ -18,7 +18,7 @@ package com.codahale.xsalsa20poly1305;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.Arrays;
-import java.util.Optional;
+import java8.util.Optional;
 import org.bouncycastle.crypto.digests.Blake2bDigest;
 import org.bouncycastle.crypto.engines.XSalsa20Engine;
 import org.bouncycastle.crypto.macs.Poly1305;
@@ -54,8 +54,6 @@ public class SecretBox {
    *
    * @param publicKey a Curve25519 public key
    * @param privateKey a Curve25519 private key
-   * @see Keys#generatePrivateKey()
-   * @see Keys#generatePublicKey(byte[])
    */
   public SecretBox(byte[] publicKey, byte[] privateKey) {
     this(Keys.sharedSecret(publicKey, privateKey));
