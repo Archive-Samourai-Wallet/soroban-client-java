@@ -7,7 +7,6 @@ import com.google.common.base.Charsets;
 import com.samourai.soroban.client.tor.TorHttpHelper;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.InetSocketAddress;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -32,12 +31,10 @@ public class RpcClient {
   private HttpClient httpclient;
   private HttpClientContext context;
 
-  public RpcClient(String proxy, int port, String url) {
+  public RpcClient(String url) {
     this.url = url;
-    httpclient = TorHttpHelper.createClient();
-    context = HttpClientContext.create();
-
-    context.setAttribute("socks.address", new InetSocketAddress(proxy, port));
+    this.httpclient = TorHttpHelper.createClient();
+    this.context = HttpClientContext.create();
   }
 
   public void close() throws IOException {
@@ -174,5 +171,9 @@ public class RpcClient {
       throw new Exception("Invalid encodeDirectory value");
     }
     return result;
+  }
+
+  public HttpClientContext getHttpClientContext() {
+    return context;
   }
 }

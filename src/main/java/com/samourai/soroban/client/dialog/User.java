@@ -1,25 +1,45 @@
 package com.samourai.soroban.client.dialog;
 
-import org.bitcoinj.core.ECKey;
-import org.bouncycastle.util.encoders.Hex;
+import com.samourai.wallet.bip47.rpc.BIP47Wallet;
+import com.samourai.wallet.bip47.rpc.PaymentCode;
+import com.samourai.wallet.bip47.rpc.java.Bip47UtilJava;
+import com.samourai.wallet.segwit.SegwitAddress;
+import org.bitcoinj.core.NetworkParameters;
 
 public class User {
-  ECKey privateKey;
+  private static final Bip47UtilJava bip47Util = Bip47UtilJava.getInstance();
 
-  public User(ECKey privateKey) {
-    this.privateKey = privateKey;
+  BIP47Wallet bip47Wallet;
+
+  public User(BIP47Wallet bip47Wallet) {
+    this.bip47Wallet = bip47Wallet;
   }
 
-  public String publicKey() {
-    return this.privateKey.getPublicKeyAsHex();
+  public SegwitAddress getMeeetingAddressReceive(
+      PaymentCode paymentCodeCounterparty, NetworkParameters params) throws Exception {
+    SegwitAddress receiveAddress =
+        bip47Util
+            .getReceiveAddress(bip47Wallet, paymentCodeCounterparty, 0, params)
+            .getSegwitAddressReceive();
+    return receiveAddress;
   }
 
-  public Box box(byte[] otherPublicKey) {
-    return new Box(privateKey.getPrivKeyBytes(), otherPublicKey);
+  public SegwitAddress getMeeetingAddressSend(
+      PaymentCode paymentCodeInitiator, NetworkParameters params) throws Exception {
+    SegwitAddress sendAddress =
+        bip47Util
+            .getSendAddress(bip47Wallet, paymentCodeInitiator, 0, params)
+            .getSegwitAddressSend();
+    return sendAddress;
   }
 
-  public String sharedSecret(Box box) {
+  public Box box(String initialDirectory) {
+    return new Box(initialDirectory);
+  }
+
+  // TODO ZL
+  /*public String sharedSecret(Box box) {
     byte[] sharedSecret = box.sharedSecret();
     return Hex.toHexString(sharedSecret);
-  }
+  }*/
 }
