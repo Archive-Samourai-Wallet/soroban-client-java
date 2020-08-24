@@ -1,25 +1,14 @@
 package com.samourai.soroban.client.rpc;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
-import com.samourai.soroban.client.tor.TorHttpHelper;
+import com.samourai.http.client.IHttpClient;
 import java.io.IOException;
-import java.io.InputStream;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.protocol.HttpClientContext;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.util.EntityUtils;
 import org.bouncycastle.util.encoders.Hex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,52 +16,31 @@ import org.slf4j.LoggerFactory;
 public class RpcClient {
   private static final Logger log = LoggerFactory.getLogger(RpcClient.class);
 
+  private static final int WAIT_DELAY_MS = 200;
+
+  private IHttpClient httpclient;
   private String url;
-  private HttpClient httpclient;
-  private HttpClientContext context;
 
-  public RpcClient(String url) {
+  public RpcClient(IHttpClient httpClient, String url) {
+    this.httpclient = httpClient;
     this.url = url;
-    this.httpclient = TorHttpHelper.createClient();
-    this.context = HttpClientContext.create();
-  }
-
-  public void close() throws IOException {
-    ((CloseableHttpClient) httpclient).close();
   }
 
   private Map<String, Object> call(String method, HashMap<String, Object> params)
       throws IOException {
-    Map<String, Object> result = new HashMap<String, Object>();
 
-    HttpPost request = new HttpPost(url + "/rpc");
-    request.setHeader("content-type", "application/json");
-    request.setHeader("User-Agent", "HotJava/1.1.2 FCS");
+    Map<String, String> headers = new HashMap<String, String>();
+    headers.put("content-type", "application/json");
+    headers.put("User-Agent", "HotJava/1.1.2 FCS");
 
-    HashMap<String, Object> hashmap = new HashMap<String, Object>();
-    hashmap.put("method", method);
-    hashmap.put("jsonrpc", "2.0");
-    hashmap.put("id", 1);
-    hashmap.put("params", Arrays.asList(params));
+    HashMap<String, Object> body = new HashMap<String, Object>();
+    body.put("method", method);
+    body.put("jsonrpc", "2.0");
+    body.put("id", 1);
+    body.put("params", Arrays.asList(params));
 
-    ObjectMapper mapper = new ObjectMapper();
-    String json = mapper.writeValueAsString(hashmap);
-
-    StringEntity stringEntity = new StringEntity(json);
-    request.setEntity(stringEntity);
-
-    CloseableHttpResponse response = (CloseableHttpResponse) httpclient.execute(request, context);
-    try {
-      InputStream stream = response.getEntity().getContent();
-      JsonNode jsonNode = mapper.readTree(stream);
-
-      mapper = new ObjectMapper();
-      result = mapper.convertValue(jsonNode, new TypeReference<Map<String, Object>>() {});
-
-      EntityUtils.consume(response.getEntity());
-    } finally {
-      response.close();
-    }
+    Map<String, Object> result =
+        httpclient.postJson(url, Map.class, headers, body).blockingSingle().get();
     return result;
   }
 
@@ -81,7 +49,7 @@ public class RpcClient {
     params.put("Name", name);
     params.put("Entries", new String[0]);
 
-    Map<?, ?> rpc = (Map<?, ?>) call("directory.List", params);
+    Map<?, ?> rpc = call("directory.List", params);
     if (rpc.get("error") != null) {
       return new String[0];
     }
@@ -100,7 +68,7 @@ public class RpcClient {
     params.put("Entry", entry);
     params.put("Mode", mode);
 
-    Map<?, ?> rpc = (Map<?, ?>) call("directory.Add", params);
+    Map<?, ?> rpc = call("directory.Add", params);
     if (rpc.get("error") != null) {
       throw new IOException("Error: " + rpc.get("error"));
     }
@@ -120,7 +88,7 @@ public class RpcClient {
     params.put("Name", name);
     params.put("Entry", entry);
 
-    Map<?, ?> rpc = (Map<?, ?>) call("directory.Remove", params);
+    Map<?, ?> rpc = call("directory.Remove", params);
     if (rpc.get("error") != null) {
       throw new IOException("Error: " + rpc.get("error"));
     }
@@ -132,22 +100,24 @@ public class RpcClient {
     }
   }
 
-  public String waitAndRemove(String name, int count) throws Exception {
-    String[] values = new String[0];
+  public String waitAndRemove(String name, long timeoutMs) throws Exception {
+    String[] values;
 
-    int total = count;
-    count = 0;
-    while (count < total) {
+    long timeStart = System.currentTimeMillis();
+    long elapsedTime;
+    while (true) {
+      elapsedTime = System.currentTimeMillis() - timeStart;
+
       values = directoryList(name);
-      count++;
-      if (values.length > 0 || count >= total) {
+      if (values.length > 0) {
         break;
       }
-      Thread.sleep(200);
-    }
 
-    if (count >= total) {
-      throw new TimeoutException(String.format("Wait on %s", name.substring(0, 8)));
+      // always check values at least once, or more when timeout not expired
+      if (elapsedTime >= timeoutMs) {
+        throw new TimeoutException(String.format("Wait on %s", name.substring(0, 8)));
+      }
+      Thread.sleep(WAIT_DELAY_MS);
     }
 
     // consider last entry
@@ -158,7 +128,7 @@ public class RpcClient {
       throw new Exception("Invalid response");
     }
     if (log.isDebugEnabled()) {
-      log.debug("<= " + name + " (" + count + 1 + "/" + total + ")");
+      log.debug("<= " + name + " (" + elapsedTime + " ms)");
     }
     return value;
   }
@@ -171,9 +141,5 @@ public class RpcClient {
       throw new Exception("Invalid encodeDirectory value");
     }
     return result;
-  }
-
-  public HttpClientContext getHttpClientContext() {
-    return context;
   }
 }

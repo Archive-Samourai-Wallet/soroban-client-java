@@ -101,8 +101,8 @@ public class RpcDialog {
     return new RpcDialog(rpc, box);
   }
 
-  public String receive() throws Exception {
-    String payload = rpc.waitAndRemove(nextDirectory, 10);
+  public String receive(long timeoutMs) throws Exception {
+    String payload = rpc.waitAndRemove(nextDirectory, timeoutMs);
     String message = box.decrypt(payload);
     if (log.isDebugEnabled()) {
       log.debug("(" + nextDirectory + ") <= " + message);

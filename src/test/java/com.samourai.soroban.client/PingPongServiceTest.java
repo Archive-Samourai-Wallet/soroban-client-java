@@ -1,10 +1,14 @@
 package com.samourai.soroban.client;
 
+import com.samourai.http.client.IHttpClient;
+import com.samourai.http.client.JavaHttpClient;
 import com.samourai.soroban.client.pingPong.PingPongMessage;
 import com.samourai.soroban.client.pingPong.PingPongService;
 import com.samourai.wallet.bip47.rpc.BIP47Wallet;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.soroban.client.SorobanMessage;
+import io.reactivex.subjects.BehaviorSubject;
+import io.reactivex.subjects.Subject;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -48,15 +52,16 @@ public class PingPongServiceTest extends AbstractTest {
               public void run() {
                 // instanciate services
                 PingPongService pingPongService = new PingPongService(ITERATIONS);
+                IHttpClient httpClient = new JavaHttpClient();
                 SorobanService sorobanService =
-                    new SorobanService(params, bip47walletInitiator, pingPongService);
-                bindTorProxy(sorobanService.getHttpClientContext());
+                    new SorobanService(params, bip47walletInitiator, pingPongService, httpClient);
                 try {
                   // run soroban as initiator
                   boolean last = ITERATIONS == 1;
                   PingPongMessage message = new PingPongMessage(PingPongMessage.VALUES.PING, last);
+                  Subject<SorobanMessage> onMessage = BehaviorSubject.create();
                   SorobanMessage lastMessage =
-                      sorobanService.initiator(paymentCodeCounterparty, message);
+                      sorobanService.initiator(paymentCodeCounterparty, message, onMessage);
                   Assertions.assertEquals(lastPayload, lastMessage.toPayload());
                 } catch (Exception e) {
                   Assertions.fail(e);
@@ -78,12 +83,16 @@ public class PingPongServiceTest extends AbstractTest {
               public void run() {
                 // instanciate services
                 PingPongService pingPongService = new PingPongService(ITERATIONS);
+                IHttpClient httpClient = new JavaHttpClient();
                 SorobanService sorobanService =
-                    new SorobanService(params, bip47walletCounterparty, pingPongService);
-                bindTorProxy(sorobanService.getHttpClientContext());
+                    new SorobanService(
+                        params, bip47walletCounterparty, pingPongService, httpClient);
                 try {
                   // run soroban as contributor
-                  SorobanMessage lastMessage = sorobanService.contributor(paymentCodeInitiator);
+                  Subject<SorobanMessage> onMessage = BehaviorSubject.create();
+                  SorobanMessage lastMessage =
+                      sorobanService.contributor(
+                          paymentCodeInitiator, SOROBAN_TIMEOUT_MS, onMessage);
                   Assertions.assertEquals(lastPayload, lastMessage.toPayload());
                 } catch (Exception e) {
                   Assertions.fail(e);
