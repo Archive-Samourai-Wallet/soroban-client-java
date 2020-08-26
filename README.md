@@ -1,3 +1,3 @@
-# Soroban-client-android
+# Soroban-client-java
 
 
