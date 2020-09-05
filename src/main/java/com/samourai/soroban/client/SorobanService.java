@@ -8,8 +8,9 @@ import com.samourai.wallet.bip47.rpc.BIP47Wallet;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.soroban.client.SorobanMessage;
 import com.samourai.wallet.soroban.client.SorobanMessageService;
-import com.samourai.wallet.soroban.client.SorobanServer;
-import com.samourai.wallet.util.FormatsUtilGeneric;
+import io.reactivex.Observable;
+import io.reactivex.functions.Function;
+import io.reactivex.subjects.BehaviorSubject;
 import io.reactivex.subjects.Subject;
 import org.bitcoinj.core.NetworkParameters;
 import org.slf4j.Logger;
@@ -17,76 +18,121 @@ import org.slf4j.LoggerFactory;
 
 public class SorobanService {
   private static final Logger log = LoggerFactory.getLogger(SorobanService.class);
-  private static final String ENDPOINT_RPC = "/rpc";
 
   private NetworkParameters params;
   private RpcClient rpc;
-  private SorobanMessageService messageService;
   private BIP47Wallet bip47w;
-  private int timeoutMs;
 
   private boolean exit;
 
-  public SorobanService(
-      NetworkParameters params,
-      BIP47Wallet bip47w,
-      SorobanMessageService messageService,
-      IHttpClient httpClient,
-      int timeoutMs) {
+  public SorobanService(NetworkParameters params, BIP47Wallet bip47w, IHttpClient httpClient) {
     this.params = params;
-    this.messageService = messageService;
     this.bip47w = bip47w;
     this.exit = false;
-    String url =
-        SorobanServer.get(FormatsUtilGeneric.getInstance().isTestNet(params)).getUrl()
-            + ENDPOINT_RPC;
-    this.rpc = new RpcClient(httpClient, url);
-    this.timeoutMs = timeoutMs;
+    this.rpc = new RpcClient(httpClient, params);
   }
 
-  public SorobanMessage initiator(
-      PaymentCode paymentCodeCounterParty,
-      SorobanMessage message,
-      Subject<SorobanMessage> onMessage)
+  public Observable<SorobanMessage> initiator(
+      final int account,
+      final SorobanMessageService messageService,
+      final PaymentCode paymentCodeCounterParty,
+      final long timeoutMs,
+      final SorobanMessage message)
       throws Exception {
-    User user = new User(bip47w);
-    RpcDialog dialog = RpcDialog.initiator(rpc, user, paymentCodeCounterParty, params);
+    final BehaviorSubject onMessage = BehaviorSubject.create();
+    Thread t =
+        new Thread(
+            new Runnable() {
+              @Override
+              public void run() {
+                try {
+                  User user = new User(bip47w);
+                  String initialDirectory =
+                      user.getMeeetingAddressSend(paymentCodeCounterParty, params)
+                          .getBech32AsString();
 
-    SorobanMessage lastMessage = dialog(dialog, message, "INITIATOR", onMessage);
-    return lastMessage;
+                  RpcDialog dialog = new RpcDialog(rpc, user, initialDirectory);
+                  dialog(
+                      account, messageService, dialog, timeoutMs, message, "INITIATOR", onMessage);
+                  onMessage.onComplete();
+                } catch (Exception e) {
+                  onMessage.onError(e);
+                }
+              }
+            });
+    t.setName("soroban-initiator");
+    t.start();
+    return onMessage;
   }
 
-  public SorobanMessage contributor(
-      PaymentCode paymentCodeInitiator, long timeoutMs, Subject<SorobanMessage> onMessage)
+  public Observable<SorobanMessage> contributor(
+      final int account,
+      final SorobanMessageService messageService,
+      final PaymentCode paymentCodeInitiator,
+      final long timeoutMs)
       throws Exception {
-    User user = new User(bip47w);
-    RpcDialog dialog = RpcDialog.contributor(rpc, user, paymentCodeInitiator, params);
+    final BehaviorSubject onMessage = BehaviorSubject.create();
+    Thread t =
+        new Thread(
+            new Runnable() {
+              @Override
+              public void run() {
+                try {
+                  User user = new User(bip47w);
+                  String initialDirectory =
+                      user.getMeeetingAddressReceive(paymentCodeInitiator, params)
+                          .getBech32AsString();
 
-    String info = "CONTRIBUTOR";
-    SorobanMessage message = receive(dialog, timeoutMs);
-    onMessage.onNext(message);
-    if (log.isDebugEnabled()) {
-      log.debug(info + " #(0) <= " + message.toString());
-    }
-    if (message.isLastMessage()) {
-      if (log.isDebugEnabled()) {
-        log.debug(info + " #(0) done.");
-      }
-      return message;
-    }
-    SorobanMessage response = messageService.reply(message);
-    SorobanMessage lastMessage = dialog(dialog, response, "CONTRIBUTOR", onMessage);
-    return lastMessage;
+                  RpcDialog dialog = new RpcDialog(rpc, user, initialDirectory);
+
+                  String info = "CONTRIBUTOR";
+                  SorobanMessage message =
+                      receive(messageService, dialog, timeoutMs).blockingSingle();
+                  onMessage.onNext(message);
+                  if (log.isDebugEnabled()) {
+                    log.debug(info + " #(0) <= " + message.toString());
+                  }
+                  if (message.isLastMessage()) {
+                    if (log.isDebugEnabled()) {
+                      log.debug(info + " #(0) done.");
+                    }
+                    onMessage.onComplete();
+                    return;
+                  }
+                  SorobanMessage response = messageService.reply(account, message);
+                  dialog(
+                      account,
+                      messageService,
+                      dialog,
+                      timeoutMs,
+                      response,
+                      "CONTRIBUTOR",
+                      onMessage);
+                  onMessage.onComplete();
+                } catch (Exception e) {
+                  onMessage.onError(e);
+                }
+              }
+            });
+    t.setName("soroban-contributor");
+    t.start();
+    return onMessage;
   }
 
   private SorobanMessage dialog(
-      RpcDialog dialog, SorobanMessage message, String info, Subject<SorobanMessage> onMessage)
+      int account,
+      SorobanMessageService messageService,
+      RpcDialog dialog,
+      long timeoutMs,
+      SorobanMessage message,
+      String info,
+      Subject<SorobanMessage> onMessage)
       throws Exception {
     int i = 0;
     while (true) {
       if (exit) {
         if (log.isDebugEnabled()) {
-          log.debug("=> forced exit");
+          log.debug(info + " #" + i + " => forced exit");
         }
         break;
       }
@@ -94,8 +140,10 @@ public class SorobanService {
       if (log.isDebugEnabled()) {
         log.debug(info + " #" + i + " => " + message.toString());
       }
-      onMessage.onNext(message);
-      dialog.send(message.toPayload());
+      if (onMessage != null) {
+        onMessage.onNext(message);
+      }
+      dialog.send(message).blockingSingle();
 
       if (message.isLastMessage()) {
         // done
@@ -106,8 +154,10 @@ public class SorobanService {
       }
 
       // receive response
-      message = receive(dialog, timeoutMs);
-      onMessage.onNext(message);
+      message = receive(messageService, dialog, timeoutMs).blockingSingle();
+      if (onMessage != null) {
+        onMessage.onNext(message);
+      }
       if (log.isDebugEnabled()) {
         log.debug(info + " #" + i + " <= " + message.toString());
       }
@@ -120,16 +170,25 @@ public class SorobanService {
       }
 
       // prepare reply
-      message = messageService.reply(message);
+      message = messageService.reply(account, message);
       i++;
     }
     return message;
   }
 
-  private SorobanMessage receive(RpcDialog dialog, long timeoutMs) throws Exception {
-    String payload = dialog.receive(timeoutMs);
-    SorobanMessage response = messageService.parse(payload);
-    return response;
+  private Observable<SorobanMessage> receive(
+      final SorobanMessageService messageService, RpcDialog dialog, long timeoutMs)
+      throws Exception {
+    return dialog
+        .receive(timeoutMs)
+        .map(
+            new Function<String, SorobanMessage>() {
+              @Override
+              public SorobanMessage apply(String payload) throws Exception {
+                SorobanMessage response = messageService.parse(payload);
+                return response;
+              }
+            });
   }
 
   public void close() {

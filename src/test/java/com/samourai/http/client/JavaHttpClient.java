@@ -26,8 +26,8 @@ public class JavaHttpClient extends JacksonHttpClient {
   private HttpClient httpClient;
   private long requestTimeout;
 
-  public JavaHttpClient() {
-    this(computeHttpClient(true), 10000);
+  public JavaHttpClient(long requestTimeout) {
+    this(computeHttpClient(true), requestTimeout);
   }
 
   public JavaHttpClient(HttpClient httpClient, long requestTimeout) {

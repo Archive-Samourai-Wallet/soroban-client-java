@@ -10,8 +10,6 @@ import com.samourai.wallet.cahoots.TestCahootsWallet;
 import com.samourai.wallet.hd.HD_Wallet;
 import com.samourai.wallet.segwit.BIP84Wallet;
 import com.samourai.wallet.soroban.client.SorobanMessage;
-import io.reactivex.subjects.BehaviorSubject;
-import io.reactivex.subjects.Subject;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -53,19 +51,22 @@ public class SorobanServiceTest extends AbstractTest {
                 String address = "tb1q9m8cc0jkjlc9zwvea5a2365u6px3yu646vgez4";
 
                 // instanciate services
-                CahootsService messageService =
-                    new CahootsService(params, cahootsWalletInitiator, account);
-                IHttpClient httpClient = new JavaHttpClient();
+                CahootsService messageService = new CahootsService(params, cahootsWalletInitiator);
+                IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
                 SorobanService sorobanService =
-                    new SorobanService(params, bip47walletInitiator, messageService, httpClient);
+                    new SorobanService(params, bip47walletInitiator, httpClient);
 
                 try {
                   // run soroban as initiator
-                  CahootsMessage message = messageService.newStonewallx2(amount, address);
-                  Subject<SorobanMessage> onMessage = BehaviorSubject.create();
-                  sorobanService.initiator(paymentCodeCounterparty, message, onMessage);
+                  CahootsMessage message = messageService.newStonewallx2(account, amount, address);
+                  SorobanMessage lastMessage =
+                      sorobanService
+                          .initiator(
+                              account, messageService, paymentCodeCounterparty, TIMEOUT_MS, message)
+                          .blockingLast();
+                  Assertions.assertEquals("", lastMessage.toPayload());
                 } catch (Exception e) {
-                  Assertions.fail(e);
+                  setException(e);
                 } finally {
                   try {
                     sorobanService.close();
@@ -84,16 +85,19 @@ public class SorobanServiceTest extends AbstractTest {
               public void run() {
                 // instanciate services
                 CahootsService messageService =
-                    new CahootsService(params, cahootsWalletCounterparty, account);
-                IHttpClient httpClient = new JavaHttpClient();
+                    new CahootsService(params, cahootsWalletCounterparty);
+                IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
                 SorobanService sorobanService =
-                    new SorobanService(params, bip47walletCounterparty, messageService, httpClient);
+                    new SorobanService(params, bip47walletCounterparty, httpClient);
                 try {
                   // run soroban as counterparty
-                  Subject<SorobanMessage> onMessage = BehaviorSubject.create();
-                  sorobanService.contributor(paymentCodeInitiator, SOROBAN_TIMEOUT_MS, onMessage);
+                  SorobanMessage lastMessage =
+                      sorobanService
+                          .contributor(account, messageService, paymentCodeInitiator, TIMEOUT_MS)
+                          .blockingLast();
+                  Assertions.assertEquals("", lastMessage.toPayload());
                 } catch (Exception e) {
-                  Assertions.fail(e);
+                  setException(e);
                 } finally {
                   try {
                     sorobanService.close();
@@ -104,9 +108,11 @@ public class SorobanServiceTest extends AbstractTest {
             });
     threadContributor.start();
 
-    synchronized (threadInitiator) {
-      threadInitiator.wait();
-    }
+    assertNoException();
+    threadInitiator.join();
+    threadContributor.join();
+
+    assertNoException();
     log.info("*** STONEWALLx2 SUCCESS ***");
   }
 

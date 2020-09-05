@@ -2,7 +2,7 @@ package com.samourai.soroban.client.dialog;
 
 public class Box /*extends SecretBox*/ {
   // static final int NONCE_SIZE = 24;
-  private String initialDirectory;
+  // private String initialDirectory;
 
   // private byte[] privateKey;
   // private byte[] otherPublicKey;
@@ -13,13 +13,15 @@ public class Box /*extends SecretBox*/ {
     this.otherPublicKey = otherPublicKey; // TODO ZLL
   }*/
 
-  public Box(String initialDirectory) {
+  public Box() {}
+
+  /*public Box(String initialDirectory) {
     this.initialDirectory = initialDirectory;
   }
 
   public String initialDirectory() {
     return initialDirectory;
-  }
+  }*/
 
   /*public byte[] sharedSecret() {
     return Keys.sharedSecret(otherPublicKey, privateKey);

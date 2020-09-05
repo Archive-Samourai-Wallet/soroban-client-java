@@ -1,8 +1,12 @@
 package com.samourai.soroban.client.dialog;
 
+import com.google.common.base.Charsets;
 import com.samourai.soroban.client.rpc.RpcClient;
-import com.samourai.wallet.bip47.rpc.PaymentCode;
-import org.bitcoinj.core.NetworkParameters;
+import com.samourai.wallet.soroban.client.SorobanMessage;
+import io.reactivex.Observable;
+import io.reactivex.functions.Function;
+import java.security.MessageDigest;
+import org.bouncycastle.util.encoders.Hex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,110 +17,113 @@ public class RpcDialog {
   private Box box;
   private String nextDirectory;
 
-  private RpcDialog(RpcClient rpc, Box box) throws Exception {
+  public RpcDialog(RpcClient rpc, User user, String directory) throws Exception {
     this.rpc = rpc;
-    this.box = box;
-    this.nextDirectory =
-        box.initialDirectory(); // TODO ZL // RpcClient.encodeDirectory(user.sharedSecret(box));
+    this.box = user.box();
+    setNextDirectory(directory); // TODO ZL // RpcClient.encodeDirectory(user.sharedSecret(box));
   }
 
-  public static RpcDialog initiator(
-      RpcClient rpc, User user, PaymentCode paymentCodePartner, NetworkParameters params)
-      throws Exception {
-    // TODO ZL
-    /*SegwitAddress meetingAddress = user.getMeeetingAddressAsInitiator(paymentCodeCounterparty, params);
-    String directoryName = RpcClient.encodeDirectory(meetingAddress.getBech32AsString());
+  public RpcDialog(RpcClient rpc, User user, SorobanMessage sorobanMessage) throws Exception {
+    this(rpc, user, sorobanMessage.toPayload());
+  }
 
-    // send signature
-    //rpc.directoryAdd(directoryName, user.publicKey(), "long");
-    rpc.directoryAdd(directoryName, "initiatorSignature", "long"); // TODO ZL signature
-    if (log.isDebugEnabled()) {
-      log.debug("initiator is ready");
-    }
+  /*public static RpcDialog dialog(
+        RpcClient rpc, User user, PaymentCode paymentCodePartner, NetworkParameters params)
+        throws Exception {
+  // TODO ZL
+  /*SegwitAddress meetingAddress = user.getMeeetingAddressAsInitiator(paymentCodeCounterparty, params);
+  String directoryName = RpcClient.encodeDirectory(meetingAddress.getBech32AsString());
 
-    String privateDirectory = String.format("%s.%s", directoryName, meetingAddress.getECKey().getPubKey());
-    privateDirectory = RpcClient.encodeDirectory(privateDirectory);
+  // send signature
+  //rpc.directoryAdd(directoryName, user.publicKey(), "long");
+  rpc.directoryAdd(directoryName, "initiatorSignature", "long"); // TODO ZL signature
+  if (log.isDebugEnabled()) {
+    log.debug("initiator is ready");
+  }
 
-    // wait for contributor
-    String contributorSignature = rpc.waitAndRemove(privateDirectory, 100);
-    if (!"contributorSignature".equals(contributorSignature)) {
-      throw new Exception("Invalid contributor signature"); // TODO ZL signature
-    }
-    if (log.isDebugEnabled()) {
-      log.debug("contributor connected: " + contributorSignature);
-    }
+  String privateDirectory = String.format("%s.%s", directoryName, meetingAddress.getECKey().getPubKey());
+  privateDirectory = RpcClient.encodeDirectory(privateDirectory);
 
-    // instanciate
-    byte[] pubKey = Hex.decode(candidatePublicKey);
-    return new RpcDialog(rpc, user, pubKey);*/
+  // wait for contributor
+  String contributorSignature = rpc.waitAndRemove(privateDirectory, 100);
+  if (!"contributorSignature".equals(contributorSignature)) {
+    throw new Exception("Invalid contributor signature"); // TODO ZL signature
+  }
+  if (log.isDebugEnabled()) {
+    log.debug("contributor connected: " + contributorSignature);
+  }
 
-    // instanciate
-    // byte[] pubKey = user.getMeeetingAddressSend(paymentCodePartner,
-    // params).getECKey().getPubKey();
-    String initialDirectory =
-        user.getMeeetingAddressSend(paymentCodePartner, params).getBech32AsString();
+  // instanciate
+  byte[] pubKey = Hex.decode(candidatePublicKey);
+  return new RpcDialog(rpc, user, pubKey);*/
+
+  // instanciate
+  // byte[] pubKey = user.getMeeetingAddressSend(paymentCodePartner,
+  // params).getECKey().getPubKey();
+  /*String initialDirectory =
+            user.getMeeetingAddressSend(paymentCodePartner, params).getBech32AsString();
     if (log.isDebugEnabled()) {
       log.debug("Connecting initiator => " + initialDirectory);
     }
 
-    Box box = user.box(initialDirectory);
-    return new RpcDialog(rpc, box);
+    return new RpcDialog(rpc, user, initialDirectory);
+  }*/
+
+  public Observable<String> receive(long timeoutMs) throws Exception {
+    if (log.isDebugEnabled()) {
+      log.debug("watching: " + nextDirectory);
+    }
+    return rpc.waitAndRemove(nextDirectory, timeoutMs)
+        .map(
+            new Function<String, String>() {
+              @Override
+              public String apply(String payload) throws Exception {
+                String message = box.decrypt(payload);
+                if (log.isDebugEnabled()) {
+                  log.debug("(" + nextDirectory + ") <= " + message);
+                }
+                setNextDirectory(payload);
+                return message;
+              }
+            });
   }
 
-  public static RpcDialog contributor(
-      RpcClient rpc, User user, PaymentCode paymentCodePartner, NetworkParameters params)
-      throws Exception {
-    // TODO ZL
-    /*SegwitAddress meetingAddress = user.getMeeetingAddressAsCounterparty(paymentCodeInitiator, params);
-    String directoryName = RpcClient.encodeDirectory(meetingAddress.getBech32AsString());
-
-    // get initiator signature
-    String initiatorSignature = rpc.waitAndRemove(directoryName, 10);
-    if (!"initiatorSignature".equals(initiatorSignature)) {
-      throw new Exception("Invalid initiator signature"); // TODO ZL signature
-    }
-    if (log.isDebugEnabled()) {
-      log.debug("initiator found: "+initiatorSignature);
-    }
-
-    String privateDirectory = String.format("%s.%s", directoryName, meetingAddress.getECKey().getPubKey());
-    privateDirectory = RpcClient.encodeDirectory(privateDirectory);
-
-    // send signature
-    rpc.directoryAdd(privateDirectory, "contributorSignature", "default"); // TODO ZL signature
-    if (log.isDebugEnabled()) {
-      log.debug("publickey sent");
-    }
-
-    // instanciate
-    byte[] pubKey = Hex.decode(initiatorPublicKey);
-    return new RpcDialog(rpc, user, pubKey);*/
-
-    String initialDirectory =
-        user.getMeeetingAddressReceive(paymentCodePartner, params).getBech32AsString();
-    if (log.isDebugEnabled()) {
-      log.debug("Connecting contributor => " + initialDirectory);
-    }
-    Box box = user.box(initialDirectory);
-    return new RpcDialog(rpc, box);
+  public Observable send(SorobanMessage message) throws Exception {
+    return send(message.toPayload());
   }
 
-  public String receive(long timeoutMs) throws Exception {
-    String payload = rpc.waitAndRemove(nextDirectory, timeoutMs);
-    String message = box.decrypt(payload);
-    if (log.isDebugEnabled()) {
-      log.debug("(" + nextDirectory + ") <= " + message);
-    }
-    nextDirectory = RpcClient.encodeDirectory(payload);
-    return message;
-  }
-
-  public void send(String payload) throws Exception {
+  private Observable send(String payload) throws Exception {
     if (log.isDebugEnabled()) {
       log.debug("(" + nextDirectory + ") => " + payload);
     }
     payload = box.encrypt(payload);
-    rpc.directoryAdd(nextDirectory, payload, "short");
-    nextDirectory = RpcClient.encodeDirectory(payload);
+
+    final String myPayload = payload;
+    return rpc.directoryAdd(nextDirectory, payload, "short")
+        .map(
+            new Function() {
+              @Override
+              public Object apply(Object o) throws Exception {
+                setNextDirectory(myPayload);
+                return o;
+              }
+            });
+  }
+
+  private static String encodeDirectory(String payload) throws Exception {
+    MessageDigest digest = MessageDigest.getInstance("SHA-256");
+    byte[] hash = digest.digest(payload.getBytes(Charsets.UTF_8));
+    String result = Hex.toHexString(hash);
+    if (result.isEmpty()) {
+      throw new Exception("Invalid encodeDirectory value");
+    }
+    return result;
+  }
+
+  private void setNextDirectory(String nextDirectory) throws Exception {
+    this.nextDirectory = encodeDirectory(nextDirectory);
+    if (log.isDebugEnabled()) {
+      log.debug("nextDirectory: " + this.nextDirectory);
+    }
   }
 }

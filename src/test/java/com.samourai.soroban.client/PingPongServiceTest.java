@@ -7,8 +7,6 @@ import com.samourai.soroban.client.pingPong.PingPongService;
 import com.samourai.wallet.bip47.rpc.BIP47Wallet;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.soroban.client.SorobanMessage;
-import io.reactivex.subjects.BehaviorSubject;
-import io.reactivex.subjects.Subject;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -52,19 +50,21 @@ public class PingPongServiceTest extends AbstractTest {
               public void run() {
                 // instanciate services
                 PingPongService pingPongService = new PingPongService(ITERATIONS);
-                IHttpClient httpClient = new JavaHttpClient();
+                IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
                 SorobanService sorobanService =
-                    new SorobanService(params, bip47walletInitiator, pingPongService, httpClient);
+                    new SorobanService(params, bip47walletInitiator, httpClient);
                 try {
                   // run soroban as initiator
                   boolean last = ITERATIONS == 1;
                   PingPongMessage message = new PingPongMessage(PingPongMessage.VALUES.PING, last);
-                  Subject<SorobanMessage> onMessage = BehaviorSubject.create();
                   SorobanMessage lastMessage =
-                      sorobanService.initiator(paymentCodeCounterparty, message, onMessage);
+                      sorobanService
+                          .initiator(
+                              0, pingPongService, paymentCodeCounterparty, TIMEOUT_MS, message)
+                          .blockingLast();
                   Assertions.assertEquals(lastPayload, lastMessage.toPayload());
                 } catch (Exception e) {
-                  Assertions.fail(e);
+                  setException(e);
                 } finally {
                   try {
                     sorobanService.close();
@@ -83,19 +83,18 @@ public class PingPongServiceTest extends AbstractTest {
               public void run() {
                 // instanciate services
                 PingPongService pingPongService = new PingPongService(ITERATIONS);
-                IHttpClient httpClient = new JavaHttpClient();
+                IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
                 SorobanService sorobanService =
-                    new SorobanService(
-                        params, bip47walletCounterparty, pingPongService, httpClient);
+                    new SorobanService(params, bip47walletCounterparty, httpClient);
                 try {
                   // run soroban as contributor
-                  Subject<SorobanMessage> onMessage = BehaviorSubject.create();
                   SorobanMessage lastMessage =
-                      sorobanService.contributor(
-                          paymentCodeInitiator, SOROBAN_TIMEOUT_MS, onMessage);
+                      sorobanService
+                          .contributor(0, pingPongService, paymentCodeInitiator, TIMEOUT_MS)
+                          .blockingLast();
                   Assertions.assertEquals(lastPayload, lastMessage.toPayload());
                 } catch (Exception e) {
-                  Assertions.fail(e);
+                  setException(e);
                 } finally {
                   try {
                     sorobanService.close();
@@ -106,9 +105,11 @@ public class PingPongServiceTest extends AbstractTest {
             });
     threadContributor.start();
 
-    synchronized (threadInitiator) {
-      threadInitiator.wait();
-    }
+    assertNoException();
+    threadInitiator.join();
+    threadContributor.join();
+
+    assertNoException();
     log.info("threadInitiator ended");
   }
 }

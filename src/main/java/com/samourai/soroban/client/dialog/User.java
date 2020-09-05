@@ -33,8 +33,8 @@ public class User {
     return sendAddress;
   }
 
-  public Box box(String initialDirectory) {
-    return new Box(initialDirectory);
+  public Box box() {
+    return new Box();
   }
 
   // TODO ZL
