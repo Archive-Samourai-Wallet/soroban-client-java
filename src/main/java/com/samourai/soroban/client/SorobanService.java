@@ -4,6 +4,7 @@ import com.samourai.http.client.IHttpClient;
 import com.samourai.soroban.client.dialog.RpcDialog;
 import com.samourai.soroban.client.dialog.User;
 import com.samourai.soroban.client.rpc.RpcClient;
+import com.samourai.wallet.bip47.BIP47UtilGeneric;
 import com.samourai.wallet.bip47.rpc.BIP47Wallet;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.soroban.client.SorobanMessage;
@@ -19,13 +20,19 @@ import org.slf4j.LoggerFactory;
 public class SorobanService {
   private static final Logger log = LoggerFactory.getLogger(SorobanService.class);
 
+  private BIP47UtilGeneric bip47Util;
   private NetworkParameters params;
   private RpcClient rpc;
   private BIP47Wallet bip47w;
 
   private boolean exit;
 
-  public SorobanService(NetworkParameters params, BIP47Wallet bip47w, IHttpClient httpClient) {
+  public SorobanService(
+      BIP47UtilGeneric bip47Util,
+      NetworkParameters params,
+      BIP47Wallet bip47w,
+      IHttpClient httpClient) {
+    this.bip47Util = bip47Util;
     this.params = params;
     this.bip47w = bip47w;
     this.exit = false;
@@ -46,7 +53,7 @@ public class SorobanService {
               @Override
               public void run() {
                 try {
-                  User user = new User(bip47w);
+                  User user = new User(bip47Util, bip47w);
                   String initialDirectory =
                       user.getMeeetingAddressSend(paymentCodeCounterParty, params)
                           .getBech32AsString();
@@ -78,7 +85,7 @@ public class SorobanService {
               @Override
               public void run() {
                 try {
-                  User user = new User(bip47w);
+                  User user = new User(bip47Util, bip47w);
                   String initialDirectory =
                       user.getMeeetingAddressReceive(paymentCodeInitiator, params)
                           .getBech32AsString();

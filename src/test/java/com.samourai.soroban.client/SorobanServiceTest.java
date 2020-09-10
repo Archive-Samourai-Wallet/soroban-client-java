@@ -54,7 +54,7 @@ public class SorobanServiceTest extends AbstractTest {
                 CahootsService messageService = new CahootsService(params, cahootsWalletInitiator);
                 IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
                 SorobanService sorobanService =
-                    new SorobanService(params, bip47walletInitiator, httpClient);
+                    new SorobanService(bip47Util, params, bip47walletInitiator, httpClient);
 
                 try {
                   // run soroban as initiator
@@ -88,7 +88,7 @@ public class SorobanServiceTest extends AbstractTest {
                     new CahootsService(params, cahootsWalletCounterparty);
                 IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
                 SorobanService sorobanService =
-                    new SorobanService(params, bip47walletCounterparty, httpClient);
+                    new SorobanService(bip47Util, params, bip47walletCounterparty, httpClient);
                 try {
                   // run soroban as counterparty
                   SorobanMessage lastMessage =

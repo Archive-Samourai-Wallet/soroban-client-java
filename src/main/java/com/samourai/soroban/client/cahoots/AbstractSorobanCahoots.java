@@ -3,6 +3,7 @@ package com.samourai.soroban.client.cahoots;
 import com.samourai.http.client.IHttpClient;
 import com.samourai.soroban.client.SorobanService;
 import com.samourai.soroban.client.meeting.SorobanMeetingService;
+import com.samourai.wallet.bip47.BIP47UtilGeneric;
 import com.samourai.wallet.bip47.rpc.BIP47Wallet;
 import com.samourai.wallet.cahoots.CahootsService;
 import com.samourai.wallet.cahoots.CahootsWallet;
@@ -27,14 +28,15 @@ public abstract class AbstractSorobanCahoots {
   }
 
   public AbstractSorobanCahoots(
+      BIP47UtilGeneric bip47Util,
       NetworkParameters params,
       CahootsWallet cahootsWallet,
       BIP47Wallet bip47Wallet,
       IHttpClient httpClient) {
     this(
         new CahootsService(params, cahootsWallet),
-        new SorobanService(params, bip47Wallet, httpClient),
-        new SorobanMeetingService(params, bip47Wallet, httpClient));
+        new SorobanService(bip47Util, params, bip47Wallet, httpClient),
+        new SorobanMeetingService(bip47Util, params, bip47Wallet, httpClient));
   }
 
   public SorobanService getSorobanService() {

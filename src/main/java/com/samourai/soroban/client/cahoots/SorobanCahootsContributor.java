@@ -5,6 +5,7 @@ import com.samourai.soroban.client.SorobanService;
 import com.samourai.soroban.client.meeting.SorobanMeetingService;
 import com.samourai.soroban.client.meeting.SorobanRequestMessage;
 import com.samourai.soroban.client.meeting.SorobanResponseMessage;
+import com.samourai.wallet.bip47.BIP47UtilGeneric;
 import com.samourai.wallet.bip47.rpc.BIP47Wallet;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.cahoots.CahootsService;
@@ -26,24 +27,25 @@ public class SorobanCahootsContributor extends AbstractSorobanCahoots {
   }
 
   public SorobanCahootsContributor(
+      BIP47UtilGeneric bip47Util,
       NetworkParameters params,
       CahootsWallet cahootsWallet,
       BIP47Wallet bip47Wallet,
       IHttpClient httpClient) {
-    super(params, cahootsWallet, bip47Wallet, httpClient);
+    super(bip47Util, params, cahootsWallet, bip47Wallet, httpClient);
   }
 
   // meeting
 
-  public Observable<SorobanRequestMessage> meetingListen(long timeoutMs) throws Exception {
+  public Observable<SorobanRequestMessage> receiveMeetingRequest(long timeoutMs) throws Exception {
     checkTor();
-    return sorobanMeetingService.meetingListen(timeoutMs);
+    return sorobanMeetingService.receiveMeetingRequest(timeoutMs);
   }
 
-  public Observable<SorobanResponseMessage> meetingResponse(
+  public Observable<SorobanResponseMessage> sendMeetingResponse(
       SorobanRequestMessage request, boolean accept) throws Exception {
     checkTor();
-    return sorobanMeetingService.meetingResponse(request, accept);
+    return sorobanMeetingService.sendMeetingResponse(request, accept);
   }
 
   // cahoots

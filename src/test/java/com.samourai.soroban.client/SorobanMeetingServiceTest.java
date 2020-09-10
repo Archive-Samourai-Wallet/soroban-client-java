@@ -39,18 +39,19 @@ public class SorobanMeetingServiceTest extends AbstractTest {
               public void run() {
                 // instanciate services
                 IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
-                SorobanMeetingService sorobanMeetingService =
-                    new SorobanMeetingService(params, bip47walletInitiator, httpClient);
+                final SorobanMeetingService sorobanMeetingService =
+                    new SorobanMeetingService(bip47Util, params, bip47walletInitiator, httpClient);
 
                 try {
                   // request soroban meeeting
+                  SorobanRequestMessage request =
+                      sorobanMeetingService
+                          .sendMeetingRequest(
+                              paymentCodeCounterparty, description, CahootsType.STONEWALLX2)
+                          .blockingSingle();
                   SorobanResponseMessage response =
                       sorobanMeetingService
-                          .meetingRequest(
-                              paymentCodeCounterparty,
-                              description,
-                              CahootsType.STONEWALLX2,
-                              TIMEOUT_MS)
+                          .receiveMeetingResponse(request, TIMEOUT_MS)
                           .blockingSingle();
                   Assertions.assertTrue(response.isAccept());
                 } catch (Exception e) {
@@ -69,18 +70,19 @@ public class SorobanMeetingServiceTest extends AbstractTest {
                 // instanciate services
                 IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
                 SorobanMeetingService sorobanMeetingService =
-                    new SorobanMeetingService(params, bip47walletCounterparty, httpClient);
+                    new SorobanMeetingService(
+                        bip47Util, params, bip47walletCounterparty, httpClient);
 
                 try {
                   // listen for Soroban requests
                   SorobanRequestMessage requestMessage =
-                      sorobanMeetingService.meetingListen(TIMEOUT_MS).blockingSingle();
+                      sorobanMeetingService.receiveMeetingRequest(TIMEOUT_MS).blockingSingle();
                   Assertions.assertEquals(description, requestMessage.getDescription());
                   Assertions.assertEquals(
                       paymentCodeInitiator.toString(), requestMessage.getSenderPaymentCode());
 
                   // response accept
-                  sorobanMeetingService.meetingResponse(requestMessage, true).subscribe();
+                  sorobanMeetingService.sendMeetingResponse(requestMessage, true).subscribe();
                 } catch (Exception e) {
                   setException(e);
                 }
