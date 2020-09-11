@@ -1,6 +1,6 @@
 package com.samourai.soroban.client.meeting;
 
-import com.samourai.soroban.client.AbstractSorobanMessage;
+import com.samourai.soroban.client.dialog.AbstractSorobanMessage;
 import com.samourai.wallet.cahoots.CahootsType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -1,4 +1,4 @@
-package com.samourai.soroban.client;
+package com.samourai.soroban.client.dialog;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.samourai.wallet.soroban.client.SorobanMessage;

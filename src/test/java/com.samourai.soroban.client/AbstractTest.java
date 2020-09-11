@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 public abstract class AbstractTest {
   private static final Logger log = LoggerFactory.getLogger(AbstractTest.class);
   protected static final int TIMEOUT_MS = 20000;
+  protected static final String PROVIDER_JAVA = "BC";
 
   protected static final NetworkParameters params = TestNet3Params.get();
   protected static final Bip47UtilJava bip47Util = Bip47UtilJava.getInstance();

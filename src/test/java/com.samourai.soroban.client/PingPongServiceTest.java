@@ -52,7 +52,8 @@ public class PingPongServiceTest extends AbstractTest {
                 PingPongService pingPongService = new PingPongService(ITERATIONS);
                 IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
                 SorobanService sorobanService =
-                    new SorobanService(bip47Util, params, bip47walletInitiator, httpClient);
+                    new SorobanService(
+                        bip47Util, params, PROVIDER_JAVA, bip47walletInitiator, httpClient);
                 try {
                   // run soroban as initiator
                   boolean last = ITERATIONS == 1;
@@ -65,11 +66,6 @@ public class PingPongServiceTest extends AbstractTest {
                   Assertions.assertEquals(lastPayload, lastMessage.toPayload());
                 } catch (Exception e) {
                   setException(e);
-                } finally {
-                  try {
-                    sorobanService.close();
-                  } catch (Exception e) {
-                  }
                 }
               }
             });
@@ -85,7 +81,8 @@ public class PingPongServiceTest extends AbstractTest {
                 PingPongService pingPongService = new PingPongService(ITERATIONS);
                 IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
                 SorobanService sorobanService =
-                    new SorobanService(bip47Util, params, bip47walletCounterparty, httpClient);
+                    new SorobanService(
+                        bip47Util, params, PROVIDER_JAVA, bip47walletCounterparty, httpClient);
                 try {
                   // run soroban as contributor
                   SorobanMessage lastMessage =
@@ -95,11 +92,6 @@ public class PingPongServiceTest extends AbstractTest {
                   Assertions.assertEquals(lastPayload, lastMessage.toPayload());
                 } catch (Exception e) {
                   setException(e);
-                } finally {
-                  try {
-                    sorobanService.close();
-                  } catch (Exception e) {
-                  }
                 }
               }
             });

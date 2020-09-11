@@ -20,15 +20,18 @@ public class SorobanMeetingService {
   private BIP47UtilGeneric bip47Util;
   private RpcClient rpc;
   private BIP47Wallet bip47w;
+  private User user;
 
   public SorobanMeetingService(
       BIP47UtilGeneric bip47Util,
       NetworkParameters params,
+      String provider,
       BIP47Wallet bip47w,
       IHttpClient httpClient) {
     this.bip47Util = bip47Util;
     this.bip47w = bip47w;
     this.rpc = new RpcClient(httpClient, params);
+    this.user = new User(bip47Util, bip47w, params, provider);
   }
 
   private PaymentCode getMyPaymentCode() {
@@ -37,17 +40,15 @@ public class SorobanMeetingService {
 
   public Observable<SorobanRequestMessage> sendMeetingRequest(
       PaymentCode paymentCodeCounterParty, String description, CahootsType type) throws Exception {
-    User user = new User(bip47Util, bip47w);
-
     // send request
-    final RpcDialog dialog = new RpcDialog(rpc, user, paymentCodeCounterParty.toString());
+    RpcDialog dialog = new RpcDialog(rpc, user, paymentCodeCounterParty.toString());
     final SorobanRequestMessage request =
         new SorobanRequestMessage(getMyPaymentCode().toString(), description, type);
     if (log.isDebugEnabled()) {
       log.debug("[initiator] meeting request sending: " + request);
     }
     return dialog
-        .send(request)
+        .sendWithSender(request, paymentCodeCounterParty)
         .map(
             new Function<Object, SorobanRequestMessage>() {
               @Override
@@ -58,14 +59,12 @@ public class SorobanMeetingService {
   }
 
   public Observable<SorobanRequestMessage> receiveMeetingRequest(long timeoutMs) throws Exception {
-    User user = new User(bip47Util, bip47w);
-
     RpcDialog dialog = new RpcDialog(rpc, user, getMyPaymentCode().toString());
     if (log.isDebugEnabled()) {
       log.debug("[contributor] listening");
     }
     return dialog
-        .receive(timeoutMs)
+        .receiveWithSender(timeoutMs)
         .map(
             new Function<String, SorobanRequestMessage>() {
               @Override
@@ -80,13 +79,12 @@ public class SorobanMeetingService {
   }
 
   public Observable<SorobanResponseMessage> sendMeetingResponse(
-      SorobanRequestMessage request, boolean accept) throws Exception {
-    User user = new User(bip47Util, bip47w);
-
+      PaymentCode paymentCodeCounterParty, SorobanRequestMessage request, boolean accept)
+      throws Exception {
     RpcDialog dialog = new RpcDialog(rpc, user, request);
     final SorobanResponseMessage response = new SorobanResponseMessage(accept);
     return dialog
-        .send(response)
+        .send(response, paymentCodeCounterParty)
         .map(
             new Function<Object, SorobanResponseMessage>() {
               @Override
@@ -100,13 +98,12 @@ public class SorobanMeetingService {
   }
 
   public Observable<SorobanResponseMessage> receiveMeetingResponse(
-      SorobanRequestMessage request, final long timeoutMs) throws Exception {
-    User user = new User(bip47Util, bip47w);
-
+      PaymentCode paymentCodeCounterParty, SorobanRequestMessage request, final long timeoutMs)
+      throws Exception {
     // send request
     final RpcDialog dialog = new RpcDialog(rpc, user, request);
     return dialog
-        .receive(timeoutMs)
+        .receive(paymentCodeCounterParty, timeoutMs)
         .map(
             new Function<String, SorobanResponseMessage>() {
               @Override

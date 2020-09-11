@@ -30,13 +30,14 @@ public abstract class AbstractSorobanCahoots {
   public AbstractSorobanCahoots(
       BIP47UtilGeneric bip47Util,
       NetworkParameters params,
+      String provider,
       CahootsWallet cahootsWallet,
       BIP47Wallet bip47Wallet,
       IHttpClient httpClient) {
     this(
         new CahootsService(params, cahootsWallet),
-        new SorobanService(bip47Util, params, bip47Wallet, httpClient),
-        new SorobanMeetingService(bip47Util, params, bip47Wallet, httpClient));
+        new SorobanService(bip47Util, params, provider, bip47Wallet, httpClient),
+        new SorobanMeetingService(bip47Util, params, provider, bip47Wallet, httpClient));
   }
 
   public SorobanService getSorobanService() {

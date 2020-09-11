@@ -9,10 +9,18 @@ import org.bitcoinj.core.NetworkParameters;
 public class User {
   private BIP47UtilGeneric bip47Util;
   private BIP47Wallet bip47Wallet;
+  private NetworkParameters params;
+  private String provider;
 
-  public User(BIP47UtilGeneric bip47Util, BIP47Wallet bip47Wallet) {
+  public User(
+      BIP47UtilGeneric bip47Util,
+      BIP47Wallet bip47Wallet,
+      NetworkParameters params,
+      String provider) {
     this.bip47Util = bip47Util;
     this.bip47Wallet = bip47Wallet;
+    this.params = params;
+    this.provider = provider;
   }
 
   public SegwitAddress getMeeetingAddressReceive(
@@ -33,13 +41,11 @@ public class User {
     return sendAddress;
   }
 
-  public Box box() {
-    return new Box();
+  public Encrypter getEncrypter(PaymentCode paymentCodePartner) {
+    return new PaynymEncrypter(bip47Wallet, paymentCodePartner, bip47Util, params, provider);
   }
 
-  // TODO ZL
-  /*public String sharedSecret(Box box) {
-    byte[] sharedSecret = box.sharedSecret();
-    return Hex.toHexString(sharedSecret);
-  }*/
+  public PaymentCode getPaymentCode() {
+    return bip47Util.getPaymentCode(bip47Wallet);
+  }
 }

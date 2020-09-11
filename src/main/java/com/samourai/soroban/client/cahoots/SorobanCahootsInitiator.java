@@ -31,10 +31,11 @@ public class SorobanCahootsInitiator extends AbstractSorobanCahoots {
   public SorobanCahootsInitiator(
       BIP47UtilGeneric bip47Util,
       NetworkParameters params,
+      String provider,
       CahootsWallet cahootsWallet,
       BIP47Wallet bip47Wallet,
       IHttpClient httpClient) {
-    super(bip47Util, params, cahootsWallet, bip47Wallet, httpClient);
+    super(bip47Util, params, provider, cahootsWallet, bip47Wallet, httpClient);
   }
 
   // meeting
@@ -46,9 +47,11 @@ public class SorobanCahootsInitiator extends AbstractSorobanCahoots {
   }
 
   public Observable<SorobanResponseMessage> receiveMeetingResponse(
-      SorobanRequestMessage request, long timeoutMs) throws Exception {
+      PaymentCode paymentCodeCounterparty, SorobanRequestMessage request, long timeoutMs)
+      throws Exception {
     checkTor();
-    return sorobanMeetingService.receiveMeetingResponse(request, timeoutMs);
+    return sorobanMeetingService.receiveMeetingResponse(
+        paymentCodeCounterparty, request, timeoutMs);
   }
 
   // cahoots

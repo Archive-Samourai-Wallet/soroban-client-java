@@ -40,7 +40,8 @@ public class SorobanMeetingServiceTest extends AbstractTest {
                 // instanciate services
                 IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
                 final SorobanMeetingService sorobanMeetingService =
-                    new SorobanMeetingService(bip47Util, params, bip47walletInitiator, httpClient);
+                    new SorobanMeetingService(
+                        bip47Util, params, PROVIDER_JAVA, bip47walletInitiator, httpClient);
 
                 try {
                   // request soroban meeeting
@@ -51,7 +52,7 @@ public class SorobanMeetingServiceTest extends AbstractTest {
                           .blockingSingle();
                   SorobanResponseMessage response =
                       sorobanMeetingService
-                          .receiveMeetingResponse(request, TIMEOUT_MS)
+                          .receiveMeetingResponse(paymentCodeCounterparty, request, TIMEOUT_MS)
                           .blockingSingle();
                   Assertions.assertTrue(response.isAccept());
                 } catch (Exception e) {
@@ -71,7 +72,7 @@ public class SorobanMeetingServiceTest extends AbstractTest {
                 IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
                 SorobanMeetingService sorobanMeetingService =
                     new SorobanMeetingService(
-                        bip47Util, params, bip47walletCounterparty, httpClient);
+                        bip47Util, params, PROVIDER_JAVA, bip47walletCounterparty, httpClient);
 
                 try {
                   // listen for Soroban requests
@@ -82,7 +83,9 @@ public class SorobanMeetingServiceTest extends AbstractTest {
                       paymentCodeInitiator.toString(), requestMessage.getSenderPaymentCode());
 
                   // response accept
-                  sorobanMeetingService.sendMeetingResponse(requestMessage, true).subscribe();
+                  sorobanMeetingService
+                      .sendMeetingResponse(paymentCodeInitiator, requestMessage, true)
+                      .subscribe();
                 } catch (Exception e) {
                   setException(e);
                 }
