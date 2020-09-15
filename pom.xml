@@ -76,4 +76,8 @@
             </plugin>
         </plugins>
     </build>
+    <scm>
+        <connection>scm:git:git@code.samourai.io:wallet/soroban-client-java.git</connection>
+        <tag>0.0.1</tag>
+    </scm>
 </project>
