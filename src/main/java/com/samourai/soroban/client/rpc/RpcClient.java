@@ -141,8 +141,7 @@ public class RpcClient {
               // always check values at least once, or more when timeout not expired
               if (elapsedTime >= timeoutMs) {
                 throw new TimeoutException(
-                    String.format(
-                        "Waited " + Math.round(elapsedTime/1000) + "s, aborting"));
+                    String.format("Waited " + Math.round(elapsedTime / 1000) + "s, aborting"));
               }
               try {
                 Thread.sleep(WAIT_DELAY_MS);
