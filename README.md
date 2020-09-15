@@ -1,4 +1,4 @@
-[![](https://jitpack.io/v/io.samourai.code.wallet/soroban-client-java.svg)](https://jitpack.io/#io.samourai.code.wallet/soroban-client-java)
+[![](https://jitpack.io/v/io.samourai.code.wallet/Soroban-client-java.svg)](https://jitpack.io/#io.samourai.code.wallet/Soroban-client-java)
 
 # soroban-client-java
 
