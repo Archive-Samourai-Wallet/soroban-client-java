@@ -142,7 +142,7 @@ public class RpcClient {
               if (elapsedTime >= timeoutMs) {
                 throw new TimeoutException(
                     String.format(
-                        "Waited " + elapsedTime + "ms on %s", name.substring(0, 8) + "..."));
+                        "Waited " + Math.round(elapsedTime/1000) + "s, aborting"));
               }
               try {
                 Thread.sleep(WAIT_DELAY_MS);
