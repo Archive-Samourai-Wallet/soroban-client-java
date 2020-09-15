@@ -138,7 +138,7 @@ public class RpcDialog {
   }
 
   protected Observable doSend(final String payload) throws Exception {
-    return rpc.directoryAdd(nextDirectory, payload, "short")
+    return rpc.directoryAdd(nextDirectory, payload, "normal")
         .map(
             new Function() {
               @Override
