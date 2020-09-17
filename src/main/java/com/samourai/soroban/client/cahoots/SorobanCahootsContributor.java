@@ -8,7 +8,6 @@ import com.samourai.soroban.client.meeting.SorobanResponseMessage;
 import com.samourai.wallet.bip47.BIP47UtilGeneric;
 import com.samourai.wallet.bip47.rpc.BIP47Wallet;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
-import com.samourai.wallet.cahoots.CahootsService;
 import com.samourai.wallet.cahoots.CahootsWallet;
 import com.samourai.wallet.soroban.client.SorobanMessage;
 import io.reactivex.Observable;
@@ -20,10 +19,10 @@ public class SorobanCahootsContributor extends AbstractSorobanCahoots {
   private final Logger log = LoggerFactory.getLogger(SorobanCahootsContributor.class);
 
   public SorobanCahootsContributor(
-      CahootsService cahootsService,
+      OnlineCahootsService onlineCahootsService,
       SorobanService sorobanService,
       SorobanMeetingService sorobanMeetingService) {
-    super(cahootsService, sorobanService, sorobanMeetingService);
+    super(onlineCahootsService, sorobanService, sorobanMeetingService);
   }
 
   public SorobanCahootsContributor(
@@ -55,6 +54,7 @@ public class SorobanCahootsContributor extends AbstractSorobanCahoots {
   public Observable<SorobanMessage> contributor(
       int account, PaymentCode paymentCodeInitiator, long timeoutMs) throws Exception {
     checkTor();
-    return sorobanService.contributor(account, cahootsService, paymentCodeInitiator, timeoutMs);
+    return sorobanService.contributor(
+        account, onlineCahootsService, paymentCodeInitiator, timeoutMs);
   }
 }

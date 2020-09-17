@@ -39,11 +39,10 @@ public class SorobanMeetingService {
   }
 
   public Observable<SorobanRequestMessage> sendMeetingRequest(
-      PaymentCode paymentCodeCounterParty, String description, CahootsType type) throws Exception {
+      PaymentCode paymentCodeCounterParty, CahootsType type) throws Exception {
     // send request
     RpcDialog dialog = new RpcDialog(rpc, user, paymentCodeCounterParty.toString());
-    final SorobanRequestMessage request =
-        new SorobanRequestMessage(getMyPaymentCode().toString(), description, type);
+    final SorobanRequestMessage request = new SorobanRequestMessage(type);
     if (log.isDebugEnabled()) {
       log.debug("[initiator] meeting request sending: " + request);
     }
@@ -66,10 +65,13 @@ public class SorobanMeetingService {
     return dialog
         .receiveWithSender(timeoutMs)
         .map(
-            new Function<String, SorobanRequestMessage>() {
+            new Function<SorobanMessageWithSender, SorobanRequestMessage>() {
               @Override
-              public SorobanRequestMessage apply(String payload) throws Exception {
-                SorobanRequestMessage request = SorobanRequestMessage.parse(payload);
+              public SorobanRequestMessage apply(SorobanMessageWithSender message)
+                  throws Exception {
+                String sender = message.getSender();
+                SorobanRequestMessage request = SorobanRequestMessage.parse(message.getPayload());
+                request.setSender(sender); // set sender information
                 if (log.isDebugEnabled()) {
                   log.debug("[contributor] meeting request received: " + request);
                 }

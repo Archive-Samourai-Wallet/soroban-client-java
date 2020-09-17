@@ -2,62 +2,58 @@ package com.samourai.soroban.client.meeting;
 
 import com.samourai.soroban.client.dialog.AbstractSorobanMessage;
 import com.samourai.wallet.cahoots.CahootsType;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class SorobanRequestMessage extends AbstractSorobanMessage {
   private static final Logger log = LoggerFactory.getLogger(SorobanRequestMessage.class);
 
-  private String senderPaymentCode;
-  private String description;
   private CahootsType type;
+  private String sender;
 
   public SorobanRequestMessage() {
-    this(null, null, null);
+    this(null);
   }
 
-  public SorobanRequestMessage(String senderPaymentCode, String description, CahootsType type) {
+  public SorobanRequestMessage(CahootsType type) {
     super(true);
-    this.senderPaymentCode = senderPaymentCode;
-    this.description = description;
     this.type = type;
+    this.sender = null;
   }
 
   public static SorobanRequestMessage parse(String payload) throws Exception {
-    return parse(payload, SorobanRequestMessage.class);
+    JSONObject obj = new JSONObject(payload);
+
+    if (!obj.has("type")) {
+      throw new Exception("missing .type");
+    }
+    CahootsType type = CahootsType.find(obj.getInt("type")).get();
+    return new SorobanRequestMessage(type);
   }
 
   @Override
-  public boolean isLastMessage() {
+  public String toPayload() {
+    JSONObject obj = new JSONObject();
+    obj.put("type", type.getValue());
+    // 'sender' is transmitted in SorobanMessageWithSender
+    return obj.toString();
+  }
+
+  @Override
+  public boolean isDone() {
     return true;
-  }
-
-  public String getSenderPaymentCode() {
-    return senderPaymentCode;
-  }
-
-  public void setSenderPaymentCode(String senderPaymentCode) {
-    this.senderPaymentCode = senderPaymentCode;
-  }
-
-  public String getDescription() {
-    return description;
-  }
-
-  public void setDescription(String description) {
-    this.description = description;
   }
 
   public CahootsType getType() {
     return type;
   }
 
-  public void setType(CahootsType type) {
-    this.type = type;
+  public String getSender() {
+    return sender;
   }
 
-  @Override
-  public String toString() {
-    return "Type: " + type + "\nDescription: " + description;
+  public void setSender(String sender) {
+    this.sender = sender;
   }
 }

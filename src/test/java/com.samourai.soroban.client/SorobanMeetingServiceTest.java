@@ -29,8 +29,6 @@ public class SorobanMeetingServiceTest extends AbstractTest {
     final PaymentCode paymentCodeInitiator = bip47Util.getPaymentCode(bip47walletInitiator);
     final PaymentCode paymentCodeCounterparty = bip47Util.getPaymentCode(bip47walletCounterparty);
 
-    final String description = "TEST REQUEST";
-
     // run initiator
     Thread threadInitiator =
         new Thread(
@@ -47,8 +45,7 @@ public class SorobanMeetingServiceTest extends AbstractTest {
                   // request soroban meeeting
                   SorobanRequestMessage request =
                       sorobanMeetingService
-                          .sendMeetingRequest(
-                              paymentCodeCounterparty, description, CahootsType.STONEWALLX2)
+                          .sendMeetingRequest(paymentCodeCounterparty, CahootsType.STONEWALLX2)
                           .blockingSingle();
                   SorobanResponseMessage response =
                       sorobanMeetingService
@@ -78,9 +75,9 @@ public class SorobanMeetingServiceTest extends AbstractTest {
                   // listen for Soroban requests
                   SorobanRequestMessage requestMessage =
                       sorobanMeetingService.receiveMeetingRequest(TIMEOUT_MS).blockingSingle();
-                  Assertions.assertEquals(description, requestMessage.getDescription());
+                  Assertions.assertEquals(CahootsType.STONEWALLX2, requestMessage.getType());
                   Assertions.assertEquals(
-                      paymentCodeInitiator.toString(), requestMessage.getSenderPaymentCode());
+                      paymentCodeInitiator.makeSamouraiPaymentCode(), requestMessage.getSender());
 
                   // response accept
                   sorobanMeetingService

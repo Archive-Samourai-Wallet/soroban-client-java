@@ -35,26 +35,29 @@ public class RpcDialog {
     this(rpc, user, sorobanMessage.toPayload());
   }
 
-  public Observable<String> receiveWithSender(long timeoutMs) throws Exception {
+  public Observable<SorobanMessageWithSender> receiveWithSender(long timeoutMs) throws Exception {
     if (log.isDebugEnabled()) {
       log.debug("watching[withSender]: " + nextDirectory);
     }
     return doReceive(timeoutMs)
         .map(
-            new Function<String, String>() {
+            new Function<String, SorobanMessageWithSender>() {
               @Override
-              public String apply(String payloadWithSender) throws Exception {
+              public SorobanMessageWithSender apply(String payloadWithSender) throws Exception {
                 SorobanMessageWithSender messageWithSender =
                     SorobanMessageWithSender.parse(payloadWithSender);
                 String encryptedPayload = messageWithSender.getPayload();
-                PaymentCode paymentCodePartner = new PaymentCode(messageWithSender.getSender());
+                String sender = messageWithSender.getSender();
+                PaymentCode paymentCodePartner = new PaymentCode(sender);
 
                 // decrypt
                 String payload = decrypt(encryptedPayload, paymentCodePartner);
                 if (log.isDebugEnabled()) {
                   log.debug("(" + nextDirectory + ") <= " + payload);
                 }
-                return payload;
+
+                // return clear object
+                return new SorobanMessageWithSender(sender, payload);
               }
             });
   }

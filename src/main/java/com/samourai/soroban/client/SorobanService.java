@@ -24,6 +24,8 @@ public class SorobanService {
   private NetworkParameters params;
   private RpcClient rpc;
   private User user;
+  private Subject<SorobanMessage> interactiveMessageProvider;
+  private Subject<SorobanMessage> onInteraction;
 
   public SorobanService(
       BIP47UtilGeneric bip47Util,
@@ -34,6 +36,8 @@ public class SorobanService {
     this.params = params;
     this.rpc = new RpcClient(httpClient, params);
     this.user = new User(bip47Util, bip47w, params, provider);
+    this.interactiveMessageProvider = BehaviorSubject.create();
+    this.onInteraction = BehaviorSubject.create();
   }
 
   public Observable<SorobanMessage> initiator(
@@ -116,7 +120,7 @@ public class SorobanService {
                   if (log.isDebugEnabled()) {
                     log.debug(info + " #(0) <= " + message.toString());
                   }
-                  if (message.isLastMessage()) {
+                  if (message.isDone()) {
                     if (log.isDebugEnabled()) {
                       log.debug(info + " #(0) done.");
                     }
@@ -183,7 +187,7 @@ public class SorobanService {
       }
       dialog.send(message, paymentCodePartner).blockingSingle();
 
-      if (message.isLastMessage()) {
+      if (message.isDone()) {
         // done
         if (log.isDebugEnabled()) {
           log.debug(info + " #" + i + " done.");
@@ -199,7 +203,8 @@ public class SorobanService {
       if (log.isDebugEnabled()) {
         log.debug(info + " #" + i + " <= " + message.toString());
       }
-      if (message.isLastMessage()) {
+
+      if (message.isDone()) {
         // done
         if (log.isDebugEnabled()) {
           log.debug(info + " #" + i + " done.");
@@ -209,6 +214,20 @@ public class SorobanService {
 
       // prepare reply
       message = safeReply(messageService, account, message, dialog, paymentCodePartner);
+
+      // manage interactive reply?
+      if (message.isInteraction()) {
+        if (log.isDebugEnabled()) {
+          log.debug(info + " #" + i + " => [INTERACTIVE] ...");
+        }
+        onInteraction.onNext(message);
+
+        // wait for interaction
+        message = interactiveMessageProvider.blockingNext().iterator().next();
+        if (log.isDebugEnabled()) {
+          log.debug(info + " #" + i + " => [INTERACTIVE] " + message.toString());
+        }
+      }
       i++;
     }
     return message;
@@ -230,5 +249,16 @@ public class SorobanService {
                 return response;
               }
             });
+  }
+
+  public void replyInteractive(SorobanMessage message) {
+    if (log.isDebugEnabled()) {
+      log.debug(" => replyInteractive");
+    }
+    interactiveMessageProvider.onNext(message);
+  }
+
+  public Subject<SorobanMessage> getOnInteraction() {
+    return onInteraction;
   }
 }

@@ -8,8 +8,6 @@ import com.samourai.soroban.client.meeting.SorobanResponseMessage;
 import com.samourai.wallet.bip47.BIP47UtilGeneric;
 import com.samourai.wallet.bip47.rpc.BIP47Wallet;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
-import com.samourai.wallet.cahoots.CahootsMessage;
-import com.samourai.wallet.cahoots.CahootsService;
 import com.samourai.wallet.cahoots.CahootsType;
 import com.samourai.wallet.cahoots.CahootsWallet;
 import com.samourai.wallet.soroban.client.SorobanMessage;
@@ -22,10 +20,10 @@ public class SorobanCahootsInitiator extends AbstractSorobanCahoots {
   private final Logger log = LoggerFactory.getLogger(SorobanCahootsInitiator.class);
 
   public SorobanCahootsInitiator(
-      CahootsService cahootsService,
+      OnlineCahootsService onlineCahootsService,
       SorobanService sorobanService,
       SorobanMeetingService sorobanMeetingService) {
-    super(cahootsService, sorobanService, sorobanMeetingService);
+    super(onlineCahootsService, sorobanService, sorobanMeetingService);
   }
 
   public SorobanCahootsInitiator(
@@ -41,9 +39,9 @@ public class SorobanCahootsInitiator extends AbstractSorobanCahoots {
   // meeting
 
   public Observable<SorobanRequestMessage> sendMeetingRequest(
-      PaymentCode paymentCodeCounterParty, String description, CahootsType type) throws Exception {
+      PaymentCode paymentCodeCounterParty, CahootsType type) throws Exception {
     checkTor();
-    return sorobanMeetingService.sendMeetingRequest(paymentCodeCounterParty, description, type);
+    return sorobanMeetingService.sendMeetingRequest(paymentCodeCounterParty, type);
   }
 
   public Observable<SorobanResponseMessage> receiveMeetingResponse(
@@ -60,17 +58,22 @@ public class SorobanCahootsInitiator extends AbstractSorobanCahoots {
       int account, long amount, String address, PaymentCode paymentCodeCounterparty, long timeoutMs)
       throws Exception {
     checkTor();
-    CahootsMessage message = cahootsService.newStonewallx2(account, amount, address);
+    OnlineCahootsMessage message = onlineCahootsService.newStonewallx2(account, amount, address);
     return sorobanService.initiator(
-        account, cahootsService, paymentCodeCounterparty, timeoutMs, message);
+        account, onlineCahootsService, paymentCodeCounterparty, timeoutMs, message);
   }
 
   public Observable<SorobanMessage> newStowaway(
       int account, long amount, PaymentCode paymentCodeCounterparty, long timeoutMs)
       throws Exception {
     checkTor();
-    CahootsMessage message = cahootsService.newStowaway(account, amount);
+    OnlineCahootsMessage message = onlineCahootsService.newStowaway(account, amount);
     return sorobanService.initiator(
-        account, cahootsService, paymentCodeCounterparty, timeoutMs, message);
+        account, onlineCahootsService, paymentCodeCounterparty, timeoutMs, message);
+  }
+
+  public void confirmTxBroadcast(SorobanMessage message) throws Exception {
+    SorobanMessage reply = onlineCahootsService.confirmTxBroadcast(message);
+    sorobanService.replyInteractive(reply);
   }
 }

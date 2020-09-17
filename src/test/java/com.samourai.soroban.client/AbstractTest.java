@@ -1,10 +1,13 @@
 package com.samourai.soroban.client;
 
+import com.samourai.soroban.client.cahoots.OnlineCahootsMessage;
 import com.samourai.soroban.utils.LogbackUtils;
 import com.samourai.wallet.bip47.rpc.BIP47Wallet;
 import com.samourai.wallet.bip47.rpc.java.Bip47UtilJava;
+import com.samourai.wallet.cahoots.CahootsTestUtil;
 import com.samourai.wallet.hd.HD_Wallet;
 import com.samourai.wallet.hd.java.HD_WalletFactoryJava;
+import com.samourai.wallet.soroban.client.SorobanMessage;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.params.TestNet3Params;
 import org.junit.jupiter.api.Assertions;
@@ -43,5 +46,13 @@ public abstract class AbstractTest {
   public static void setException(Exception e) {
     AbstractTest.exception = e;
     log.error("", e);
+  }
+
+  protected void verify(String expectedPayload, SorobanMessage message) throws Exception {
+    OnlineCahootsMessage onlineCahootsMessage = (OnlineCahootsMessage) message;
+    CahootsTestUtil.cleanPayload(onlineCahootsMessage.getCahoots());
+    String payloadStr = onlineCahootsMessage.toPayload();
+    log.info("### payload=" + payloadStr);
+    Assertions.assertEquals(expectedPayload, payloadStr);
   }
 }

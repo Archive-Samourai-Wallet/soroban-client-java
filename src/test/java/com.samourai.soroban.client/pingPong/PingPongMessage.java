@@ -1,5 +1,6 @@
 package com.samourai.soroban.client.pingPong;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.samourai.wallet.soroban.client.SorobanMessage;
 import org.slf4j.Logger;
@@ -66,12 +67,18 @@ public class PingPongMessage implements SorobanMessage {
   }
 
   @Override
-  public boolean isLastMessage() {
+  public boolean isDone() {
     return lastMessage;
   }
 
   public void setLastMessage(boolean lastMessage) {
     this.lastMessage = lastMessage;
+  }
+
+  @JsonIgnore
+  @Override
+  public boolean isInteraction() {
+    return false;
   }
 
   @Override
