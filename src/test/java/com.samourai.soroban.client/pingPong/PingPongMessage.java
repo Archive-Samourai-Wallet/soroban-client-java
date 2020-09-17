@@ -18,22 +18,22 @@ public class PingPongMessage implements SorobanMessage {
 
   private VALUES value;
   private int iteration;
-  private boolean lastMessage;
+  private boolean done;
 
   public PingPongMessage() {
     this.value = null;
     this.iteration = 0;
-    this.lastMessage = false;
+    this.done = false;
   }
 
-  public PingPongMessage(VALUES value, boolean lastMessage, int iteration) {
+  public PingPongMessage(VALUES value, boolean done, int iteration) {
     this.value = value;
     this.iteration = iteration;
-    this.lastMessage = lastMessage;
+    this.done = done;
   }
 
-  public PingPongMessage(VALUES value, boolean lastMessage) {
-    this(value, lastMessage, 1);
+  public PingPongMessage(VALUES value, boolean done) {
+    this(value, done, 1);
   }
 
   public static PingPongMessage parse(String payload) throws Exception {
@@ -68,11 +68,11 @@ public class PingPongMessage implements SorobanMessage {
 
   @Override
   public boolean isDone() {
-    return lastMessage;
+    return done;
   }
 
-  public void setLastMessage(boolean lastMessage) {
-    this.lastMessage = lastMessage;
+  public void setDone(boolean done) {
+    this.done = done;
   }
 
   @JsonIgnore
@@ -83,6 +83,6 @@ public class PingPongMessage implements SorobanMessage {
 
   @Override
   public String toString() {
-    return "value=" + value + ", iteration=" + iteration + ", lastMessage=" + lastMessage;
+    return "value=" + value + ", iteration=" + iteration + ", done=" + done;
   }
 }

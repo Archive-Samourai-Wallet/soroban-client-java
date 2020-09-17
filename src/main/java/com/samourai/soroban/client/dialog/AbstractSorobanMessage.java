@@ -7,15 +7,15 @@ import org.slf4j.LoggerFactory;
 public abstract class AbstractSorobanMessage implements SorobanMessage {
   private static final Logger log = LoggerFactory.getLogger(AbstractSorobanMessage.class);
 
-  private boolean lastMessage;
+  private boolean done;
 
-  public AbstractSorobanMessage(boolean lastMessage) {
-    this.lastMessage = lastMessage;
+  public AbstractSorobanMessage(boolean done) {
+    this.done = done;
   }
 
   @Override
   public boolean isDone() {
-    return lastMessage;
+    return done;
   }
 
   @Override

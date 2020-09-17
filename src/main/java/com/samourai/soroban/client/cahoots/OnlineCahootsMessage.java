@@ -5,11 +5,11 @@ import com.samourai.wallet.cahoots.ManualCahootsMessage;
 import org.json.JSONObject;
 
 public class OnlineCahootsMessage extends ManualCahootsMessage {
-  private boolean lastMessage;
+  private boolean done;
 
-  public OnlineCahootsMessage(Cahoots cahoots, boolean lastMessage) {
+  public OnlineCahootsMessage(Cahoots cahoots, boolean done) {
     super(cahoots);
-    this.lastMessage = lastMessage;
+    this.done = done;
   }
 
   public static OnlineCahootsMessage parse(String payload) throws Exception {
@@ -18,29 +18,25 @@ public class OnlineCahootsMessage extends ManualCahootsMessage {
     if (!obj.has("cahoots")) {
       throw new Exception("missing .cahoots");
     }
-    if (!obj.has("lastMessage")) {
-      throw new Exception("missing .lastMessage");
+    if (!obj.has("done")) {
+      throw new Exception("missing .done");
     }
 
     Cahoots cahoots = Cahoots.parse(obj.getString("cahoots"));
-    boolean lastMessage = obj.getBoolean("lastMessage");
-    return new OnlineCahootsMessage(cahoots, lastMessage);
+    boolean done = obj.getBoolean("done");
+    return new OnlineCahootsMessage(cahoots, done);
   }
 
   @Override
   public String toPayload() {
     JSONObject obj = new JSONObject();
     obj.put("cahoots", getCahoots().toJSONString());
-    obj.put("lastMessage", lastMessage);
+    obj.put("done", done);
     return obj.toString();
   }
 
   @Override
   public boolean isDone() {
-    return lastMessage;
-  }
-
-  public void setLastMessage(boolean lastMessage) {
-    this.lastMessage = lastMessage;
+    return done;
   }
 }

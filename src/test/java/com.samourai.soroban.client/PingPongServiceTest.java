@@ -21,16 +21,16 @@ public class PingPongServiceTest extends AbstractTest {
 
   @Test
   public void pingPong() throws Exception {
-    doTest(1, "{\"value\":\"PING\",\"iteration\":1,\"lastMessage\":true}");
+    doTest(1, "{\"value\":\"PING\",\"iteration\":1,\"done\":true}");
     Thread.sleep(3000); // wait Soroban server cleanup
 
-    doTest(2, "{\"value\":\"PONG\",\"iteration\":2,\"lastMessage\":true}");
+    doTest(2, "{\"value\":\"PONG\",\"iteration\":2,\"done\":true}");
     Thread.sleep(3000);
 
-    doTest(3, "{\"value\":\"PING\",\"iteration\":3,\"lastMessage\":true}");
+    doTest(3, "{\"value\":\"PING\",\"iteration\":3,\"done\":true}");
     Thread.sleep(3000);
 
-    doTest(4, "{\"value\":\"PONG\",\"iteration\":4,\"lastMessage\":true}");
+    doTest(4, "{\"value\":\"PONG\",\"iteration\":4,\"done\":true}");
   }
 
   private void doTest(final int ITERATIONS, final String lastPayload) throws Exception {
