@@ -220,6 +220,7 @@ public class SorobanService {
         if (log.isDebugEnabled()) {
           log.debug(info + " #" + i + " => [INTERACTIVE] ...");
         }
+        onMessage.onNext(message);
         onInteraction.onNext(message);
 
         // wait for interaction

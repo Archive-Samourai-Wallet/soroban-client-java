@@ -77,7 +77,7 @@ public class SorobanMeetingServiceTest extends AbstractTest {
                       sorobanMeetingService.receiveMeetingRequest(TIMEOUT_MS).blockingSingle();
                   Assertions.assertEquals(CahootsType.STONEWALLX2, requestMessage.getType());
                   Assertions.assertEquals(
-                      paymentCodeInitiator.makeSamouraiPaymentCode(), requestMessage.getSender());
+                      paymentCodeInitiator.toString(), requestMessage.getSender());
 
                   // response accept
                   sorobanMeetingService

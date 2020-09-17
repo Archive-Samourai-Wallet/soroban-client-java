@@ -120,8 +120,7 @@ public class RpcDialog {
 
     // wrap with clear sender
     SorobanMessageWithSender messageWithSender =
-        new SorobanMessageWithSender(
-            user.getPaymentCode().makeSamouraiPaymentCode(), encryptedPayload);
+        new SorobanMessageWithSender(user.getPaymentCode().toString(), encryptedPayload);
     return doSend(messageWithSender.toPayload());
   }
 
