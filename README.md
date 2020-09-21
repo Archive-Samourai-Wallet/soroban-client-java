@@ -10,3 +10,8 @@ Build with maven:
 cd soroban-client-java
 mvn clean install -Dmaven.test.skip=true
 ```
+
+## License
+AGPL 3.0
+
+
