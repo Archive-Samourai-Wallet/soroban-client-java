@@ -7,13 +7,17 @@ import com.samourai.soroban.client.rpc.RpcClient;
 import com.samourai.wallet.bip47.BIP47UtilGeneric;
 import com.samourai.wallet.bip47.rpc.BIP47Wallet;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
+import com.samourai.wallet.soroban.cahoots.CahootsContext;
+import com.samourai.wallet.soroban.client.SorobanInteraction;
 import com.samourai.wallet.soroban.client.SorobanMessage;
 import com.samourai.wallet.soroban.client.SorobanMessageService;
+import com.samourai.wallet.soroban.client.SorobanReply;
 import io.reactivex.Observable;
 import io.reactivex.functions.Action;
 import io.reactivex.functions.Function;
 import io.reactivex.subjects.BehaviorSubject;
 import io.reactivex.subjects.Subject;
+import java.util.concurrent.Callable;
 import org.bitcoinj.core.NetworkParameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,7 +29,7 @@ public class SorobanService {
   private RpcClient rpc;
   private User user;
   private Subject<SorobanMessage> interactiveMessageProvider;
-  private Subject<SorobanMessage> onInteraction;
+  private Subject<SorobanInteraction> onInteraction;
 
   public SorobanService(
       BIP47UtilGeneric bip47Util,
@@ -42,12 +46,13 @@ public class SorobanService {
 
   public Observable<SorobanMessage> initiator(
       final int account,
+      final CahootsContext cahootsContext,
       final SorobanMessageService messageService,
       final PaymentCode paymentCodeCounterParty,
       final long timeoutMs,
       final SorobanMessage message)
       throws Exception {
-    final BehaviorSubject onMessage = BehaviorSubject.create();
+    final BehaviorSubject<SorobanMessage> onMessage = BehaviorSubject.create();
     Thread t =
         new Thread(
             new Runnable() {
@@ -68,6 +73,7 @@ public class SorobanService {
                       });
                   dialog(
                       account,
+                      cahootsContext,
                       messageService,
                       dialog,
                       paymentCodeCounterParty,
@@ -88,6 +94,7 @@ public class SorobanService {
 
   public Observable<SorobanMessage> contributor(
       final int account,
+      final CahootsContext cahootsContext,
       final SorobanMessageService messageService,
       final PaymentCode paymentCodeInitiator,
       final long timeoutMs)
@@ -129,9 +136,17 @@ public class SorobanService {
                   }
 
                   SorobanMessage response =
-                      safeReply(messageService, account, message, dialog, paymentCodeInitiator);
+                      (SorobanMessage)
+                          safeReply(
+                              messageService,
+                              account,
+                              cahootsContext,
+                              message,
+                              dialog,
+                              paymentCodeInitiator);
                   dialog(
                       account,
+                      cahootsContext,
                       messageService,
                       dialog,
                       paymentCodeInitiator,
@@ -150,15 +165,16 @@ public class SorobanService {
     return onMessage;
   }
 
-  private SorobanMessage safeReply(
+  private SorobanReply safeReply(
       SorobanMessageService messageService,
       int account,
+      CahootsContext cahootsContext,
       SorobanMessage message,
       RpcDialog dialog,
       PaymentCode paymentCodePartner)
       throws Exception {
     try {
-      return messageService.reply(account, message);
+      return messageService.reply(account, cahootsContext, message);
     } catch (Exception e) {
       // send error
       dialog.sendError("Dialog failed", paymentCodePartner).subscribe();
@@ -168,6 +184,7 @@ public class SorobanService {
 
   private SorobanMessage dialog(
       int account,
+      CahootsContext cahootsContext,
       SorobanMessageService messageService,
       RpcDialog dialog,
       PaymentCode paymentCodePartner,
@@ -213,25 +230,45 @@ public class SorobanService {
       }
 
       // prepare reply
-      message = safeReply(messageService, account, message, dialog, paymentCodePartner);
+      SorobanReply reply =
+          safeReply(messageService, account, cahootsContext, message, dialog, paymentCodePartner);
 
-      // manage interactive reply?
-      if (message.isInteraction()) {
+      if (reply instanceof SorobanInteraction) {
+        // wrap interaction for Soroban
+        SorobanInteraction interaction = computeOnlineInteraction((SorobanInteraction) reply);
         if (log.isDebugEnabled()) {
-          log.debug(info + " #" + i + " => [INTERACTIVE] ...");
+          log.debug(info + " #" + i + " => [INTERACTIVE] ... >? " + interaction);
         }
-        onMessage.onNext(message);
-        onInteraction.onNext(message);
+        onInteraction.onNext(interaction);
 
-        // wait for interaction
+        // wait for interaction confirmation
         message = interactiveMessageProvider.blockingNext().iterator().next();
         if (log.isDebugEnabled()) {
           log.debug(info + " #" + i + " => [INTERACTIVE] " + message.toString());
         }
+      } else {
+        // direct reply
+        message = (SorobanMessage) reply;
       }
       i++;
     }
     return message;
+  }
+
+  private SorobanInteraction computeOnlineInteraction(final SorobanInteraction interaction) {
+    Callable<SorobanMessage> onAccept =
+        new Callable<SorobanMessage>() {
+          @Override
+          public SorobanMessage call() throws Exception {
+            SorobanMessage acceptMessage = interaction.accept();
+            replyInteractive(acceptMessage);
+            return acceptMessage;
+          }
+        };
+    SorobanInteraction onlineInteraction =
+        new SorobanInteraction(
+            interaction.getRequest(), interaction.getTypeInteraction(), onAccept);
+    return onlineInteraction;
   }
 
   private Observable<SorobanMessage> receive(
@@ -252,14 +289,14 @@ public class SorobanService {
             });
   }
 
-  public void replyInteractive(SorobanMessage message) {
+  private void replyInteractive(SorobanMessage message) {
     if (log.isDebugEnabled()) {
       log.debug(" => replyInteractive");
     }
     interactiveMessageProvider.onNext(message);
   }
 
-  public Subject<SorobanMessage> getOnInteraction() {
+  public Subject<SorobanInteraction> getOnInteraction() {
     return onInteraction;
   }
 }

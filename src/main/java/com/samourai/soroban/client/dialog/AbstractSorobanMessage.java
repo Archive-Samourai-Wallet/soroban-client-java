@@ -17,9 +17,4 @@ public abstract class AbstractSorobanMessage implements SorobanMessage {
   public boolean isDone() {
     return done;
   }
-
-  @Override
-  public boolean isInteraction() {
-    return false;
-  }
 }

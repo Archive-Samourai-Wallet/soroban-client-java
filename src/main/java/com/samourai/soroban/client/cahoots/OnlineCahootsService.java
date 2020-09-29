@@ -1,16 +1,21 @@
 package com.samourai.soroban.client.cahoots;
 
-import com.samourai.wallet.cahoots.*;
+import com.samourai.wallet.cahoots.CahootsWallet;
+import com.samourai.wallet.soroban.cahoots.CahootsContext;
+import com.samourai.wallet.soroban.cahoots.ManualCahootsMessage;
+import com.samourai.wallet.soroban.cahoots.ManualCahootsService;
+import com.samourai.wallet.soroban.client.SorobanInteraction;
 import com.samourai.wallet.soroban.client.SorobanMessage;
-import org.bitcoinj.core.NetworkParameters;
+import com.samourai.wallet.soroban.client.SorobanReply;
+import java.util.concurrent.Callable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class OnlineCahootsService extends ManualCahootsService {
   private static final Logger log = LoggerFactory.getLogger(ManualCahootsService.class);
 
-  public OnlineCahootsService(NetworkParameters params, CahootsWallet cahootsWallet) {
-    super(params, cahootsWallet);
+  public OnlineCahootsService(CahootsWallet cahootsWallet) {
+    super(cahootsWallet);
   }
 
   @Override
@@ -19,34 +24,38 @@ public class OnlineCahootsService extends ManualCahootsService {
   }
 
   @Override
-  public OnlineCahootsMessage newStonewallx2(int account, long amount, String address)
+  public OnlineCahootsMessage initiate(int account, CahootsContext cahootsContext)
       throws Exception {
-    ManualCahootsMessage manualCahootsMessage = super.newStonewallx2(account, amount, address);
-    return new OnlineCahootsMessage(manualCahootsMessage.getCahoots(), false);
+    ManualCahootsMessage manualCahootsMessage = super.initiate(account, cahootsContext);
+    return new OnlineCahootsMessage(manualCahootsMessage);
   }
 
   @Override
-  public OnlineCahootsMessage newStowaway(int account, long amount) throws Exception {
-    ManualCahootsMessage manualCahootsMessage = super.newStowaway(account, amount);
-    return new OnlineCahootsMessage(manualCahootsMessage.getCahoots(), false);
-  }
-
-  @Override
-  public OnlineCahootsMessage reply(int account, ManualCahootsMessage request) throws Exception {
-    ManualCahootsMessage manualCahootsResponse = super.reply(account, request);
-    if (CahootsTypeUser.SENDER.equals(manualCahootsResponse.getTypeUser())
-        && manualCahootsResponse.isDone()) {
-      // interaction: TX_BROADCAST
-      // wait for TX to be broadcasted before replying last Cahoots
-      return new OnlineCahootsInteraction(
-          manualCahootsResponse.getCahoots(), CahootsInteraction.TX_BROADCAST);
+  public SorobanReply reply(
+      final int account, final CahootsContext cahootsContext, final ManualCahootsMessage request)
+      throws Exception {
+    SorobanReply reply = super.reply(account, cahootsContext, request);
+    SorobanReply onlineReply;
+    if (reply instanceof ManualCahootsMessage) {
+      // SorobanMessage
+      onlineReply = new OnlineCahootsMessage((ManualCahootsMessage) reply);
+    } else if (reply instanceof SorobanInteraction) {
+      // SorobanInteraction
+      final SorobanInteraction interaction = (SorobanInteraction) reply;
+      Callable<SorobanMessage> onAccept =
+          new Callable<SorobanMessage>() {
+            @Override
+            public SorobanMessage call() throws Exception {
+              ManualCahootsMessage response = (ManualCahootsMessage) interaction.accept();
+              return new OnlineCahootsMessage(response);
+            }
+          };
+      onlineReply =
+          new SorobanInteraction(
+              interaction.getRequest(), interaction.getTypeInteraction(), onAccept);
+    } else {
+      throw new Exception("Unknown message type: " + reply.getClass());
     }
-    return new OnlineCahootsMessage(manualCahootsResponse.getCahoots(), false);
-  }
-
-  public OnlineCahootsMessage confirmTxBroadcast(SorobanMessage message) throws Exception {
-    OnlineCahootsMessage cahootsMessage =
-        new OnlineCahootsMessage(((OnlineCahootsInteraction) message).getCahoots(), true);
-    return cahootsMessage;
+    return onlineReply;
   }
 }

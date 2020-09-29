@@ -61,7 +61,12 @@ public class PingPongServiceTest extends AbstractTest {
                   SorobanMessage lastMessage =
                       sorobanService
                           .initiator(
-                              0, pingPongService, paymentCodeCounterparty, TIMEOUT_MS, message)
+                              0,
+                              null,
+                              pingPongService,
+                              paymentCodeCounterparty,
+                              TIMEOUT_MS,
+                              message)
                           .blockingLast();
                   Assertions.assertEquals(lastPayload, lastMessage.toPayload());
                 } catch (Exception e) {
@@ -87,7 +92,7 @@ public class PingPongServiceTest extends AbstractTest {
                   // run soroban as contributor
                   SorobanMessage lastMessage =
                       sorobanService
-                          .contributor(0, pingPongService, paymentCodeInitiator, TIMEOUT_MS)
+                          .contributor(0, null, pingPongService, paymentCodeInitiator, TIMEOUT_MS)
                           .blockingLast();
                   Assertions.assertEquals(lastPayload, lastMessage.toPayload());
                 } catch (Exception e) {

@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.samourai.code.wallet</groupId>
     <artifactId>soroban-client-java</artifactId>
-    <version>0.0.2</version>
+    <version>develop-SNAPSHOT</version>
     <properties>
         <maven.compiler.source>1.6</maven.compiler.source>
         <maven.compiler.target>1.6</maven.compiler.target>
@@ -12,7 +12,7 @@
         <dependency>
             <groupId>io.samourai.code.wallet</groupId>
             <artifactId>extlibj</artifactId>
-            <version>0.0.14-soroban2</version>
+            <version>soroban-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.junit.platform</groupId>

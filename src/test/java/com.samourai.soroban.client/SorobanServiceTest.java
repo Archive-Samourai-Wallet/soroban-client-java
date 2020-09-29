@@ -2,15 +2,15 @@ package com.samourai.soroban.client;
 
 import com.samourai.http.client.IHttpClient;
 import com.samourai.http.client.JavaHttpClient;
-import com.samourai.soroban.client.cahoots.CahootsInteraction;
-import com.samourai.soroban.client.cahoots.OnlineCahootsInteraction;
-import com.samourai.soroban.client.cahoots.OnlineCahootsMessage;
-import com.samourai.soroban.client.cahoots.OnlineCahootsService;
+import com.samourai.soroban.client.cahoots.SorobanCahootsService;
 import com.samourai.wallet.bip47.rpc.BIP47Wallet;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.cahoots.TestCahootsWallet;
 import com.samourai.wallet.hd.HD_Wallet;
 import com.samourai.wallet.segwit.BIP84Wallet;
+import com.samourai.wallet.soroban.cahoots.CahootsContext;
+import com.samourai.wallet.soroban.cahoots.TypeInteraction;
+import com.samourai.wallet.soroban.client.SorobanInteraction;
 import com.samourai.wallet.soroban.client.SorobanMessage;
 import io.reactivex.functions.Consumer;
 import org.junit.jupiter.api.Assertions;
@@ -50,46 +50,38 @@ public class SorobanServiceTest extends AbstractTest {
             new Runnable() {
               @Override
               public void run() {
-                long amount = 5;
-                String address = "tb1q9m8cc0jkjlc9zwvea5a2365u6px3yu646vgez4";
-
                 // instanciate services
-                final OnlineCahootsService messageService =
-                    new OnlineCahootsService(params, cahootsWalletInitiator);
                 IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
-                final SorobanService sorobanService =
-                    new SorobanService(
-                        bip47Util, params, PROVIDER_JAVA, bip47walletInitiator, httpClient);
+                final SorobanCahootsService sorobanCahootsService =
+                    new SorobanCahootsService(
+                        bip47Util, PROVIDER_JAVA, cahootsWalletInitiator, httpClient);
 
                 try {
                   // run soroban as initiator
-                  OnlineCahootsMessage message =
-                      messageService.newStonewallx2(account, amount, address);
-                  sorobanService
+                  long amount = 5;
+                  String address = "tb1q9m8cc0jkjlc9zwvea5a2365u6px3yu646vgez4";
+                  CahootsContext cahootsContext =
+                      CahootsContext.newInitiatorStonewallx2(amount, address);
+
+                  sorobanCahootsService
+                      .getSorobanService()
                       .getOnInteraction()
                       .subscribe(
-                          new Consumer<SorobanMessage>() {
+                          new Consumer<SorobanInteraction>() {
                             @Override
-                            public void accept(SorobanMessage message) throws Exception {
-                              OnlineCahootsInteraction interactiveMessage =
-                                  (OnlineCahootsInteraction) message;
+                            public void accept(SorobanInteraction interaction) throws Exception {
                               Assertions.assertEquals(
-                                  CahootsInteraction.TX_BROADCAST,
-                                  interactiveMessage.getInteraction());
+                                  TypeInteraction.TX_BROADCAST, interaction.getTypeInteraction());
                               log.info("[INTERACTION] ==> TX_BROADCAST");
-                              SorobanMessage confirmMessage =
-                                  messageService.confirmTxBroadcast(message);
-                              sorobanService.replyInteractive(confirmMessage);
+                              interaction.accept();
                             }
                           });
                   SorobanMessage lastMessage =
-                      sorobanService
-                          .initiator(
-                              account, messageService, paymentCodeCounterparty, TIMEOUT_MS, message)
+                      sorobanCahootsService
+                          .initiator(account, cahootsContext, paymentCodeCounterparty, TIMEOUT_MS)
                           .blockingLast();
-                  ;
                   verify(
-                      "{\"cahoots\":\"{\\\"cahoots\\\":{\\\"fingerprint_collab\\\":\\\"f0d70870\\\",\\\"psbt\\\":\\\"\\\",\\\"cpty_account\\\":0,\\\"spend_amount\\\":5,\\\"outpoints\\\":[{\\\"value\\\":10000,\\\"outpoint\\\":\\\"14cf9c6be92efcfe628aabd32b02c85e763615ddd430861bc18f6d366e4c4fd5-1\\\"},{\\\"value\\\":10000,\\\"outpoint\\\":\\\"9407b31fd0159dc4dd3f5377e3b18e4b4aafef2977a52e76b95c3f899cbb05ad-1\\\"}],\\\"type\\\":0,\\\"dest\\\":\\\"tb1q9m8cc0jkjlc9zwvea5a2365u6px3yu646vgez4\\\",\\\"params\\\":\\\"testnet\\\",\\\"version\\\":2,\\\"fee_amount\\\":314,\\\"fingerprint\\\":\\\"eed8a1cd\\\",\\\"step\\\":4,\\\"collabChange\\\":\\\"tb1qv4ak4l0w76qflk4uulavu22kxtaajnltkzxyq5\\\",\\\"id\\\":\\\"testID\\\",\\\"account\\\":0,\\\"ts\\\":123456}}\",\"done\":true}",
+                      "{\"cahoots\":\"{\\\"cahoots\\\":{\\\"fingerprint_collab\\\":\\\"f0d70870\\\",\\\"psbt\\\":\\\"\\\",\\\"cpty_account\\\":0,\\\"spend_amount\\\":5,\\\"outpoints\\\":[{\\\"value\\\":10000,\\\"outpoint\\\":\\\"14cf9c6be92efcfe628aabd32b02c85e763615ddd430861bc18f6d366e4c4fd5-1\\\"},{\\\"value\\\":10000,\\\"outpoint\\\":\\\"9407b31fd0159dc4dd3f5377e3b18e4b4aafef2977a52e76b95c3f899cbb05ad-1\\\"}],\\\"type\\\":0,\\\"dest\\\":\\\"tb1q9m8cc0jkjlc9zwvea5a2365u6px3yu646vgez4\\\",\\\"params\\\":\\\"testnet\\\",\\\"version\\\":2,\\\"fee_amount\\\":314,\\\"fingerprint\\\":\\\"eed8a1cd\\\",\\\"step\\\":4,\\\"collabChange\\\":\\\"tb1qv4ak4l0w76qflk4uulavu22kxtaajnltkzxyq5\\\",\\\"id\\\":\\\"testID\\\",\\\"account\\\":0,\\\"ts\\\":123456}}\"}",
                       lastMessage);
                 } catch (Exception e) {
                   setException(e);
@@ -105,20 +97,20 @@ public class SorobanServiceTest extends AbstractTest {
               @Override
               public void run() {
                 // instanciate services
-                OnlineCahootsService messageService =
-                    new OnlineCahootsService(params, cahootsWalletCounterparty);
                 IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
-                SorobanService sorobanService =
-                    new SorobanService(
-                        bip47Util, params, PROVIDER_JAVA, bip47walletCounterparty, httpClient);
+                SorobanCahootsService sorobanCahootsService =
+                    new SorobanCahootsService(
+                        bip47Util, PROVIDER_JAVA, cahootsWalletCounterparty, httpClient);
+
                 try {
                   // run soroban as counterparty
+                  CahootsContext cahootsContext = CahootsContext.newCounterpartyStonewallx2();
                   SorobanMessage lastMessage =
-                      sorobanService
-                          .contributor(account, messageService, paymentCodeInitiator, TIMEOUT_MS)
+                      sorobanCahootsService
+                          .contributor(account, cahootsContext, paymentCodeInitiator, TIMEOUT_MS)
                           .blockingLast();
                   verify(
-                      "{\"cahoots\":\"{\\\"cahoots\\\":{\\\"fingerprint_collab\\\":\\\"f0d70870\\\",\\\"psbt\\\":\\\"\\\",\\\"cpty_account\\\":0,\\\"spend_amount\\\":5,\\\"outpoints\\\":[{\\\"value\\\":10000,\\\"outpoint\\\":\\\"14cf9c6be92efcfe628aabd32b02c85e763615ddd430861bc18f6d366e4c4fd5-1\\\"},{\\\"value\\\":10000,\\\"outpoint\\\":\\\"9407b31fd0159dc4dd3f5377e3b18e4b4aafef2977a52e76b95c3f899cbb05ad-1\\\"}],\\\"type\\\":0,\\\"dest\\\":\\\"tb1q9m8cc0jkjlc9zwvea5a2365u6px3yu646vgez4\\\",\\\"params\\\":\\\"testnet\\\",\\\"version\\\":2,\\\"fee_amount\\\":314,\\\"fingerprint\\\":\\\"eed8a1cd\\\",\\\"step\\\":4,\\\"collabChange\\\":\\\"tb1qv4ak4l0w76qflk4uulavu22kxtaajnltkzxyq5\\\",\\\"id\\\":\\\"testID\\\",\\\"account\\\":0,\\\"ts\\\":123456}}\",\"done\":true}",
+                      "{\"cahoots\":\"{\\\"cahoots\\\":{\\\"fingerprint_collab\\\":\\\"f0d70870\\\",\\\"psbt\\\":\\\"\\\",\\\"cpty_account\\\":0,\\\"spend_amount\\\":5,\\\"outpoints\\\":[{\\\"value\\\":10000,\\\"outpoint\\\":\\\"14cf9c6be92efcfe628aabd32b02c85e763615ddd430861bc18f6d366e4c4fd5-1\\\"},{\\\"value\\\":10000,\\\"outpoint\\\":\\\"9407b31fd0159dc4dd3f5377e3b18e4b4aafef2977a52e76b95c3f899cbb05ad-1\\\"}],\\\"type\\\":0,\\\"dest\\\":\\\"tb1q9m8cc0jkjlc9zwvea5a2365u6px3yu646vgez4\\\",\\\"params\\\":\\\"testnet\\\",\\\"version\\\":2,\\\"fee_amount\\\":314,\\\"fingerprint\\\":\\\"eed8a1cd\\\",\\\"step\\\":4,\\\"collabChange\\\":\\\"tb1qv4ak4l0w76qflk4uulavu22kxtaajnltkzxyq5\\\",\\\"id\\\":\\\"testID\\\",\\\"account\\\":0,\\\"ts\\\":123456}}\"}",
                       lastMessage);
                 } catch (Exception e) {
                   setException(e);
