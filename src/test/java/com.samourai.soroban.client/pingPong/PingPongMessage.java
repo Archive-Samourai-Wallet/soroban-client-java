@@ -2,8 +2,8 @@ package com.samourai.soroban.client.pingPong;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.samourai.wallet.soroban.client.SorobanInteraction;
-import com.samourai.wallet.soroban.client.SorobanMessage;
+import com.samourai.soroban.client.SorobanInteraction;
+import com.samourai.soroban.client.SorobanMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

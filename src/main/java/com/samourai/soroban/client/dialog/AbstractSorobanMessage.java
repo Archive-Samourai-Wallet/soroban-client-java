@@ -1,6 +1,6 @@
 package com.samourai.soroban.client.dialog;
 
-import com.samourai.wallet.soroban.client.SorobanMessage;
+import com.samourai.soroban.client.SorobanMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -7,7 +7,6 @@ import com.samourai.wallet.bip47.rpc.java.Bip47UtilJava;
 import com.samourai.wallet.cahoots.CahootsTestUtil;
 import com.samourai.wallet.hd.HD_Wallet;
 import com.samourai.wallet.hd.java.HD_WalletFactoryJava;
-import com.samourai.wallet.soroban.client.SorobanMessage;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.params.TestNet3Params;
 import org.junit.jupiter.api.Assertions;

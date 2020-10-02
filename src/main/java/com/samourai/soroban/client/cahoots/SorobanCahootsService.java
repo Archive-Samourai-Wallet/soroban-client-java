@@ -1,6 +1,8 @@
 package com.samourai.soroban.client.cahoots;
 
 import com.samourai.http.client.IHttpClient;
+import com.samourai.soroban.cahoots.CahootsContext;
+import com.samourai.soroban.client.SorobanMessage;
 import com.samourai.soroban.client.SorobanService;
 import com.samourai.soroban.client.meeting.SorobanMeetingService;
 import com.samourai.soroban.client.meeting.SorobanRequestMessage;
@@ -9,8 +11,6 @@ import com.samourai.wallet.bip47.BIP47UtilGeneric;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.cahoots.CahootsType;
 import com.samourai.wallet.cahoots.CahootsWallet;
-import com.samourai.wallet.soroban.cahoots.CahootsContext;
-import com.samourai.wallet.soroban.client.SorobanMessage;
 import io.reactivex.Observable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

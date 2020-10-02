@@ -1,13 +1,11 @@
 package com.samourai.soroban.client.cahoots;
 
+import com.samourai.soroban.cahoots.CahootsContext;
+import com.samourai.soroban.cahoots.ManualCahootsMessage;
+import com.samourai.soroban.cahoots.ManualCahootsService;
+import com.samourai.soroban.client.SorobanInteraction;
+import com.samourai.soroban.client.SorobanReply;
 import com.samourai.wallet.cahoots.CahootsWallet;
-import com.samourai.wallet.soroban.cahoots.CahootsContext;
-import com.samourai.wallet.soroban.cahoots.ManualCahootsMessage;
-import com.samourai.wallet.soroban.cahoots.ManualCahootsService;
-import com.samourai.wallet.soroban.client.SorobanInteraction;
-import com.samourai.wallet.soroban.client.SorobanMessage;
-import com.samourai.wallet.soroban.client.SorobanReply;
-import java.util.concurrent.Callable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,22 +35,11 @@ public class OnlineCahootsService extends ManualCahootsService {
     SorobanReply reply = super.reply(account, cahootsContext, request);
     SorobanReply onlineReply;
     if (reply instanceof ManualCahootsMessage) {
-      // SorobanMessage
+      // wrap SorobanMessage as OnlineCahootsMessage
       onlineReply = new OnlineCahootsMessage((ManualCahootsMessage) reply);
     } else if (reply instanceof SorobanInteraction) {
-      // SorobanInteraction
-      final SorobanInteraction interaction = (SorobanInteraction) reply;
-      Callable<SorobanMessage> onAccept =
-          new Callable<SorobanMessage>() {
-            @Override
-            public SorobanMessage call() throws Exception {
-              ManualCahootsMessage response = (ManualCahootsMessage) interaction.accept();
-              return new OnlineCahootsMessage(response);
-            }
-          };
-      onlineReply =
-          new SorobanInteraction(
-              interaction.getRequest(), interaction.getTypeInteraction(), onAccept);
+      // forward SorobanInteraction
+      onlineReply = reply;
     } else {
       throw new Exception("Unknown message type: " + reply.getClass());
     }

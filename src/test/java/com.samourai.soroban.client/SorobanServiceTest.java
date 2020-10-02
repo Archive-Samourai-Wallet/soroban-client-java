@@ -2,16 +2,14 @@ package com.samourai.soroban.client;
 
 import com.samourai.http.client.IHttpClient;
 import com.samourai.http.client.JavaHttpClient;
+import com.samourai.soroban.cahoots.CahootsContext;
+import com.samourai.soroban.cahoots.TypeInteraction;
 import com.samourai.soroban.client.cahoots.SorobanCahootsService;
 import com.samourai.wallet.bip47.rpc.BIP47Wallet;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.cahoots.TestCahootsWallet;
 import com.samourai.wallet.hd.HD_Wallet;
 import com.samourai.wallet.segwit.BIP84Wallet;
-import com.samourai.wallet.soroban.cahoots.CahootsContext;
-import com.samourai.wallet.soroban.cahoots.TypeInteraction;
-import com.samourai.wallet.soroban.client.SorobanInteraction;
-import com.samourai.wallet.soroban.client.SorobanMessage;
 import io.reactivex.functions.Consumer;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -56,36 +54,15 @@ public class SorobanServiceTest extends AbstractTest {
                     new SorobanCahootsService(
                         bip47Util, PROVIDER_JAVA, cahootsWalletInitiator, httpClient);
 
-                try {
-                  // run soroban as initiator
-                  long amount = 5;
-                  String address = "tb1q9m8cc0jkjlc9zwvea5a2365u6px3yu646vgez4";
-                  CahootsContext cahootsContext =
-                      CahootsContext.newInitiatorStonewallx2(amount, address);
+                /*
+                 * #1 => accept
+                 */
+                runInitiator(true, sorobanCahootsService, account, paymentCodeCounterparty);
 
-                  sorobanCahootsService
-                      .getSorobanService()
-                      .getOnInteraction()
-                      .subscribe(
-                          new Consumer<SorobanInteraction>() {
-                            @Override
-                            public void accept(SorobanInteraction interaction) throws Exception {
-                              Assertions.assertEquals(
-                                  TypeInteraction.TX_BROADCAST, interaction.getTypeInteraction());
-                              log.info("[INTERACTION] ==> TX_BROADCAST");
-                              interaction.accept();
-                            }
-                          });
-                  SorobanMessage lastMessage =
-                      sorobanCahootsService
-                          .initiator(account, cahootsContext, paymentCodeCounterparty, TIMEOUT_MS)
-                          .blockingLast();
-                  verify(
-                      "{\"cahoots\":\"{\\\"cahoots\\\":{\\\"fingerprint_collab\\\":\\\"f0d70870\\\",\\\"psbt\\\":\\\"\\\",\\\"cpty_account\\\":0,\\\"spend_amount\\\":5,\\\"outpoints\\\":[{\\\"value\\\":10000,\\\"outpoint\\\":\\\"14cf9c6be92efcfe628aabd32b02c85e763615ddd430861bc18f6d366e4c4fd5-1\\\"},{\\\"value\\\":10000,\\\"outpoint\\\":\\\"9407b31fd0159dc4dd3f5377e3b18e4b4aafef2977a52e76b95c3f899cbb05ad-1\\\"}],\\\"type\\\":0,\\\"dest\\\":\\\"tb1q9m8cc0jkjlc9zwvea5a2365u6px3yu646vgez4\\\",\\\"params\\\":\\\"testnet\\\",\\\"version\\\":2,\\\"fee_amount\\\":314,\\\"fingerprint\\\":\\\"eed8a1cd\\\",\\\"step\\\":4,\\\"collabChange\\\":\\\"tb1qv4ak4l0w76qflk4uulavu22kxtaajnltkzxyq5\\\",\\\"id\\\":\\\"testID\\\",\\\"account\\\":0,\\\"ts\\\":123456}}\"}",
-                      lastMessage);
-                } catch (Exception e) {
-                  setException(e);
-                }
+                /*
+                 * #2 => reject
+                 */
+                runInitiator(false, sorobanCahootsService, account, paymentCodeCounterparty);
               }
             });
     threadInitiator.start();
@@ -102,19 +79,11 @@ public class SorobanServiceTest extends AbstractTest {
                     new SorobanCahootsService(
                         bip47Util, PROVIDER_JAVA, cahootsWalletCounterparty, httpClient);
 
-                try {
-                  // run soroban as counterparty
-                  CahootsContext cahootsContext = CahootsContext.newCounterpartyStonewallx2();
-                  SorobanMessage lastMessage =
-                      sorobanCahootsService
-                          .contributor(account, cahootsContext, paymentCodeInitiator, TIMEOUT_MS)
-                          .blockingLast();
-                  verify(
-                      "{\"cahoots\":\"{\\\"cahoots\\\":{\\\"fingerprint_collab\\\":\\\"f0d70870\\\",\\\"psbt\\\":\\\"\\\",\\\"cpty_account\\\":0,\\\"spend_amount\\\":5,\\\"outpoints\\\":[{\\\"value\\\":10000,\\\"outpoint\\\":\\\"14cf9c6be92efcfe628aabd32b02c85e763615ddd430861bc18f6d366e4c4fd5-1\\\"},{\\\"value\\\":10000,\\\"outpoint\\\":\\\"9407b31fd0159dc4dd3f5377e3b18e4b4aafef2977a52e76b95c3f899cbb05ad-1\\\"}],\\\"type\\\":0,\\\"dest\\\":\\\"tb1q9m8cc0jkjlc9zwvea5a2365u6px3yu646vgez4\\\",\\\"params\\\":\\\"testnet\\\",\\\"version\\\":2,\\\"fee_amount\\\":314,\\\"fingerprint\\\":\\\"eed8a1cd\\\",\\\"step\\\":4,\\\"collabChange\\\":\\\"tb1qv4ak4l0w76qflk4uulavu22kxtaajnltkzxyq5\\\",\\\"id\\\":\\\"testID\\\",\\\"account\\\":0,\\\"ts\\\":123456}}\"}",
-                      lastMessage);
-                } catch (Exception e) {
-                  setException(e);
-                }
+                /** #1 => accept */
+                runContributor(true, sorobanCahootsService, account, paymentCodeInitiator);
+
+                /** #2 => reject */
+                runContributor(false, sorobanCahootsService, account, paymentCodeInitiator);
               }
             });
     threadContributor.start();
@@ -124,7 +93,83 @@ public class SorobanServiceTest extends AbstractTest {
     threadContributor.join();
 
     assertNoException();
-    log.info("*** STONEWALLx2 SUCCESS ***");
+  }
+
+  private void runInitiator(
+      final boolean ACCEPT,
+      SorobanCahootsService sorobanCahootsService,
+      int account,
+      PaymentCode paymentCodeCounterparty) {
+    // run soroban as initiator
+    long amount = 5;
+    String address = "tb1q9m8cc0jkjlc9zwvea5a2365u6px3yu646vgez4";
+
+    try {
+      CahootsContext cahootsContext = CahootsContext.newInitiatorStonewallx2(amount, address);
+
+      sorobanCahootsService
+          .getSorobanService()
+          .getOnInteraction()
+          .subscribe(
+              new Consumer<OnlineSorobanInteraction>() {
+                @Override
+                public void accept(OnlineSorobanInteraction interaction) throws Exception {
+                  Assertions.assertEquals(
+                      TypeInteraction.TX_BROADCAST, interaction.getTypeInteraction());
+                  log.info("[INTERACTION] ==> TX_BROADCAST");
+                  if (ACCEPT) {
+                    interaction.sorobanAccept();
+                  } else {
+                    interaction.sorobanReject("TEST_REJECT");
+                  }
+                }
+              });
+      SorobanMessage lastMessage =
+          sorobanCahootsService
+              .initiator(account, cahootsContext, paymentCodeCounterparty, TIMEOUT_MS)
+              .blockingLast();
+      if (ACCEPT) {
+        verify(
+            "{\"cahoots\":\"{\\\"cahoots\\\":{\\\"fingerprint_collab\\\":\\\"f0d70870\\\",\\\"psbt\\\":\\\"\\\",\\\"cpty_account\\\":0,\\\"spend_amount\\\":5,\\\"outpoints\\\":[{\\\"value\\\":10000,\\\"outpoint\\\":\\\"14cf9c6be92efcfe628aabd32b02c85e763615ddd430861bc18f6d366e4c4fd5-1\\\"},{\\\"value\\\":10000,\\\"outpoint\\\":\\\"9407b31fd0159dc4dd3f5377e3b18e4b4aafef2977a52e76b95c3f899cbb05ad-1\\\"}],\\\"type\\\":0,\\\"dest\\\":\\\"tb1q9m8cc0jkjlc9zwvea5a2365u6px3yu646vgez4\\\",\\\"params\\\":\\\"testnet\\\",\\\"version\\\":2,\\\"fee_amount\\\":314,\\\"fingerprint\\\":\\\"eed8a1cd\\\",\\\"step\\\":4,\\\"collabChange\\\":\\\"tb1qv4ak4l0w76qflk4uulavu22kxtaajnltkzxyq5\\\",\\\"id\\\":\\\"testID\\\",\\\"account\\\":0,\\\"ts\\\":123456}}\"}",
+            lastMessage);
+      } else {
+        Assertions.assertTrue(false);
+      }
+    } catch (Exception e) {
+      if (ACCEPT) {
+        setException(e);
+      } else {
+        Assertions.assertTrue(e.getMessage().contains("TEST_REJECT"));
+      }
+    }
+  }
+
+  private void runContributor(
+      boolean ACCEPT,
+      SorobanCahootsService sorobanCahootsService,
+      int account,
+      PaymentCode paymentCodeInitiator) {
+    try {
+      // run soroban as counterparty
+      CahootsContext cahootsContext = CahootsContext.newCounterpartyStonewallx2();
+      SorobanMessage lastMessage =
+          sorobanCahootsService
+              .contributor(account, cahootsContext, paymentCodeInitiator, TIMEOUT_MS)
+              .blockingLast();
+      if (ACCEPT) {
+        verify(
+            "{\"cahoots\":\"{\\\"cahoots\\\":{\\\"fingerprint_collab\\\":\\\"f0d70870\\\",\\\"psbt\\\":\\\"\\\",\\\"cpty_account\\\":0,\\\"spend_amount\\\":5,\\\"outpoints\\\":[{\\\"value\\\":10000,\\\"outpoint\\\":\\\"14cf9c6be92efcfe628aabd32b02c85e763615ddd430861bc18f6d366e4c4fd5-1\\\"},{\\\"value\\\":10000,\\\"outpoint\\\":\\\"9407b31fd0159dc4dd3f5377e3b18e4b4aafef2977a52e76b95c3f899cbb05ad-1\\\"}],\\\"type\\\":0,\\\"dest\\\":\\\"tb1q9m8cc0jkjlc9zwvea5a2365u6px3yu646vgez4\\\",\\\"params\\\":\\\"testnet\\\",\\\"version\\\":2,\\\"fee_amount\\\":314,\\\"fingerprint\\\":\\\"eed8a1cd\\\",\\\"step\\\":4,\\\"collabChange\\\":\\\"tb1qv4ak4l0w76qflk4uulavu22kxtaajnltkzxyq5\\\",\\\"id\\\":\\\"testID\\\",\\\"account\\\":0,\\\"ts\\\":123456}}\"}",
+            lastMessage);
+      } else {
+        Assertions.assertTrue(false);
+      }
+    } catch (Exception e) {
+      if (ACCEPT) {
+        setException(e);
+      } else {
+        Assertions.assertTrue(e.getMessage().contains("TEST_REJECT"));
+      }
+    }
   }
 
   private TestCahootsWallet computeCahootsWallet(String seedWords, String passphrase)

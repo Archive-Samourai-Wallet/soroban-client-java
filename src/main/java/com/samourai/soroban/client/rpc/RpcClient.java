@@ -1,7 +1,7 @@
 package com.samourai.soroban.client.rpc;
 
 import com.samourai.http.client.IHttpClient;
-import com.samourai.wallet.soroban.client.SorobanServer;
+import com.samourai.soroban.client.SorobanServer;
 import com.samourai.wallet.util.FormatsUtilGeneric;
 import io.reactivex.Observable;
 import io.reactivex.functions.Function;

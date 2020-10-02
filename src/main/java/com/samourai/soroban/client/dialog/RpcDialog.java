@@ -1,10 +1,10 @@
 package com.samourai.soroban.client.dialog;
 
 import com.google.common.base.Charsets;
+import com.samourai.soroban.client.SorobanMessage;
 import com.samourai.soroban.client.meeting.SorobanMessageWithSender;
 import com.samourai.soroban.client.rpc.RpcClient;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
-import com.samourai.wallet.soroban.client.SorobanMessage;
 import com.samourai.wallet.util.Z85;
 import io.reactivex.Observable;
 import io.reactivex.functions.Function;

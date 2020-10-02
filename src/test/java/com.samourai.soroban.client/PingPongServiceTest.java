@@ -6,7 +6,6 @@ import com.samourai.soroban.client.pingPong.PingPongMessage;
 import com.samourai.soroban.client.pingPong.PingPongService;
 import com.samourai.wallet.bip47.rpc.BIP47Wallet;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
-import com.samourai.wallet.soroban.client.SorobanMessage;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;

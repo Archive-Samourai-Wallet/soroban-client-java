@@ -1,7 +1,7 @@
 package com.samourai.soroban.client.pingPong;
 
-import com.samourai.wallet.soroban.client.SorobanContext;
-import com.samourai.wallet.soroban.client.SorobanMessageService;
+import com.samourai.soroban.client.SorobanContext;
+import com.samourai.soroban.client.SorobanMessageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
