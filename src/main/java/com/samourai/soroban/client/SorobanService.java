@@ -1,6 +1,5 @@
 package com.samourai.soroban.client;
 
-import com.samourai.http.client.IHttpClient;
 import com.samourai.soroban.cahoots.CahootsContext;
 import com.samourai.soroban.cahoots.TxBroadcastInteraction;
 import com.samourai.soroban.client.dialog.RpcDialog;
@@ -37,9 +36,9 @@ public class SorobanService {
       NetworkParameters params,
       String provider,
       BIP47Wallet bip47w,
-      IHttpClient httpClient) {
+      RpcClient rpcClient) {
     this.params = params;
-    this.rpc = new RpcClient(httpClient, params);
+    this.rpc = rpcClient;
     this.user = new User(bip47Util, bip47w, params, provider);
     this.interactiveMessageProvider = null;
     this.onInteraction = BehaviorSubject.create();

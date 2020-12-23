@@ -5,6 +5,7 @@ import com.samourai.http.client.JavaHttpClient;
 import com.samourai.soroban.client.meeting.SorobanMeetingService;
 import com.samourai.soroban.client.meeting.SorobanRequestMessage;
 import com.samourai.soroban.client.meeting.SorobanResponseMessage;
+import com.samourai.soroban.client.rpc.RpcClient;
 import com.samourai.wallet.bip47.rpc.BIP47Wallet;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.cahoots.CahootsType;
@@ -37,9 +38,10 @@ public class SorobanMeetingServiceTest extends AbstractTest {
               public void run() {
                 // instanciate services
                 IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
+                RpcClient rpcClient = new RpcClient(httpClient, params);
                 final SorobanMeetingService sorobanMeetingService =
                     new SorobanMeetingService(
-                        bip47Util, params, PROVIDER_JAVA, bip47walletInitiator, httpClient);
+                        bip47Util, params, PROVIDER_JAVA, bip47walletInitiator, rpcClient);
 
                 try {
                   // request soroban meeeting
@@ -67,9 +69,10 @@ public class SorobanMeetingServiceTest extends AbstractTest {
               public void run() {
                 // instanciate services
                 IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
+                RpcClient rpcClient = new RpcClient(httpClient, params);
                 SorobanMeetingService sorobanMeetingService =
                     new SorobanMeetingService(
-                        bip47Util, params, PROVIDER_JAVA, bip47walletCounterparty, httpClient);
+                        bip47Util, params, PROVIDER_JAVA, bip47walletCounterparty, rpcClient);
 
                 try {
                   // listen for Soroban requests

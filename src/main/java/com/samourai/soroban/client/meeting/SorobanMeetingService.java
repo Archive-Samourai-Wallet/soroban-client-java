@@ -1,6 +1,5 @@
 package com.samourai.soroban.client.meeting;
 
-import com.samourai.http.client.IHttpClient;
 import com.samourai.soroban.client.dialog.RpcDialog;
 import com.samourai.soroban.client.dialog.User;
 import com.samourai.soroban.client.rpc.RpcClient;
@@ -27,10 +26,10 @@ public class SorobanMeetingService {
       NetworkParameters params,
       String provider,
       BIP47Wallet bip47w,
-      IHttpClient httpClient) {
+      RpcClient rpcClient) {
     this.bip47Util = bip47Util;
     this.bip47w = bip47w;
-    this.rpc = new RpcClient(httpClient, params);
+    this.rpc = rpcClient;
     this.user = new User(bip47Util, bip47w, params, provider);
   }
 

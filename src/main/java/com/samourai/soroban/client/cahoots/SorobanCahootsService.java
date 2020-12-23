@@ -1,12 +1,12 @@
 package com.samourai.soroban.client.cahoots;
 
-import com.samourai.http.client.IHttpClient;
 import com.samourai.soroban.cahoots.CahootsContext;
 import com.samourai.soroban.client.SorobanMessage;
 import com.samourai.soroban.client.SorobanService;
 import com.samourai.soroban.client.meeting.SorobanMeetingService;
 import com.samourai.soroban.client.meeting.SorobanRequestMessage;
 import com.samourai.soroban.client.meeting.SorobanResponseMessage;
+import com.samourai.soroban.client.rpc.RpcClient;
 import com.samourai.wallet.bip47.BIP47UtilGeneric;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.cahoots.CahootsType;
@@ -35,7 +35,7 @@ public class SorobanCahootsService {
       BIP47UtilGeneric bip47Util,
       String provider,
       CahootsWallet cahootsWallet,
-      IHttpClient httpClient) {
+      RpcClient rpcClient) {
     this(
         new OnlineCahootsService(cahootsWallet),
         new SorobanService(
@@ -43,13 +43,13 @@ public class SorobanCahootsService {
             cahootsWallet.getParams(),
             provider,
             cahootsWallet.getBip47Wallet(),
-            httpClient),
+            rpcClient),
         new SorobanMeetingService(
             bip47Util,
             cahootsWallet.getParams(),
             provider,
             cahootsWallet.getBip47Wallet(),
-            httpClient));
+            rpcClient));
   }
 
   protected void checkTor() throws Exception {

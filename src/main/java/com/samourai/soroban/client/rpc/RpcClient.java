@@ -26,20 +26,14 @@ public class RpcClient {
   private IHttpClient httpclient;
   private String url;
 
-  public RpcClient(IHttpClient httpClient, String url) {
+  public RpcClient(IHttpClient httpClient, String serverUrl) {
     this.httpclient = httpClient;
-    this.url = url;
+    this.url = serverUrl + ENDPOINT_RPC;
   }
 
   public RpcClient(IHttpClient httpClient, NetworkParameters params) {
-    this(httpClient, computeServerUrl(params));
-  }
-
-  private static final String computeServerUrl(NetworkParameters params) {
-    String url =
-        SorobanServer.get(FormatsUtilGeneric.getInstance().isTestNet(params)).getUrl()
-            + ENDPOINT_RPC;
-    return url;
+    this(
+        httpClient, SorobanServer.get(FormatsUtilGeneric.getInstance().isTestNet(params)).getUrl());
   }
 
   private Observable<Map<String, Object>> call(String method, HashMap<String, Object> params)

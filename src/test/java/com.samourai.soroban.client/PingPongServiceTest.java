@@ -4,6 +4,7 @@ import com.samourai.http.client.IHttpClient;
 import com.samourai.http.client.JavaHttpClient;
 import com.samourai.soroban.client.pingPong.PingPongMessage;
 import com.samourai.soroban.client.pingPong.PingPongService;
+import com.samourai.soroban.client.rpc.RpcClient;
 import com.samourai.wallet.bip47.rpc.BIP47Wallet;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import org.junit.jupiter.api.Assertions;
@@ -50,9 +51,10 @@ public class PingPongServiceTest extends AbstractTest {
                 // instanciate services
                 PingPongService pingPongService = new PingPongService(ITERATIONS);
                 IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
+                RpcClient rpcClient = new RpcClient(httpClient, params);
                 SorobanService sorobanService =
                     new SorobanService(
-                        bip47Util, params, PROVIDER_JAVA, bip47walletInitiator, httpClient);
+                        bip47Util, params, PROVIDER_JAVA, bip47walletInitiator, rpcClient);
                 try {
                   // run soroban as initiator
                   boolean last = ITERATIONS == 1;
@@ -84,9 +86,10 @@ public class PingPongServiceTest extends AbstractTest {
                 // instanciate services
                 PingPongService pingPongService = new PingPongService(ITERATIONS);
                 IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
+                RpcClient rpcClient = new RpcClient(httpClient, params);
                 SorobanService sorobanService =
                     new SorobanService(
-                        bip47Util, params, PROVIDER_JAVA, bip47walletCounterparty, httpClient);
+                        bip47Util, params, PROVIDER_JAVA, bip47walletCounterparty, rpcClient);
                 try {
                   // run soroban as contributor
                   SorobanMessage lastMessage =

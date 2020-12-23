@@ -5,6 +5,7 @@ import com.samourai.http.client.JavaHttpClient;
 import com.samourai.soroban.cahoots.CahootsContext;
 import com.samourai.soroban.cahoots.TypeInteraction;
 import com.samourai.soroban.client.cahoots.SorobanCahootsService;
+import com.samourai.soroban.client.rpc.RpcClient;
 import com.samourai.wallet.bip47.rpc.BIP47Wallet;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.cahoots.TestCahootsWallet;
@@ -50,9 +51,10 @@ public class SorobanServiceTest extends AbstractTest {
               public void run() {
                 // instanciate services
                 IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
+                RpcClient rpcClient = new RpcClient(httpClient, params);
                 final SorobanCahootsService sorobanCahootsService =
                     new SorobanCahootsService(
-                        bip47Util, PROVIDER_JAVA, cahootsWalletInitiator, httpClient);
+                        bip47Util, PROVIDER_JAVA, cahootsWalletInitiator, rpcClient);
 
                 /*
                  * #1 => accept
@@ -75,9 +77,10 @@ public class SorobanServiceTest extends AbstractTest {
               public void run() {
                 // instanciate services
                 IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
+                RpcClient rpcClient = new RpcClient(httpClient, params);
                 SorobanCahootsService sorobanCahootsService =
                     new SorobanCahootsService(
-                        bip47Util, PROVIDER_JAVA, cahootsWalletCounterparty, httpClient);
+                        bip47Util, PROVIDER_JAVA, cahootsWalletCounterparty, rpcClient);
 
                 /** #1 => accept */
                 runContributor(true, sorobanCahootsService, account, paymentCodeInitiator);
