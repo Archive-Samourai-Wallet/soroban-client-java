@@ -12,6 +12,7 @@ import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.cahoots.CahootsType;
 import com.samourai.wallet.cahoots.CahootsWallet;
 import io.reactivex.Observable;
+import java.security.Provider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,7 +34,7 @@ public class SorobanCahootsService {
 
   public SorobanCahootsService(
       BIP47UtilGeneric bip47Util,
-      String provider,
+      Provider provider,
       CahootsWallet cahootsWallet,
       RpcClient rpcClient) {
     this(

@@ -5,6 +5,7 @@ import com.samourai.wallet.bip47.rpc.BIP47Wallet;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.crypto.CryptoUtil;
 import com.samourai.wallet.crypto.impl.ECDHKeySet;
+import java.security.Provider;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.slf4j.Logger;
@@ -22,7 +23,7 @@ public class PaynymEncrypter implements Encrypter {
       PaymentCode paymentCodePartner,
       BIP47UtilGeneric bip47Util,
       NetworkParameters params,
-      String provider) {
+      Provider provider) {
     this.myKey = bip47Util.getNotificationAddress(bip47Wallet).getECKey();
     this.partnerKey = paymentCodePartner.notificationAddress(params).getECKey();
     this.cryptoUtil = CryptoUtil.getInstance(provider);

@@ -51,7 +51,7 @@ public class PingPongServiceTest extends AbstractTest {
                 // instanciate services
                 PingPongService pingPongService = new PingPongService(ITERATIONS);
                 IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
-                RpcClient rpcClient = new RpcClient(httpClient, params);
+                RpcClient rpcClient = new RpcClient(httpClient, false, params);
                 SorobanService sorobanService =
                     new SorobanService(
                         bip47Util, params, PROVIDER_JAVA, bip47walletInitiator, rpcClient);
@@ -86,7 +86,7 @@ public class PingPongServiceTest extends AbstractTest {
                 // instanciate services
                 PingPongService pingPongService = new PingPongService(ITERATIONS);
                 IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
-                RpcClient rpcClient = new RpcClient(httpClient, params);
+                RpcClient rpcClient = new RpcClient(httpClient, false, params);
                 SorobanService sorobanService =
                     new SorobanService(
                         bip47Util, params, PROVIDER_JAVA, bip47walletCounterparty, rpcClient);

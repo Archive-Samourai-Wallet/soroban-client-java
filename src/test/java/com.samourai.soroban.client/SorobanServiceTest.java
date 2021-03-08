@@ -51,7 +51,7 @@ public class SorobanServiceTest extends AbstractTest {
               public void run() {
                 // instanciate services
                 IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
-                RpcClient rpcClient = new RpcClient(httpClient, params);
+                RpcClient rpcClient = new RpcClient(httpClient, false, params);
                 final SorobanCahootsService sorobanCahootsService =
                     new SorobanCahootsService(
                         bip47Util, PROVIDER_JAVA, cahootsWalletInitiator, rpcClient);
@@ -77,7 +77,7 @@ public class SorobanServiceTest extends AbstractTest {
               public void run() {
                 // instanciate services
                 IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
-                RpcClient rpcClient = new RpcClient(httpClient, params);
+                RpcClient rpcClient = new RpcClient(httpClient, false, params);
                 SorobanCahootsService sorobanCahootsService =
                     new SorobanCahootsService(
                         bip47Util, PROVIDER_JAVA, cahootsWalletCounterparty, rpcClient);

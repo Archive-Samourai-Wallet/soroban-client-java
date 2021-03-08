@@ -2,7 +2,6 @@ package com.samourai.soroban.client.rpc;
 
 import com.samourai.http.client.IHttpClient;
 import com.samourai.soroban.client.SorobanServer;
-import com.samourai.wallet.util.FormatsUtilGeneric;
 import io.reactivex.Observable;
 import io.reactivex.functions.Function;
 import java.io.IOException;
@@ -26,14 +25,13 @@ public class RpcClient {
   private IHttpClient httpclient;
   private String url;
 
+  public RpcClient(IHttpClient httpClient, boolean onion, NetworkParameters params) {
+    this(httpClient, SorobanServer.get(params).getServerUrl(onion));
+  }
+
   public RpcClient(IHttpClient httpClient, String serverUrl) {
     this.httpclient = httpClient;
     this.url = serverUrl + ENDPOINT_RPC;
-  }
-
-  public RpcClient(IHttpClient httpClient, NetworkParameters params) {
-    this(
-        httpClient, SorobanServer.get(FormatsUtilGeneric.getInstance().isTestNet(params)).getUrl());
   }
 
   private Observable<Map<String, Object>> call(String method, HashMap<String, Object> params)

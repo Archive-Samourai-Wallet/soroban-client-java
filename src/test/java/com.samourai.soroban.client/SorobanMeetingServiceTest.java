@@ -38,7 +38,7 @@ public class SorobanMeetingServiceTest extends AbstractTest {
               public void run() {
                 // instanciate services
                 IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
-                RpcClient rpcClient = new RpcClient(httpClient, params);
+                RpcClient rpcClient = new RpcClient(httpClient, false, params);
                 final SorobanMeetingService sorobanMeetingService =
                     new SorobanMeetingService(
                         bip47Util, params, PROVIDER_JAVA, bip47walletInitiator, rpcClient);
@@ -69,7 +69,7 @@ public class SorobanMeetingServiceTest extends AbstractTest {
               public void run() {
                 // instanciate services
                 IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
-                RpcClient rpcClient = new RpcClient(httpClient, params);
+                RpcClient rpcClient = new RpcClient(httpClient, false, params);
                 SorobanMeetingService sorobanMeetingService =
                     new SorobanMeetingService(
                         bip47Util, params, PROVIDER_JAVA, bip47walletCounterparty, rpcClient);

@@ -9,6 +9,7 @@ import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.cahoots.CahootsType;
 import io.reactivex.Observable;
 import io.reactivex.functions.Function;
+import java.security.Provider;
 import org.bitcoinj.core.NetworkParameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,7 +25,7 @@ public class SorobanMeetingService {
   public SorobanMeetingService(
       BIP47UtilGeneric bip47Util,
       NetworkParameters params,
-      String provider,
+      Provider provider,
       BIP47Wallet bip47w,
       RpcClient rpcClient) {
     this.bip47Util = bip47Util;

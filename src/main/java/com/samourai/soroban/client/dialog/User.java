@@ -4,19 +4,20 @@ import com.samourai.wallet.bip47.BIP47UtilGeneric;
 import com.samourai.wallet.bip47.rpc.BIP47Wallet;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.segwit.SegwitAddress;
+import java.security.Provider;
 import org.bitcoinj.core.NetworkParameters;
 
 public class User {
   private BIP47UtilGeneric bip47Util;
   private BIP47Wallet bip47Wallet;
   private NetworkParameters params;
-  private String provider;
+  private Provider provider;
 
   public User(
       BIP47UtilGeneric bip47Util,
       BIP47Wallet bip47Wallet,
       NetworkParameters params,
-      String provider) {
+      Provider provider) {
     this.bip47Util = bip47Util;
     this.bip47Wallet = bip47Wallet;
     this.params = params;

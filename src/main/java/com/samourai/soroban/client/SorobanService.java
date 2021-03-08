@@ -15,6 +15,7 @@ import io.reactivex.functions.Function;
 import io.reactivex.functions.Predicate;
 import io.reactivex.subjects.BehaviorSubject;
 import io.reactivex.subjects.Subject;
+import java.security.Provider;
 import org.bitcoinj.core.NetworkParameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,7 +35,7 @@ public class SorobanService {
   public SorobanService(
       BIP47UtilGeneric bip47Util,
       NetworkParameters params,
-      String provider,
+      Provider provider,
       BIP47Wallet bip47w,
       RpcClient rpcClient) {
     this.params = params;

@@ -7,8 +7,10 @@ import com.samourai.wallet.bip47.rpc.java.Bip47UtilJava;
 import com.samourai.wallet.cahoots.CahootsTestUtil;
 import com.samourai.wallet.hd.HD_Wallet;
 import com.samourai.wallet.hd.java.HD_WalletFactoryJava;
+import java.security.Provider;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.params.TestNet3Params;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,7 +18,7 @@ import org.slf4j.LoggerFactory;
 public abstract class AbstractTest {
   private static final Logger log = LoggerFactory.getLogger(AbstractTest.class);
   protected static final int TIMEOUT_MS = 20000;
-  protected static final String PROVIDER_JAVA = "BC";
+  protected static final Provider PROVIDER_JAVA = new BouncyCastleProvider();
 
   protected static final NetworkParameters params = TestNet3Params.get();
   protected static final Bip47UtilJava bip47Util = Bip47UtilJava.getInstance();
