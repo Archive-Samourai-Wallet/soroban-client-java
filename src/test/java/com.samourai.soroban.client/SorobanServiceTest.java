@@ -10,7 +10,6 @@ import com.samourai.wallet.bip47.rpc.BIP47Wallet;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.cahoots.TestCahootsWallet;
 import com.samourai.wallet.hd.HD_Wallet;
-import com.samourai.wallet.segwit.BIP84Wallet;
 import io.reactivex.functions.Consumer;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -179,7 +178,6 @@ public class SorobanServiceTest extends AbstractTest {
       throws Exception {
     byte[] seed = hdWalletFactory.computeSeedFromWords(seedWords);
     HD_Wallet bip84w = hdWalletFactory.getBIP84(seed, passphrase, params);
-    BIP84Wallet bip84Wallet = new BIP84Wallet(bip84w, params);
-    return new TestCahootsWallet(bip84Wallet, params);
+    return new TestCahootsWallet(bip84w, params);
   }
 }
