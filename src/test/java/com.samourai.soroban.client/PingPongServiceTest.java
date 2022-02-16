@@ -45,34 +45,26 @@ public class PingPongServiceTest extends AbstractTest {
     // run initiator
     Thread threadInitiator =
         new Thread(
-            new Runnable() {
-              @Override
-              public void run() {
-                // instanciate services
-                PingPongService pingPongService = new PingPongService(ITERATIONS);
-                IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
-                RpcClient rpcClient = new RpcClient(httpClient, false, params);
-                SorobanService sorobanService =
-                    new SorobanService(
-                        bip47Util, params, PROVIDER_JAVA, bip47walletInitiator, rpcClient);
-                try {
-                  // run soroban as initiator
-                  boolean last = ITERATIONS == 1;
-                  PingPongMessage message = new PingPongMessage(PingPongMessage.VALUES.PING, last);
-                  SorobanMessage lastMessage =
-                      sorobanService
-                          .initiator(
-                              0,
-                              null,
-                              pingPongService,
-                              paymentCodeCounterparty,
-                              TIMEOUT_MS,
-                              message)
-                          .blockingLast();
-                  Assertions.assertEquals(lastPayload, lastMessage.toPayload());
-                } catch (Exception e) {
-                  setException(e);
-                }
+            () -> {
+              // instanciate services
+              PingPongService pingPongService = new PingPongService(ITERATIONS);
+              IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
+              RpcClient rpcClient = new RpcClient(httpClient, false, params);
+              SorobanService sorobanService =
+                  new SorobanService(
+                      bip47Util, params, PROVIDER_JAVA, bip47walletInitiator, rpcClient);
+              try {
+                // run soroban as initiator
+                boolean last = ITERATIONS == 1;
+                PingPongMessage message = new PingPongMessage(PingPongMessage.VALUES.PING, last);
+                SorobanMessage lastMessage =
+                    sorobanService
+                        .initiator(
+                            0, null, pingPongService, paymentCodeCounterparty, TIMEOUT_MS, message)
+                        .blockingLast();
+                Assertions.assertEquals(lastPayload, lastMessage.toPayload());
+              } catch (Exception e) {
+                setException(e);
               }
             });
     threadInitiator.start();
@@ -80,26 +72,23 @@ public class PingPongServiceTest extends AbstractTest {
     // run contributor
     Thread threadContributor =
         new Thread(
-            new Runnable() {
-              @Override
-              public void run() {
-                // instanciate services
-                PingPongService pingPongService = new PingPongService(ITERATIONS);
-                IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
-                RpcClient rpcClient = new RpcClient(httpClient, false, params);
-                SorobanService sorobanService =
-                    new SorobanService(
-                        bip47Util, params, PROVIDER_JAVA, bip47walletCounterparty, rpcClient);
-                try {
-                  // run soroban as contributor
-                  SorobanMessage lastMessage =
-                      sorobanService
-                          .contributor(0, null, pingPongService, paymentCodeInitiator, TIMEOUT_MS)
-                          .blockingLast();
-                  Assertions.assertEquals(lastPayload, lastMessage.toPayload());
-                } catch (Exception e) {
-                  setException(e);
-                }
+            () -> {
+              // instanciate services
+              PingPongService pingPongService = new PingPongService(ITERATIONS);
+              IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
+              RpcClient rpcClient = new RpcClient(httpClient, false, params);
+              SorobanService sorobanService =
+                  new SorobanService(
+                      bip47Util, params, PROVIDER_JAVA, bip47walletCounterparty, rpcClient);
+              try {
+                // run soroban as contributor
+                SorobanMessage lastMessage =
+                    sorobanService
+                        .contributor(0, null, pingPongService, paymentCodeInitiator, TIMEOUT_MS)
+                        .blockingLast();
+                Assertions.assertEquals(lastPayload, lastMessage.toPayload());
+              } catch (Exception e) {
+                setException(e);
               }
             });
     threadContributor.start();

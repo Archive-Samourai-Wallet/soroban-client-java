@@ -33,30 +33,27 @@ public class SorobanMeetingServiceTest extends AbstractTest {
     // run initiator
     Thread threadInitiator =
         new Thread(
-            new Runnable() {
-              @Override
-              public void run() {
-                // instanciate services
-                IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
-                RpcClient rpcClient = new RpcClient(httpClient, false, params);
-                final SorobanMeetingService sorobanMeetingService =
-                    new SorobanMeetingService(
-                        bip47Util, params, PROVIDER_JAVA, bip47walletInitiator, rpcClient);
+            () -> {
+              // instanciate services
+              IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
+              RpcClient rpcClient = new RpcClient(httpClient, false, params);
+              final SorobanMeetingService sorobanMeetingService =
+                  new SorobanMeetingService(
+                      bip47Util, params, PROVIDER_JAVA, bip47walletInitiator, rpcClient);
 
-                try {
-                  // request soroban meeeting
-                  SorobanRequestMessage request =
-                      sorobanMeetingService
-                          .sendMeetingRequest(paymentCodeCounterparty, CahootsType.STONEWALLX2)
-                          .blockingSingle();
-                  SorobanResponseMessage response =
-                      sorobanMeetingService
-                          .receiveMeetingResponse(paymentCodeCounterparty, request, TIMEOUT_MS)
-                          .blockingSingle();
-                  Assertions.assertTrue(response.isAccept());
-                } catch (Exception e) {
-                  setException(e);
-                }
+              try {
+                // request soroban meeeting
+                SorobanRequestMessage request =
+                    sorobanMeetingService
+                        .sendMeetingRequest(paymentCodeCounterparty, CahootsType.STONEWALLX2)
+                        .blockingSingle();
+                SorobanResponseMessage response =
+                    sorobanMeetingService
+                        .receiveMeetingResponse(paymentCodeCounterparty, request, TIMEOUT_MS)
+                        .blockingSingle();
+                Assertions.assertTrue(response.isAccept());
+              } catch (Exception e) {
+                setException(e);
               }
             });
     threadInitiator.start();
@@ -64,31 +61,28 @@ public class SorobanMeetingServiceTest extends AbstractTest {
     // run contributor
     Thread threadContributor =
         new Thread(
-            new Runnable() {
-              @Override
-              public void run() {
-                // instanciate services
-                IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
-                RpcClient rpcClient = new RpcClient(httpClient, false, params);
-                SorobanMeetingService sorobanMeetingService =
-                    new SorobanMeetingService(
-                        bip47Util, params, PROVIDER_JAVA, bip47walletCounterparty, rpcClient);
+            () -> {
+              // instanciate services
+              IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
+              RpcClient rpcClient = new RpcClient(httpClient, false, params);
+              SorobanMeetingService sorobanMeetingService =
+                  new SorobanMeetingService(
+                      bip47Util, params, PROVIDER_JAVA, bip47walletCounterparty, rpcClient);
 
-                try {
-                  // listen for Soroban requests
-                  SorobanRequestMessage requestMessage =
-                      sorobanMeetingService.receiveMeetingRequest(TIMEOUT_MS).blockingSingle();
-                  Assertions.assertEquals(CahootsType.STONEWALLX2, requestMessage.getType());
-                  Assertions.assertEquals(
-                      paymentCodeInitiator.toString(), requestMessage.getSender());
+              try {
+                // listen for Soroban requests
+                SorobanRequestMessage requestMessage =
+                    sorobanMeetingService.receiveMeetingRequest(TIMEOUT_MS).blockingSingle();
+                Assertions.assertEquals(CahootsType.STONEWALLX2, requestMessage.getType());
+                Assertions.assertEquals(
+                    paymentCodeInitiator.toString(), requestMessage.getSender());
 
-                  // response accept
-                  sorobanMeetingService
-                      .sendMeetingResponse(paymentCodeInitiator, requestMessage, true)
-                      .subscribe();
-                } catch (Exception e) {
-                  setException(e);
-                }
+                // response accept
+                sorobanMeetingService
+                    .sendMeetingResponse(paymentCodeInitiator, requestMessage, true)
+                    .subscribe();
+              } catch (Exception e) {
+                setException(e);
               }
             });
     threadContributor.start();

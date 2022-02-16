@@ -48,13 +48,7 @@ public class SorobanMeetingService {
     }
     return dialog
         .sendWithSender(request, paymentCodeCounterParty)
-        .map(
-            new Function<Object, SorobanRequestMessage>() {
-              @Override
-              public SorobanRequestMessage apply(Object o) throws Exception {
-                return request;
-              }
-            });
+        .map((Function<Object, SorobanRequestMessage>) o -> request);
   }
 
   public Observable<SorobanRequestMessage> receiveMeetingRequest(long timeoutMs) throws Exception {
@@ -65,18 +59,14 @@ public class SorobanMeetingService {
     return dialog
         .receiveWithSender(timeoutMs)
         .map(
-            new Function<SorobanMessageWithSender, SorobanRequestMessage>() {
-              @Override
-              public SorobanRequestMessage apply(SorobanMessageWithSender message)
-                  throws Exception {
-                String sender = message.getSender();
-                SorobanRequestMessage request = SorobanRequestMessage.parse(message.getPayload());
-                request.setSender(sender); // set sender information
-                if (log.isDebugEnabled()) {
-                  log.debug("[contributor] meeting request received: " + request);
-                }
-                return request;
+            message -> {
+              String sender = message.getSender();
+              SorobanRequestMessage request = SorobanRequestMessage.parse(message.getPayload());
+              request.setSender(sender); // set sender information
+              if (log.isDebugEnabled()) {
+                log.debug("[contributor] meeting request received: " + request);
               }
+              return request;
             });
   }
 
@@ -88,15 +78,13 @@ public class SorobanMeetingService {
     return dialog
         .send(response, paymentCodeCounterParty)
         .map(
-            new Function<Object, SorobanResponseMessage>() {
-              @Override
-              public SorobanResponseMessage apply(Object o) throws Exception {
-                if (log.isDebugEnabled()) {
-                  log.debug("[contributor] meeting response sent: " + response);
-                }
-                return response;
-              }
-            });
+            (Function<Object, SorobanResponseMessage>)
+                o -> {
+                  if (log.isDebugEnabled()) {
+                    log.debug("[contributor] meeting response sent: " + response);
+                  }
+                  return response;
+                });
   }
 
   public Observable<SorobanResponseMessage> receiveMeetingResponse(
@@ -107,15 +95,12 @@ public class SorobanMeetingService {
     return dialog
         .receive(paymentCodeCounterParty, timeoutMs)
         .map(
-            new Function<String, SorobanResponseMessage>() {
-              @Override
-              public SorobanResponseMessage apply(String payload) throws Exception {
-                SorobanResponseMessage response = SorobanResponseMessage.parse(payload);
-                if (log.isDebugEnabled()) {
-                  log.debug("[initiator] meeting response received: " + response);
-                }
-                return response;
+            payload -> {
+              SorobanResponseMessage response = SorobanResponseMessage.parse(payload);
+              if (log.isDebugEnabled()) {
+                log.debug("[initiator] meeting response received: " + response);
               }
+              return response;
             });
   }
 }

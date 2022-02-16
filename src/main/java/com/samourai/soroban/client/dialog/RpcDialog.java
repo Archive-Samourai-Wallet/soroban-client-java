@@ -7,7 +7,6 @@ import com.samourai.soroban.client.rpc.RpcClient;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.util.Z85;
 import io.reactivex.Observable;
-import io.reactivex.functions.Function;
 import io.reactivex.subjects.BehaviorSubject;
 import java.security.MessageDigest;
 import org.bouncycastle.util.encoders.Hex;
@@ -41,24 +40,21 @@ public class RpcDialog {
     }
     return doReceive(timeoutMs)
         .map(
-            new Function<String, SorobanMessageWithSender>() {
-              @Override
-              public SorobanMessageWithSender apply(String payloadWithSender) throws Exception {
-                SorobanMessageWithSender messageWithSender =
-                    SorobanMessageWithSender.parse(payloadWithSender);
-                String encryptedPayload = messageWithSender.getPayload();
-                String sender = messageWithSender.getSender();
-                PaymentCode paymentCodePartner = new PaymentCode(sender);
+            payloadWithSender -> {
+              SorobanMessageWithSender messageWithSender =
+                  SorobanMessageWithSender.parse(payloadWithSender);
+              String encryptedPayload = messageWithSender.getPayload();
+              String sender = messageWithSender.getSender();
+              PaymentCode paymentCodePartner = new PaymentCode(sender);
 
-                // decrypt
-                String payload = decrypt(encryptedPayload, paymentCodePartner);
-                if (log.isDebugEnabled()) {
-                  log.debug("(" + nextDirectory + ") <= " + payload);
-                }
-
-                // return clear object
-                return new SorobanMessageWithSender(sender, payload);
+              // decrypt
+              String payload = decrypt(encryptedPayload, paymentCodePartner);
+              if (log.isDebugEnabled()) {
+                log.debug("(" + nextDirectory + ") <= " + payload);
               }
+
+              // return clear object
+              return new SorobanMessageWithSender(sender, payload);
             });
   }
 
@@ -69,22 +65,19 @@ public class RpcDialog {
     }
     return doReceive(timeoutMs)
         .map(
-            new Function<String, String>() {
-              @Override
-              public String apply(String payload) throws Exception {
-                // decrypt
-                String decryptedPayload = decrypt(payload, paymentCodePartner);
-                if (log.isDebugEnabled()) {
-                  log.debug("(" + nextDirectory + ") <= " + payload);
-                }
-
-                // check for error
-                String error = getError(decryptedPayload);
-                if (error != null) {
-                  throw new SorobanException(error);
-                }
-                return decryptedPayload;
+            payload -> {
+              // decrypt
+              String decryptedPayload = decrypt(payload, paymentCodePartner);
+              if (log.isDebugEnabled()) {
+                log.debug("(" + nextDirectory + ") <= " + payload);
               }
+
+              // check for error
+              String error = getError(decryptedPayload);
+              if (error != null) {
+                throw new SorobanException(error);
+              }
+              return decryptedPayload;
             });
   }
 
@@ -97,12 +90,9 @@ public class RpcDialog {
     }
     return rpc.waitAndRemove(nextDirectory, timeoutMs)
         .map(
-            new Function<String, String>() {
-              @Override
-              public String apply(String payload) throws Exception {
-                setNextDirectory(payload);
-                return payload;
-              }
+            payload -> {
+              setNextDirectory(payload);
+              return payload;
             });
   }
 
@@ -142,12 +132,9 @@ public class RpcDialog {
   protected Observable doSend(final String payload) throws Exception {
     return rpc.directoryAdd(nextDirectory, payload, "normal")
         .map(
-            new Function() {
-              @Override
-              public Object apply(Object o) throws Exception {
-                setNextDirectory(payload);
-                return o;
-              }
+            o -> {
+              setNextDirectory(payload);
+              return o;
             });
   }
 

@@ -45,48 +45,42 @@ public class SorobanServiceTest extends AbstractTest {
     // run initiator
     Thread threadInitiator =
         new Thread(
-            new Runnable() {
-              @Override
-              public void run() {
-                // instanciate services
-                IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
-                RpcClient rpcClient = new RpcClient(httpClient, false, params);
-                final SorobanCahootsService sorobanCahootsService =
-                    new SorobanCahootsService(
-                        bip47Util, PROVIDER_JAVA, cahootsWalletInitiator, rpcClient);
+            () -> {
+              // instanciate services
+              IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
+              RpcClient rpcClient = new RpcClient(httpClient, false, params);
+              final SorobanCahootsService sorobanCahootsService =
+                  new SorobanCahootsService(
+                      bip47Util, PROVIDER_JAVA, cahootsWalletInitiator, rpcClient);
 
-                /*
-                 * #1 => accept
-                 */
-                runInitiator(true, sorobanCahootsService, account, paymentCodeCounterparty);
+              /*
+               * #1 => accept
+               */
+              runInitiator(true, sorobanCahootsService, account, paymentCodeCounterparty);
 
-                /*
-                 * #2 => reject
-                 */
-                runInitiator(false, sorobanCahootsService, account, paymentCodeCounterparty);
-              }
+              /*
+               * #2 => reject
+               */
+              runInitiator(false, sorobanCahootsService, account, paymentCodeCounterparty);
             });
     threadInitiator.start();
 
     // run contributor
     Thread threadContributor =
         new Thread(
-            new Runnable() {
-              @Override
-              public void run() {
-                // instanciate services
-                IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
-                RpcClient rpcClient = new RpcClient(httpClient, false, params);
-                SorobanCahootsService sorobanCahootsService =
-                    new SorobanCahootsService(
-                        bip47Util, PROVIDER_JAVA, cahootsWalletCounterparty, rpcClient);
+            () -> {
+              // instanciate services
+              IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
+              RpcClient rpcClient = new RpcClient(httpClient, false, params);
+              SorobanCahootsService sorobanCahootsService =
+                  new SorobanCahootsService(
+                      bip47Util, PROVIDER_JAVA, cahootsWalletCounterparty, rpcClient);
 
-                /** #1 => accept */
-                runContributor(true, sorobanCahootsService, account, paymentCodeInitiator);
+              /** #1 => accept */
+              runContributor(true, sorobanCahootsService, account, paymentCodeInitiator);
 
-                /** #2 => reject */
-                runContributor(false, sorobanCahootsService, account, paymentCodeInitiator);
-              }
+              /** #2 => reject */
+              runContributor(false, sorobanCahootsService, account, paymentCodeInitiator);
             });
     threadContributor.start();
 

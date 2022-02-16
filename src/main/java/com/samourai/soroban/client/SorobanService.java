@@ -9,9 +9,7 @@ import com.samourai.wallet.bip47.BIP47UtilGeneric;
 import com.samourai.wallet.bip47.rpc.BIP47Wallet;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import io.reactivex.Observable;
-import io.reactivex.functions.Action;
 import io.reactivex.functions.Consumer;
-import io.reactivex.functions.Function;
 import io.reactivex.functions.Predicate;
 import io.reactivex.subjects.BehaviorSubject;
 import io.reactivex.subjects.Subject;
@@ -57,33 +55,30 @@ public class SorobanService {
     final BehaviorSubject<SorobanMessage> onMessage = BehaviorSubject.create();
     Thread t =
         new Thread(
-            new Runnable() {
-              @Override
-              public void run() {
-                RpcDialog dialogOrNull = null;
-                try {
-                  String initialDirectory =
-                      user.getMeeetingAddressSend(paymentCodeCounterParty, params)
-                          .getBech32AsString();
+            () -> {
+              RpcDialog dialogOrNull = null;
+              try {
+                String initialDirectory =
+                    user.getMeeetingAddressSend(paymentCodeCounterParty, params)
+                        .getBech32AsString();
 
-                  dialogOrNull = new RpcDialog(rpc, user, initialDirectory);
-                  final RpcDialog dialog = dialogOrNull;
-                  closeDialogOnError(onMessage, dialog, paymentCodeCounterParty);
-                  dialog(
-                      account,
-                      cahootsContext,
-                      messageService,
-                      dialog,
-                      paymentCodeCounterParty,
-                      timeoutMs,
-                      message,
-                      "INITIATOR",
-                      onMessage);
-                  onMessage.onComplete();
-                } catch (Exception e) {
-                  log.error("INITIATOR => error", e);
-                  fail(e.getMessage(), onMessage, dialogOrNull, paymentCodeCounterParty);
-                }
+                dialogOrNull = new RpcDialog(rpc, user, initialDirectory);
+                final RpcDialog dialog = dialogOrNull;
+                closeDialogOnError(onMessage, dialog, paymentCodeCounterParty);
+                dialog(
+                    account,
+                    cahootsContext,
+                    messageService,
+                    dialog,
+                    paymentCodeCounterParty,
+                    timeoutMs,
+                    message,
+                    "INITIATOR",
+                    onMessage);
+                onMessage.onComplete();
+              } catch (Exception e) {
+                log.error("INITIATOR => error", e);
+                fail(e.getMessage(), onMessage, dialogOrNull, paymentCodeCounterParty);
               }
             });
     t.setName("soroban-initiator");
@@ -102,59 +97,56 @@ public class SorobanService {
     final BehaviorSubject onMessage = BehaviorSubject.create();
     Thread t =
         new Thread(
-            new Runnable() {
-              @Override
-              public void run() {
-                RpcDialog dialogOrNull = null;
-                try {
-                  String initialDirectory =
-                      user.getMeeetingAddressReceive(paymentCodeInitiator, params)
-                          .getBech32AsString();
+            () -> {
+              RpcDialog dialogOrNull = null;
+              try {
+                String initialDirectory =
+                    user.getMeeetingAddressReceive(paymentCodeInitiator, params)
+                        .getBech32AsString();
 
-                  dialogOrNull = new RpcDialog(rpc, user, initialDirectory);
-                  final RpcDialog dialog = dialogOrNull;
-                  closeDialogOnError(onMessage, dialog, paymentCodeInitiator);
+                dialogOrNull = new RpcDialog(rpc, user, initialDirectory);
+                final RpcDialog dialog = dialogOrNull;
+                closeDialogOnError(onMessage, dialog, paymentCodeInitiator);
 
-                  String info = "CONTRIBUTOR";
-                  SorobanMessage message =
-                      receive(messageService, dialog, paymentCodeInitiator, timeoutMs)
-                          .blockingSingle();
-                  onMessage.onNext(message);
-                  if (log.isDebugEnabled()) {
-                    log.debug(info + " #(0) <= " + message.toString());
-                  }
-                  if (message.isDone()) {
-                    if (log.isDebugEnabled()) {
-                      log.debug(info + " #(0) done.");
-                    }
-                    onMessage.onComplete();
-                    return;
-                  }
-
-                  SorobanMessage response =
-                      (SorobanMessage)
-                          safeReply(
-                              messageService,
-                              account,
-                              cahootsContext,
-                              message,
-                              dialog,
-                              paymentCodeInitiator);
-                  dialog(
-                      account,
-                      cahootsContext,
-                      messageService,
-                      dialog,
-                      paymentCodeInitiator,
-                      timeoutMs,
-                      response,
-                      "CONTRIBUTOR",
-                      onMessage);
-                  onMessage.onComplete();
-                } catch (Exception e) {
-                  log.error("CONTRIBUTOR => error ", e);
-                  fail(e.getMessage(), onMessage, dialogOrNull, paymentCodeInitiator);
+                String info = "CONTRIBUTOR";
+                SorobanMessage message =
+                    receive(messageService, dialog, paymentCodeInitiator, timeoutMs)
+                        .blockingSingle();
+                onMessage.onNext(message);
+                if (log.isDebugEnabled()) {
+                  log.debug(info + " #(0) <= " + message.toString());
                 }
+                if (message.isDone()) {
+                  if (log.isDebugEnabled()) {
+                    log.debug(info + " #(0) done.");
+                  }
+                  onMessage.onComplete();
+                  return;
+                }
+
+                SorobanMessage response =
+                    (SorobanMessage)
+                        safeReply(
+                            messageService,
+                            account,
+                            cahootsContext,
+                            message,
+                            dialog,
+                            paymentCodeInitiator);
+                dialog(
+                    account,
+                    cahootsContext,
+                    messageService,
+                    dialog,
+                    paymentCodeInitiator,
+                    timeoutMs,
+                    response,
+                    "CONTRIBUTOR",
+                    onMessage);
+                onMessage.onComplete();
+              } catch (Exception e) {
+                log.error("CONTRIBUTOR => error ", e);
+                fail(e.getMessage(), onMessage, dialogOrNull, paymentCodeInitiator);
               }
             });
     t.setName("soroban-contributor");
@@ -267,12 +259,9 @@ public class SorobanService {
     return dialog
         .receive(paymentCodePartner, timeoutMs)
         .map(
-            new Function<String, SorobanMessage>() {
-              @Override
-              public SorobanMessage apply(String payload) throws Exception {
-                SorobanMessage response = messageService.parse(payload);
-                return response;
-              }
+            payload -> {
+              SorobanMessage response = messageService.parse(payload);
+              return response;
             });
   }
 
@@ -312,13 +301,7 @@ public class SorobanService {
 
   private void closeDialogOnError(
       final Subject onMessage, final RpcDialog dialog, final PaymentCode paymentCodePartner) {
-    onMessage.doOnDispose(
-        new Action() {
-          @Override
-          public void run() throws Exception {
-            fail("Canceled by user", onMessage, dialog, paymentCodePartner);
-          }
-        });
+    onMessage.doOnDispose(() -> fail("Canceled by user", onMessage, dialog, paymentCodePartner));
     onMessage.doOnError(
         new Consumer<Throwable>() {
           @Override
