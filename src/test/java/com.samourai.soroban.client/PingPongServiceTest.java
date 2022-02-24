@@ -52,7 +52,7 @@ public class PingPongServiceTest extends AbstractTest {
               RpcClient rpcClient = new RpcClient(httpClient, false, params);
               SorobanService sorobanService =
                   new SorobanService(
-                      bip47Util, params, PROVIDER_JAVA, bip47walletInitiator, rpcClient);
+                      bip47Util, params, PROVIDER_JAVA, bip47walletInitiator, 0, rpcClient);
               try {
                 // run soroban as initiator
                 boolean last = ITERATIONS == 1;
@@ -79,7 +79,7 @@ public class PingPongServiceTest extends AbstractTest {
               RpcClient rpcClient = new RpcClient(httpClient, false, params);
               SorobanService sorobanService =
                   new SorobanService(
-                      bip47Util, params, PROVIDER_JAVA, bip47walletCounterparty, rpcClient);
+                      bip47Util, params, PROVIDER_JAVA, bip47walletCounterparty, 0, rpcClient);
               try {
                 // run soroban as contributor
                 SorobanMessage lastMessage =
