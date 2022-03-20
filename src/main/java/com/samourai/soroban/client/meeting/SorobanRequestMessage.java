@@ -56,4 +56,9 @@ public class SorobanRequestMessage extends AbstractSorobanMessage {
   public void setSender(String sender) {
     this.sender = sender;
   }
+
+  @Override
+  public String toString() {
+    return "SorobanRequestMessage{" + "type=" + type + ", sender='" + sender + '\'' + '}';
+  }
 }

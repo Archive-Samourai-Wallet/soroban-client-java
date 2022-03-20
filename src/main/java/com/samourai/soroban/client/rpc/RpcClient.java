@@ -18,6 +18,7 @@ public class RpcClient {
 
   private IHttpClient httpclient;
   private String url;
+  private boolean started;
 
   public RpcClient(IHttpClient httpClient, boolean onion, NetworkParameters params) {
     this(httpClient, SorobanServer.get(params).getServerUrl(onion));
@@ -26,6 +27,11 @@ public class RpcClient {
   public RpcClient(IHttpClient httpClient, String serverUrl) {
     this.httpclient = httpClient;
     this.url = serverUrl + ENDPOINT_RPC;
+    this.started = true;
+  }
+
+  public void exit() {
+    this.started = false;
   }
 
   private Observable<Map<String, Object>> call(String method, HashMap<String, Object> params)
@@ -103,7 +109,7 @@ public class RpcClient {
         () -> {
           long timeStart = System.currentTimeMillis();
           long elapsedTime;
-          while (true) {
+          while (started) {
             elapsedTime = System.currentTimeMillis() - timeStart;
 
             try {
@@ -123,6 +129,7 @@ public class RpcClient {
             } catch (InterruptedException e) {
             }
           }
+          return null;
         });
   }
 
@@ -150,6 +157,7 @@ public class RpcClient {
   public Observable<String> waitAndRemove(final String name, final long timeoutMs)
       throws Exception {
     return directoryValueWait(name, timeoutMs)
+        .filter(value -> value != null) // value is null on exit()
         .map(
             value -> {
               directoryRemove(name, value).subscribe();
