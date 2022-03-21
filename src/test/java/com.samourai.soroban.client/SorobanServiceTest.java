@@ -175,6 +175,9 @@ public class SorobanServiceTest extends AbstractTest {
       throws Exception {
     byte[] seed = hdWalletFactory.computeSeedFromWords(seedWords);
     HD_Wallet bip84w = hdWalletFactory.getBIP84(seed, passphrase, params);
-    return new TestCahootsWallet(new WalletSupplierImpl(new MemoryIndexHandlerSupplier(), bip84w), BIP_FORMAT.PROVIDER, params);
+    return new TestCahootsWallet(
+        new WalletSupplierImpl(new MemoryIndexHandlerSupplier(), bip84w),
+        BIP_FORMAT.PROVIDER,
+        params);
   }
 }
