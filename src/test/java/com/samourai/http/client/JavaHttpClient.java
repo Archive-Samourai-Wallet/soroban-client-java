@@ -135,10 +135,4 @@ public class JavaHttpClient extends JacksonHttpClient {
     req.timeout(requestTimeout, TimeUnit.MILLISECONDS);
     return req;
   }
-
-  @Override
-  protected void onRequestError(Exception e) {
-    super.onRequestError(e);
-    restart();
-  }
 }
