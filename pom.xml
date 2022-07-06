@@ -12,7 +12,7 @@
         <dependency>
             <groupId>io.samourai.code.wallet</groupId>
             <artifactId>extlibj</artifactId>
-            <version>af9a20bb</version>
+            <version>9cd584cd</version>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>

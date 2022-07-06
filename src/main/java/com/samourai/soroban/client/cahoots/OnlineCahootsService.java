@@ -6,14 +6,15 @@ import com.samourai.soroban.cahoots.ManualCahootsService;
 import com.samourai.soroban.client.SorobanInteraction;
 import com.samourai.soroban.client.SorobanReply;
 import com.samourai.wallet.cahoots.CahootsWallet;
+import com.samourai.xmanager.client.XManagerClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class OnlineCahootsService extends ManualCahootsService {
   private static final Logger log = LoggerFactory.getLogger(ManualCahootsService.class);
 
-  public OnlineCahootsService(CahootsWallet cahootsWallet) {
-    super(cahootsWallet);
+  public OnlineCahootsService(CahootsWallet cahootsWallet, XManagerClient xManagerClient) {
+    super(cahootsWallet, xManagerClient);
   }
 
   @Override
