@@ -54,7 +54,7 @@ public class SorobanServiceTest extends AbstractTest {
               RpcClient rpcClient = new RpcClient(httpClient, false, params);
               final SorobanCahootsService sorobanCahootsService =
                   new SorobanCahootsService(
-                      bip47Util, PROVIDER_JAVA, cahootsWalletInitiator, rpcClient);
+                      bip47Util, PROVIDER_JAVA, cahootsWalletInitiator, rpcClient, null);
 
               /*
                * #1 => accept
@@ -77,7 +77,7 @@ public class SorobanServiceTest extends AbstractTest {
               RpcClient rpcClient = new RpcClient(httpClient, false, params);
               SorobanCahootsService sorobanCahootsService =
                   new SorobanCahootsService(
-                      bip47Util, PROVIDER_JAVA, cahootsWalletCounterparty, rpcClient);
+                      bip47Util, PROVIDER_JAVA, cahootsWalletCounterparty, rpcClient, null);
 
               /** #1 => accept */
               runContributor(true, sorobanCahootsService, account, paymentCodeInitiator);
