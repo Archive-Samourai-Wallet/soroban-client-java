@@ -16,8 +16,8 @@ public class RpcClient {
   private static final int WAIT_DELAY_MS = 500;
   private static final String ENDPOINT_RPC = "/rpc";
 
-  private IHttpClient httpclient;
-  private String url;
+  private final IHttpClient httpClient;
+  private final String url;
   private boolean started;
 
   public RpcClient(IHttpClient httpClient, boolean onion, NetworkParameters params) {
@@ -25,7 +25,7 @@ public class RpcClient {
   }
 
   public RpcClient(IHttpClient httpClient, String serverUrl) {
-    this.httpclient = httpClient;
+    this.httpClient = httpClient;
     this.url = serverUrl + ENDPOINT_RPC;
     this.started = true;
   }
@@ -35,7 +35,7 @@ public class RpcClient {
     }
 
     public IHttpClient getHttpClient() {
-      return httpclient;
+      return httpClient;
   }
 
   public void exit() {
@@ -56,7 +56,7 @@ public class RpcClient {
     body.put("params", Arrays.asList(params));
 
     Observable<Map<String, Object>> result =
-        httpclient
+        httpClient
             .postJson(url, Map.class, headers, body)
             .map(
                 rpcOpt -> {
