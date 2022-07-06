@@ -30,12 +30,12 @@ public class RpcClient {
     this.started = true;
   }
 
-    public String getUrl() {
-        return url;
-    }
+  public String getUrl() {
+    return url;
+  }
 
-    public IHttpClient getHttpClient() {
-      return httpClient;
+  public IHttpClient getHttpClient() {
+    return httpClient;
   }
 
   public void exit() {

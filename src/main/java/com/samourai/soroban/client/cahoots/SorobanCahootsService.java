@@ -15,7 +15,6 @@ import com.samourai.wallet.cahoots.CahootsWallet;
 import com.samourai.xmanager.client.XManagerClient;
 import io.reactivex.Observable;
 import java.security.Provider;
-
 import org.bitcoinj.params.TestNet3Params;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +41,14 @@ public class SorobanCahootsService {
       CahootsWallet cahootsWallet,
       RpcClient rpcClient) {
     this(
-        new OnlineCahootsService(cahootsWallet, new XManagerClient(rpcClient.getHttpClient(), cahootsWallet.getParams() == TestNet3Params.get(), rpcClient.getUrl().equals(SorobanServer.get(cahootsWallet.getParams()).getServerUrlOnion()))),
+        new OnlineCahootsService(
+            cahootsWallet,
+            new XManagerClient(
+                rpcClient.getHttpClient(),
+                cahootsWallet.getParams() == TestNet3Params.get(),
+                rpcClient
+                    .getUrl()
+                    .equals(SorobanServer.get(cahootsWallet.getParams()).getServerUrlOnion()))),
         new SorobanService(
             bip47Util,
             cahootsWallet.getParams(),
