@@ -104,7 +104,8 @@ public class SorobanServiceTest extends AbstractTest {
     String address = "tb1q9m8cc0jkjlc9zwvea5a2365u6px3yu646vgez4";
 
     try {
-      CahootsContext cahootsContext = CahootsContext.newInitiatorStonewallx2(amount, address);
+      CahootsContext cahootsContext =
+          CahootsContext.newInitiatorStonewallx2(account, amount, address);
 
       sorobanCahootsService
           .getSorobanService()
@@ -125,7 +126,7 @@ public class SorobanServiceTest extends AbstractTest {
               });
       SorobanMessage lastMessage =
           sorobanCahootsService
-              .initiator(account, cahootsContext, paymentCodeCounterparty, TIMEOUT_MS)
+              .initiator(cahootsContext, paymentCodeCounterparty, TIMEOUT_MS)
               .blockingLast();
       if (ACCEPT) {
         verify(
@@ -150,10 +151,10 @@ public class SorobanServiceTest extends AbstractTest {
       PaymentCode paymentCodeInitiator) {
     try {
       // run soroban as counterparty
-      CahootsContext cahootsContext = CahootsContext.newCounterpartyStonewallx2();
+      CahootsContext cahootsContext = CahootsContext.newCounterpartyStonewallx2(account);
       SorobanMessage lastMessage =
           sorobanCahootsService
-              .contributor(account, cahootsContext, paymentCodeInitiator, TIMEOUT_MS)
+              .contributor(cahootsContext, paymentCodeInitiator, TIMEOUT_MS)
               .blockingLast();
       if (ACCEPT) {
         verify(

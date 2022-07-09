@@ -23,17 +23,15 @@ public class OnlineCahootsService extends ManualCahootsService {
   }
 
   @Override
-  public OnlineCahootsMessage initiate(int account, CahootsContext cahootsContext)
-      throws Exception {
-    ManualCahootsMessage manualCahootsMessage = super.initiate(account, cahootsContext);
+  public OnlineCahootsMessage initiate(CahootsContext cahootsContext) throws Exception {
+    ManualCahootsMessage manualCahootsMessage = super.initiate(cahootsContext);
     return new OnlineCahootsMessage(manualCahootsMessage);
   }
 
   @Override
-  public SorobanReply reply(
-      final int account, final CahootsContext cahootsContext, final ManualCahootsMessage request)
+  public SorobanReply reply(final CahootsContext cahootsContext, final ManualCahootsMessage request)
       throws Exception {
-    SorobanReply reply = super.reply(account, cahootsContext, request);
+    SorobanReply reply = super.reply(cahootsContext, request);
     SorobanReply onlineReply;
     if (reply instanceof ManualCahootsMessage) {
       // wrap SorobanMessage as OnlineCahootsMessage

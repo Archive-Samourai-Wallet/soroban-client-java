@@ -45,7 +45,6 @@ public class SorobanService {
   }
 
   public Observable<SorobanMessage> initiator(
-      final int account,
       final CahootsContext cahootsContext,
       final SorobanMessageService messageService,
       final PaymentCode paymentCodeCounterParty,
@@ -67,7 +66,6 @@ public class SorobanService {
                 final RpcDialog dialog = dialogOrNull;
                 closeDialogOnError(onMessage, dialog, paymentCodeCounterParty);
                 dialog(
-                    account,
                     cahootsContext,
                     messageService,
                     dialog,
@@ -88,7 +86,6 @@ public class SorobanService {
   }
 
   public Observable<SorobanMessage> contributor(
-      final int account,
       final CahootsContext cahootsContext,
       final SorobanMessageService messageService,
       final PaymentCode paymentCodeInitiator,
@@ -128,14 +125,8 @@ public class SorobanService {
                 SorobanMessage response =
                     (SorobanMessage)
                         safeReply(
-                            messageService,
-                            account,
-                            cahootsContext,
-                            message,
-                            dialog,
-                            paymentCodeInitiator);
+                            messageService, cahootsContext, message, dialog, paymentCodeInitiator);
                 dialog(
-                    account,
                     cahootsContext,
                     messageService,
                     dialog,
@@ -157,14 +148,13 @@ public class SorobanService {
 
   private SorobanReply safeReply(
       SorobanMessageService messageService,
-      int account,
       CahootsContext cahootsContext,
       SorobanMessage message,
       RpcDialog dialog,
       PaymentCode paymentCodePartner)
       throws Exception {
     try {
-      return messageService.reply(account, cahootsContext, message);
+      return messageService.reply(cahootsContext, message);
     } catch (Exception e) {
       // send error
       dialog.sendError("Dialog failed", paymentCodePartner).subscribe();
@@ -174,7 +164,6 @@ public class SorobanService {
   }
 
   private SorobanMessage dialog(
-      int account,
       CahootsContext cahootsContext,
       SorobanMessageService messageService,
       RpcDialog dialog,
@@ -222,7 +211,7 @@ public class SorobanService {
 
       // prepare reply
       SorobanReply reply =
-          safeReply(messageService, account, cahootsContext, message, dialog, paymentCodePartner);
+          safeReply(messageService, cahootsContext, message, dialog, paymentCodePartner);
 
       if (reply instanceof SorobanInteraction) {
         // wrap interaction for Soroban

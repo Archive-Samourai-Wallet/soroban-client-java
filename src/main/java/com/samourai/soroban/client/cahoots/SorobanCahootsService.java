@@ -92,23 +92,20 @@ public class SorobanCahootsService {
   // cahoots
 
   public Observable<SorobanMessage> initiator(
-      int account,
-      CahootsContext cahootsContext,
-      PaymentCode paymentCodeCounterparty,
-      long timeoutMs)
+      CahootsContext cahootsContext, PaymentCode paymentCodeCounterparty, long timeoutMs)
       throws Exception {
     checkTor();
-    OnlineCahootsMessage message = onlineCahootsService.initiate(account, cahootsContext);
+    OnlineCahootsMessage message = onlineCahootsService.initiate(cahootsContext);
     return sorobanService.initiator(
-        account, cahootsContext, onlineCahootsService, paymentCodeCounterparty, timeoutMs, message);
+        cahootsContext, onlineCahootsService, paymentCodeCounterparty, timeoutMs, message);
   }
 
   public Observable<SorobanMessage> contributor(
-      int account, CahootsContext cahootsContext, PaymentCode paymentCodeInitiator, long timeoutMs)
+      CahootsContext cahootsContext, PaymentCode paymentCodeInitiator, long timeoutMs)
       throws Exception {
     checkTor();
     return sorobanService.contributor(
-        account, cahootsContext, onlineCahootsService, paymentCodeInitiator, timeoutMs);
+        cahootsContext, onlineCahootsService, paymentCodeInitiator, timeoutMs);
   }
 
   public SorobanService getSorobanService() {

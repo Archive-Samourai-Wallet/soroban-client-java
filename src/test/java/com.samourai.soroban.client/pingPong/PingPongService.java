@@ -20,8 +20,7 @@ public class PingPongService extends SorobanMessageService<PingPongMessage, Soro
   }
 
   @Override
-  public PingPongMessage reply(
-      int account, SorobanContext sorobanContext, PingPongMessage message) {
+  public PingPongMessage reply(SorobanContext sorobanContext, PingPongMessage message) {
     PingPongMessage.VALUES value =
         PingPongMessage.VALUES.PING.equals(message.getValue())
             ? PingPongMessage.VALUES.PONG
