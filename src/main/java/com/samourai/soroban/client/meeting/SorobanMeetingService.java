@@ -1,61 +1,42 @@
 package com.samourai.soroban.client.meeting;
 
 import com.samourai.soroban.client.dialog.RpcDialog;
-import com.samourai.soroban.client.dialog.User;
-import com.samourai.soroban.client.rpc.RpcClient;
-import com.samourai.wallet.bip47.BIP47UtilGeneric;
-import com.samourai.wallet.bip47.rpc.BIP47Wallet;
+import com.samourai.soroban.client.rpc.RpcService;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.cahoots.CahootsType;
+import com.samourai.wallet.cahoots.CahootsWallet;
 import io.reactivex.Observable;
 import io.reactivex.functions.Function;
-import java.security.Provider;
-import org.bitcoinj.core.NetworkParameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class SorobanMeetingService {
   private static final Logger log = LoggerFactory.getLogger(SorobanMeetingService.class);
 
-  private BIP47UtilGeneric bip47Util;
-  private RpcClient rpc;
-  private BIP47Wallet bip47w;
-  private int bip47Account;
-  private User user;
+  private RpcService rpcService;
 
-  public SorobanMeetingService(
-      BIP47UtilGeneric bip47Util,
-      NetworkParameters params,
-      Provider provider,
-      BIP47Wallet bip47w,
-      int bip47Account,
-      RpcClient rpcClient) {
-    this.bip47Util = bip47Util;
-    this.bip47w = bip47w;
-    this.bip47Account = bip47Account;
-    this.rpc = rpcClient;
-    this.user = new User(bip47Util, bip47w, bip47Account, params, provider);
-  }
-
-  private PaymentCode getMyPaymentCode() {
-    return bip47Util.getPaymentCode(bip47w, bip47Account);
+  public SorobanMeetingService(RpcService rpcService) {
+    this.rpcService = rpcService;
   }
 
   public Observable<SorobanRequestMessage> sendMeetingRequest(
-      PaymentCode paymentCodeCounterParty, CahootsType type) throws Exception {
+      CahootsWallet cahootsWallet, PaymentCode paymentCodePartner, CahootsType type)
+      throws Exception {
     // send request
-    RpcDialog dialog = new RpcDialog(rpc, user, paymentCodeCounterParty.toString());
+    RpcDialog dialog = rpcService.createRpcDialog(cahootsWallet, paymentCodePartner.toString());
     final SorobanRequestMessage request = new SorobanRequestMessage(type);
     if (log.isDebugEnabled()) {
       log.debug("[initiator] meeting request sending: " + request);
     }
     return dialog
-        .sendWithSender(request, paymentCodeCounterParty)
+        .sendWithSender(request, cahootsWallet.getPaymentCode(), paymentCodePartner)
         .map((Function<Object, SorobanRequestMessage>) o -> request);
   }
 
-  public Observable<SorobanRequestMessage> receiveMeetingRequest(long timeoutMs) throws Exception {
-    RpcDialog dialog = new RpcDialog(rpc, user, getMyPaymentCode().toString());
+  public Observable<SorobanRequestMessage> receiveMeetingRequest(
+      CahootsWallet cahootsWallet, long timeoutMs) throws Exception {
+    RpcDialog dialog =
+        rpcService.createRpcDialog(cahootsWallet, cahootsWallet.getPaymentCode().toString());
     if (log.isDebugEnabled()) {
       log.debug("[contributor] listening");
     }
@@ -74,12 +55,15 @@ public class SorobanMeetingService {
   }
 
   public Observable<SorobanResponseMessage> sendMeetingResponse(
-      PaymentCode paymentCodeCounterParty, SorobanRequestMessage request, boolean accept)
+      CahootsWallet cahootsWallet,
+      PaymentCode paymentCodePartner,
+      SorobanRequestMessage request,
+      boolean accept)
       throws Exception {
-    RpcDialog dialog = new RpcDialog(rpc, user, request);
+    RpcDialog dialog = rpcService.createRpcDialog(cahootsWallet, request);
     final SorobanResponseMessage response = new SorobanResponseMessage(accept);
     return dialog
-        .send(response, paymentCodeCounterParty)
+        .send(response, paymentCodePartner)
         .map(
             (Function<Object, SorobanResponseMessage>)
                 o -> {
@@ -91,12 +75,15 @@ public class SorobanMeetingService {
   }
 
   public Observable<SorobanResponseMessage> receiveMeetingResponse(
-      PaymentCode paymentCodeCounterParty, SorobanRequestMessage request, final long timeoutMs)
+      CahootsWallet cahootsWallet,
+      PaymentCode paymentCodePartner,
+      SorobanRequestMessage request,
+      final long timeoutMs)
       throws Exception {
     // send request
-    final RpcDialog dialog = new RpcDialog(rpc, user, request);
+    final RpcDialog dialog = rpcService.createRpcDialog(cahootsWallet, request);
     return dialog
-        .receive(paymentCodeCounterParty, timeoutMs)
+        .receive(paymentCodePartner, timeoutMs)
         .map(
             payload -> {
               SorobanResponseMessage response = SorobanResponseMessage.parse(payload);

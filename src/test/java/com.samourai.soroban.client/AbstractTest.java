@@ -1,12 +1,24 @@
 package com.samourai.soroban.client;
 
+import com.samourai.http.client.IHttpClient;
+import com.samourai.http.client.JavaHttpClient;
 import com.samourai.soroban.client.cahoots.OnlineCahootsMessage;
+import com.samourai.soroban.client.cahoots.SorobanCahootsService;
+import com.samourai.soroban.client.meeting.SorobanMeetingService;
+import com.samourai.soroban.client.rpc.RpcService;
 import com.samourai.soroban.utils.LogbackUtils;
-import com.samourai.wallet.bip47.rpc.BIP47Wallet;
+import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.bip47.rpc.java.Bip47UtilJava;
+import com.samourai.wallet.bipFormat.BIP_FORMAT;
+import com.samourai.wallet.bipWallet.WalletSupplier;
+import com.samourai.wallet.bipWallet.WalletSupplierImpl;
 import com.samourai.wallet.cahoots.CahootsTestUtil;
+import com.samourai.wallet.cahoots.CahootsWallet;
+import com.samourai.wallet.cahoots.SimpleCahootsWallet;
+import com.samourai.wallet.client.indexHandler.MemoryIndexHandlerSupplier;
 import com.samourai.wallet.hd.HD_Wallet;
 import com.samourai.wallet.hd.HD_WalletFactoryGeneric;
+import com.samourai.wallet.send.provider.SimpleUtxoProvider;
 import java.security.Provider;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.params.TestNet3Params;
@@ -17,13 +29,36 @@ import org.slf4j.LoggerFactory;
 
 public abstract class AbstractTest {
   private static final Logger log = LoggerFactory.getLogger(AbstractTest.class);
+
+  protected static final String SEED_WORDS = "all all all all all all all all all all all all";
+  protected static final String SEED_PASSPHRASE_INITIATOR = "initiator";
+  protected static final String SEED_PASSPHRASE_COUNTERPARTY = "counterparty";
+
   protected static final int TIMEOUT_MS = 20000;
   protected static final Provider PROVIDER_JAVA = new BouncyCastleProvider();
+  private static final long FEE_PER_B = 1;
 
   protected static final NetworkParameters params = TestNet3Params.get();
   protected static final Bip47UtilJava bip47Util = Bip47UtilJava.getInstance();
   protected static final HD_WalletFactoryGeneric hdWalletFactory =
       HD_WalletFactoryGeneric.getInstance();
+
+  protected IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
+  protected RpcService rpcService = new RpcService(httpClient, PROVIDER_JAVA, false);
+  protected SorobanCahootsService sorobanCahootsService =
+      new SorobanCahootsService(bip47Util, BIP_FORMAT.PROVIDER, params, rpcService);
+  protected SorobanMeetingService sorobanMeetingService =
+      sorobanCahootsService.getSorobanMeetingService();
+  protected SorobanService sorobanService = sorobanCahootsService.getSorobanService();
+
+  protected CahootsWallet cahootsWalletInitiator;
+  protected CahootsWallet cahootsWalletCounterparty;
+
+  protected SimpleUtxoProvider utxoProviderInitiator;
+  protected SimpleUtxoProvider utxoProviderCounterparty;
+
+  protected PaymentCode paymentCodeInitiator;
+  protected PaymentCode paymentCodeCounterparty;
 
   private static volatile Exception exception = null;
 
@@ -32,11 +67,30 @@ public abstract class AbstractTest {
     LogbackUtils.setLogLevel("com.samourai", "DEBUG");
   }
 
-  protected BIP47Wallet bip47Wallet(String seedWords, String passphrase) throws Exception {
-    HD_Wallet hdWallet = hdWalletFactory.restoreWallet(seedWords, passphrase, params);
-    BIP47Wallet bip47w =
-        hdWalletFactory.getBIP47(hdWallet.getSeedHex(), hdWallet.getPassphrase(), params);
-    return bip47w;
+  public void setUp() throws Exception {
+    final HD_Wallet bip84WalletSender = computeBip84wallet(SEED_WORDS, SEED_PASSPHRASE_INITIATOR);
+    WalletSupplier walletSupplierSender =
+        new WalletSupplierImpl(new MemoryIndexHandlerSupplier(), bip84WalletSender);
+    utxoProviderInitiator = new SimpleUtxoProvider(params, walletSupplierSender);
+    cahootsWalletInitiator =
+        new SimpleCahootsWallet(
+            walletSupplierSender, BIP_FORMAT.PROVIDER, params, utxoProviderInitiator, FEE_PER_B);
+
+    final HD_Wallet bip84WalletCounterparty =
+        computeBip84wallet(SEED_WORDS, SEED_PASSPHRASE_COUNTERPARTY);
+    WalletSupplier walletSupplierCounterparty =
+        new WalletSupplierImpl(new MemoryIndexHandlerSupplier(), bip84WalletCounterparty);
+    utxoProviderCounterparty = new SimpleUtxoProvider(params, walletSupplierCounterparty);
+    cahootsWalletCounterparty =
+        new SimpleCahootsWallet(
+            walletSupplierCounterparty,
+            BIP_FORMAT.PROVIDER,
+            params,
+            utxoProviderCounterparty,
+            FEE_PER_B);
+
+    paymentCodeInitiator = cahootsWalletInitiator.getPaymentCode();
+    paymentCodeCounterparty = cahootsWalletCounterparty.getPaymentCode();
   }
 
   protected static void assertNoException() {
@@ -54,7 +108,13 @@ public abstract class AbstractTest {
     OnlineCahootsMessage onlineCahootsMessage = (OnlineCahootsMessage) message;
     CahootsTestUtil.cleanPayload(onlineCahootsMessage.getCahoots());
     String payloadStr = onlineCahootsMessage.toPayload();
-    log.info("### payload=" + payloadStr);
     Assertions.assertEquals(expectedPayload, payloadStr);
+  }
+
+  private static HD_Wallet computeBip84wallet(String seedWords, String passphrase)
+      throws Exception {
+    byte[] seed = hdWalletFactory.computeSeedFromWords(seedWords);
+    HD_Wallet bip84w = hdWalletFactory.getBIP84(seed, passphrase, params);
+    return bip84w;
   }
 }

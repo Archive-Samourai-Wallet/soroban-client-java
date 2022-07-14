@@ -19,19 +19,17 @@ public class RpcDialog {
   private static final String ERROR_PREFIX = "ERROR:";
 
   private RpcClient rpc;
-  private User user;
+  private Encrypter encrypter;
+
   private String nextDirectory;
   private boolean exit;
 
-  public RpcDialog(RpcClient rpc, User user, String directory) throws Exception {
+  public RpcDialog(RpcClient rpc, Encrypter encrypter, String directory) throws Exception {
     this.rpc = rpc;
-    this.user = user;
+    this.encrypter = encrypter;
+
     setNextDirectory(directory);
     this.exit = false;
-  }
-
-  public RpcDialog(RpcClient rpc, User user, SorobanMessage sorobanMessage) throws Exception {
-    this(rpc, user, sorobanMessage.toPayload());
   }
 
   public Observable<SorobanMessageWithSender> receiveWithSender(long timeoutMs) throws Exception {
@@ -75,7 +73,7 @@ public class RpcDialog {
               // check for error
               String error = getError(decryptedPayload);
               if (error != null) {
-                throw new SorobanException(error);
+                throw new SorobanException("Partner error:" + error);
               }
               return decryptedPayload;
             });
@@ -96,7 +94,8 @@ public class RpcDialog {
             });
   }
 
-  public Observable sendWithSender(SorobanMessage message, PaymentCode paymentCodePartner)
+  public Observable sendWithSender(
+      SorobanMessage message, PaymentCode paymentCodeMine, PaymentCode paymentCodePartner)
       throws Exception {
     checkExit(paymentCodePartner);
 
@@ -110,7 +109,7 @@ public class RpcDialog {
 
     // wrap with clear sender
     SorobanMessageWithSender messageWithSender =
-        new SorobanMessageWithSender(user.getPaymentCode().toString(), encryptedPayload);
+        new SorobanMessageWithSender(paymentCodeMine.toString(), encryptedPayload);
     return doSend(messageWithSender.toPayload());
   }
 
@@ -177,14 +176,12 @@ public class RpcDialog {
   }
 
   private String encrypt(String payload, PaymentCode paymentCodePartner) throws Exception {
-    Encrypter encrypter = user.getEncrypter(paymentCodePartner);
-    String encryptedPayload = z85.encode(encrypter.encrypt(payload));
+    String encryptedPayload = z85.encode(encrypter.encrypt(payload, paymentCodePartner));
     return encryptedPayload;
   }
 
   private String decrypt(String encryptedPayload, PaymentCode paymentCodePartner) throws Exception {
-    Encrypter encrypter = user.getEncrypter(paymentCodePartner);
-    return encrypter.decrypt(z85.decode(encryptedPayload));
+    return encrypter.decrypt(z85.decode(encryptedPayload), paymentCodePartner);
   }
 
   private String getError(String payload) {
@@ -196,5 +193,6 @@ public class RpcDialog {
 
   public void close() {
     exit = true;
+    rpc.exit();
   }
 }

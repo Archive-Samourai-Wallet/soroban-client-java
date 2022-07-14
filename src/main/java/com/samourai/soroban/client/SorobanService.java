@@ -1,19 +1,17 @@
 package com.samourai.soroban.client;
 
 import com.samourai.soroban.cahoots.CahootsContext;
-import com.samourai.soroban.cahoots.TxBroadcastInteraction;
 import com.samourai.soroban.client.dialog.RpcDialog;
-import com.samourai.soroban.client.dialog.User;
-import com.samourai.soroban.client.rpc.RpcClient;
+import com.samourai.soroban.client.rpc.RpcService;
 import com.samourai.wallet.bip47.BIP47UtilGeneric;
 import com.samourai.wallet.bip47.rpc.BIP47Wallet;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
+import com.samourai.wallet.cahoots.CahootsWallet;
+import com.samourai.wallet.segwit.SegwitAddress;
 import io.reactivex.Observable;
 import io.reactivex.functions.Consumer;
-import io.reactivex.functions.Predicate;
 import io.reactivex.subjects.BehaviorSubject;
 import io.reactivex.subjects.Subject;
-import java.security.Provider;
 import org.bitcoinj.core.NetworkParameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,27 +19,15 @@ import org.slf4j.LoggerFactory;
 public class SorobanService {
   private static final Logger log = LoggerFactory.getLogger(SorobanService.class);
 
-  private static OnlineSorobanInteraction SUBJECT_RESET =
-      new OnlineSorobanInteraction(new TxBroadcastInteraction(null), null);
-
+  private BIP47UtilGeneric bip47Util;
   private NetworkParameters params;
-  private RpcClient rpc;
-  private User user;
-  private Subject<SorobanMessage> interactiveMessageProvider;
-  private Subject<OnlineSorobanInteraction> onInteraction;
+  private RpcService rpcService;
 
   public SorobanService(
-      BIP47UtilGeneric bip47Util,
-      NetworkParameters params,
-      Provider provider,
-      BIP47Wallet bip47w,
-      int bip47Account,
-      RpcClient rpcClient) {
+      BIP47UtilGeneric bip47Util, NetworkParameters params, RpcService rpcService) {
+    this.bip47Util = bip47Util;
     this.params = params;
-    this.rpc = rpcClient;
-    this.user = new User(bip47Util, bip47w, bip47Account, params, provider);
-    this.interactiveMessageProvider = null;
-    this.onInteraction = BehaviorSubject.create();
+    this.rpcService = rpcService;
   }
 
   public Observable<SorobanMessage> initiator(
@@ -49,22 +35,23 @@ public class SorobanService {
       final SorobanMessageService messageService,
       final PaymentCode paymentCodeCounterParty,
       final long timeoutMs,
-      final SorobanMessage message)
+      final SorobanMessage message,
+      Consumer<OnlineSorobanInteraction> onInteraction)
       throws Exception {
-    reset();
+    SorobanInteractionHandler interactionHandler = new SorobanInteractionHandler(onInteraction);
     final BehaviorSubject<SorobanMessage> onMessage = BehaviorSubject.create();
+    CahootsWallet cahootsWallet = cahootsContext.getCahootsWallet();
     Thread t =
         new Thread(
             () -> {
               RpcDialog dialogOrNull = null;
               try {
                 String initialDirectory =
-                    user.getMeeetingAddressSend(paymentCodeCounterParty, params)
+                    getMeeetingAddressSend(cahootsWallet, paymentCodeCounterParty, params)
                         .getBech32AsString();
-
-                dialogOrNull = new RpcDialog(rpc, user, initialDirectory);
+                dialogOrNull = rpcService.createRpcDialog(cahootsWallet, initialDirectory);
                 final RpcDialog dialog = dialogOrNull;
-                closeDialogOnError(onMessage, dialog, paymentCodeCounterParty);
+                closeDialogOnError(onMessage, dialog, paymentCodeCounterParty, interactionHandler);
                 dialog(
                     cahootsContext,
                     messageService,
@@ -73,7 +60,8 @@ public class SorobanService {
                     timeoutMs,
                     message,
                     "INITIATOR",
-                    onMessage);
+                    onMessage,
+                    interactionHandler);
                 onMessage.onComplete();
               } catch (Exception e) {
                 log.error("INITIATOR => error", e);
@@ -91,20 +79,19 @@ public class SorobanService {
       final PaymentCode paymentCodeInitiator,
       final long timeoutMs)
       throws Exception {
-    reset();
     final BehaviorSubject onMessage = BehaviorSubject.create();
+    CahootsWallet cahootsWallet = cahootsContext.getCahootsWallet();
     Thread t =
         new Thread(
             () -> {
               RpcDialog dialogOrNull = null;
               try {
                 String initialDirectory =
-                    user.getMeeetingAddressReceive(paymentCodeInitiator, params)
+                    getMeeetingAddressReceive(cahootsWallet, paymentCodeInitiator, params)
                         .getBech32AsString();
-
-                dialogOrNull = new RpcDialog(rpc, user, initialDirectory);
+                dialogOrNull = rpcService.createRpcDialog(cahootsWallet, initialDirectory);
                 final RpcDialog dialog = dialogOrNull;
-                closeDialogOnError(onMessage, dialog, paymentCodeInitiator);
+                closeDialogOnError(onMessage, dialog, paymentCodeInitiator, null);
 
                 String info = "CONTRIBUTOR";
                 SorobanMessage message =
@@ -134,7 +121,8 @@ public class SorobanService {
                     timeoutMs,
                     response,
                     "CONTRIBUTOR",
-                    onMessage);
+                    onMessage,
+                    null);
                 onMessage.onComplete();
               } catch (Exception e) {
                 log.error("CONTRIBUTOR => error ", e);
@@ -171,8 +159,9 @@ public class SorobanService {
       long timeoutMs,
       SorobanMessage message,
       String info,
-      Subject<SorobanMessage> onMessage)
-      throws Exception {
+      Subject<SorobanMessage> onMessage,
+      SorobanInteractionHandler interactionHandler // only set for initiator
+      ) throws Exception {
     int i = 0;
     while (true) {
       // send first message
@@ -214,15 +203,21 @@ public class SorobanService {
           safeReply(messageService, cahootsContext, message, dialog, paymentCodePartner);
 
       if (reply instanceof SorobanInteraction) {
+        if (interactionHandler == null) {
+          // should never happen
+          throw new Exception("No interactionHandler provided");
+        }
         // wrap interaction for Soroban
-        OnlineSorobanInteraction interaction = computeOnlineInteraction((SorobanInteraction) reply);
+        OnlineSorobanInteraction interaction =
+            computeOnlineInteraction((SorobanInteraction) reply, interactionHandler);
         if (log.isDebugEnabled()) {
           log.debug(info + " #" + i + " => [INTERACTIVE] ... >? " + interaction);
         }
-        onInteraction.onNext(interaction);
+        interactionHandler.getOnInteraction().onNext(interaction);
 
         // wait for interaction confirmation
-        message = interactiveMessageProvider.blockingNext().iterator().next();
+        message =
+            interactionHandler.getInteractiveMessageProvider().blockingNext().iterator().next();
         if (log.isDebugEnabled()) {
           log.debug(info + " #" + i + " => [INTERACTIVE] " + message.toString());
         }
@@ -235,8 +230,10 @@ public class SorobanService {
     return message;
   }
 
-  private OnlineSorobanInteraction computeOnlineInteraction(final SorobanInteraction interaction) {
-    OnlineSorobanInteraction onlineInteraction = new OnlineSorobanInteraction(interaction, this);
+  private OnlineSorobanInteraction computeOnlineInteraction(
+      final SorobanInteraction interaction, SorobanInteractionHandler interactionHandler) {
+    OnlineSorobanInteraction onlineInteraction =
+        new OnlineSorobanInteraction(interaction, interactionHandler);
     return onlineInteraction;
   }
 
@@ -255,42 +252,11 @@ public class SorobanService {
             });
   }
 
-  void replyInteractive(SorobanMessage message) {
-    if (log.isDebugEnabled()) {
-      log.debug(" => replyInteractive");
-    }
-    interactiveMessageProvider.onNext(message);
-  }
-
-  void replyInteractive(Exception e) {
-    if (log.isDebugEnabled()) {
-      log.debug(" => replyInteractive reject: " + e.getMessage());
-    }
-    interactiveMessageProvider.onError(e);
-    interactiveMessageProvider.onComplete();
-  }
-
-  public Observable<OnlineSorobanInteraction> getOnInteraction() {
-    return skipNull(onInteraction);
-  }
-
-  private void reset() {
-    interactiveMessageProvider = BehaviorSubject.create();
-    onInteraction.onNext(SUBJECT_RESET);
-  }
-
-  private <T> Observable<T> skipNull(Subject<T> subject) {
-    return subject.filter(
-        new Predicate<Object>() {
-          @Override
-          public boolean test(Object o) {
-            return o != SUBJECT_RESET;
-          }
-        });
-  }
-
   private void closeDialogOnError(
-      final Subject onMessage, final RpcDialog dialog, final PaymentCode paymentCodePartner) {
+      final Subject onMessage,
+      final RpcDialog dialog,
+      final PaymentCode paymentCodePartner,
+      SorobanInteractionHandler interactionHandler) {
     onMessage.doOnDispose(() -> fail("Canceled by user", onMessage, dialog, paymentCodePartner));
     onMessage.doOnError(
         new Consumer<Throwable>() {
@@ -299,13 +265,17 @@ public class SorobanService {
             fail(throwable.getMessage(), onMessage, dialog, paymentCodePartner);
           }
         });
-    interactiveMessageProvider.doOnError(
-        new Consumer<Throwable>() {
-          @Override
-          public void accept(Throwable throwable) throws Exception {
-            fail(throwable.getMessage(), onMessage, dialog, paymentCodePartner);
-          }
-        });
+    if (interactionHandler != null) {
+      interactionHandler
+          .getInteractiveMessageProvider()
+          .doOnError(
+              new Consumer<Throwable>() {
+                @Override
+                public void accept(Throwable throwable) throws Exception {
+                  fail(throwable.getMessage(), onMessage, dialog, paymentCodePartner);
+                }
+              });
+    }
   }
 
   private void fail(
@@ -317,5 +287,33 @@ public class SorobanService {
 
     onMessage.onError(new Exception(error));
     onMessage.onComplete();
+  }
+
+  private SegwitAddress getMeeetingAddressReceive(
+      CahootsWallet cahootsWallet, PaymentCode paymentCodeCounterparty, NetworkParameters params)
+      throws Exception {
+    BIP47Wallet bip47Wallet = cahootsWallet.getBip47Wallet();
+    int bip47Account = cahootsWallet.getBip47Account().getId();
+    SegwitAddress receiveAddress =
+        bip47Util
+            .getReceiveAddress(bip47Wallet, bip47Account, paymentCodeCounterparty, 0, params)
+            .getSegwitAddressReceive();
+    return receiveAddress;
+  }
+
+  private SegwitAddress getMeeetingAddressSend(
+      CahootsWallet cahootsWallet, PaymentCode paymentCodeInitiator, NetworkParameters params)
+      throws Exception {
+    BIP47Wallet bip47Wallet = cahootsWallet.getBip47Wallet();
+    int bip47Account = cahootsWallet.getBip47Account().getId();
+    SegwitAddress sendAddress =
+        bip47Util
+            .getSendAddress(bip47Wallet, bip47Account, paymentCodeInitiator, 0, params)
+            .getSegwitAddressSend();
+    return sendAddress;
+  }
+
+  public RpcService getRpcService() {
+    return rpcService;
   }
 }

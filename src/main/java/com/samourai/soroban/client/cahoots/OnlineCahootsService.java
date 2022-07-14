@@ -5,16 +5,20 @@ import com.samourai.soroban.cahoots.ManualCahootsMessage;
 import com.samourai.soroban.cahoots.ManualCahootsService;
 import com.samourai.soroban.client.SorobanInteraction;
 import com.samourai.soroban.client.SorobanReply;
-import com.samourai.wallet.cahoots.CahootsWallet;
-import com.samourai.xmanager.client.XManagerClient;
+import com.samourai.wallet.cahoots.multi.MultiCahootsService;
+import com.samourai.wallet.cahoots.stonewallx2.Stonewallx2Service;
+import com.samourai.wallet.cahoots.stowaway.StowawayService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class OnlineCahootsService extends ManualCahootsService {
   private static final Logger log = LoggerFactory.getLogger(ManualCahootsService.class);
 
-  public OnlineCahootsService(CahootsWallet cahootsWallet, XManagerClient xManagerClient) {
-    super(cahootsWallet, xManagerClient);
+  public OnlineCahootsService(
+      StowawayService stowawayService,
+      Stonewallx2Service stonewallx2Service,
+      MultiCahootsService multiCahootsService) {
+    super(stowawayService, stonewallx2Service, multiCahootsService);
   }
 
   @Override

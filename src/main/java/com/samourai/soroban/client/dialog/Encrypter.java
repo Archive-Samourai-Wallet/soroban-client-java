@@ -1,7 +1,9 @@
 package com.samourai.soroban.client.dialog;
 
-public interface Encrypter {
-  String decrypt(byte[] payload) throws Exception;
+import com.samourai.wallet.bip47.rpc.PaymentCode;
 
-  byte[] encrypt(String payload) throws Exception;
+public interface Encrypter {
+  String decrypt(byte[] payload, PaymentCode paymentCodePartner) throws Exception;
+
+  byte[] encrypt(String payload, PaymentCode paymentCodePartner) throws Exception;
 }

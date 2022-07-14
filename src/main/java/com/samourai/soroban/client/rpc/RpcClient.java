@@ -1,12 +1,10 @@
 package com.samourai.soroban.client.rpc;
 
 import com.samourai.http.client.IHttpClient;
-import com.samourai.soroban.client.SorobanServer;
 import io.reactivex.Observable;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.TimeoutException;
-import org.bitcoinj.core.NetworkParameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,19 +12,14 @@ public class RpcClient {
   private static final Logger log = LoggerFactory.getLogger(RpcClient.class);
 
   private static final int WAIT_DELAY_MS = 500;
-  private static final String ENDPOINT_RPC = "/rpc";
 
   private final IHttpClient httpClient;
   private final String url;
   private boolean started;
 
-  public RpcClient(IHttpClient httpClient, boolean onion, NetworkParameters params) {
-    this(httpClient, SorobanServer.get(params).getServerUrl(onion));
-  }
-
-  public RpcClient(IHttpClient httpClient, String serverUrl) {
+  public RpcClient(IHttpClient httpClient, String url) {
     this.httpClient = httpClient;
-    this.url = serverUrl + ENDPOINT_RPC;
+    this.url = url;
     this.started = true;
   }
 
