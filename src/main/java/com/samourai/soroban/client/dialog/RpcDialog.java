@@ -73,7 +73,7 @@ public class RpcDialog {
               // check for error
               String error = getError(decryptedPayload);
               if (error != null) {
-                throw new SorobanException("Partner error:" + error);
+                throw new SorobanException("Partner failed with error: " + error);
               }
               return decryptedPayload;
             });

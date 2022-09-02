@@ -145,8 +145,8 @@ public class SorobanService {
       return messageService.reply(cahootsContext, message);
     } catch (Exception e) {
       // send error
-      dialog.sendError("Dialog failed", paymentCodePartner).subscribe();
-      log.error("Dialog failed", e);
+      dialog.sendError("Cahoots failed: " + e.getMessage(), paymentCodePartner).subscribe();
+      log.error("Cahoots failed: " + e.getMessage(), e);
       throw e;
     }
   }
