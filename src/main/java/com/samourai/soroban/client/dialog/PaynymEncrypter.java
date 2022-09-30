@@ -3,7 +3,6 @@ package com.samourai.soroban.client.dialog;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.crypto.CryptoUtil;
 import com.samourai.wallet.crypto.impl.ECDHKeySet;
-import java.security.Provider;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.slf4j.Logger;
@@ -17,10 +16,10 @@ public class PaynymEncrypter implements Encrypter {
   private CryptoUtil cryptoUtil;
 
   public PaynymEncrypter(
-      ECKey notificationAddressKey, NetworkParameters params, Provider provider) {
+      ECKey notificationAddressKey, NetworkParameters params, CryptoUtil cryptoUtil) {
     this.myKey = notificationAddressKey;
     this.params = params;
-    this.cryptoUtil = CryptoUtil.getInstance(provider);
+    this.cryptoUtil = cryptoUtil;
   }
 
   @Override

@@ -1,6 +1,7 @@
 package com.samourai.soroban.client.cahoots;
 
 import com.samourai.soroban.cahoots.CahootsContext;
+import com.samourai.soroban.cahoots.Stonewallx2Context;
 import com.samourai.soroban.cahoots.TypeInteraction;
 import com.samourai.soroban.client.AbstractTest;
 import com.samourai.soroban.client.OnlineSorobanInteraction;
@@ -74,7 +75,8 @@ public class SorobanCahootsServiceTest extends AbstractTest {
 
     try {
       CahootsContext cahootsContext =
-          CahootsContext.newInitiatorStonewallx2(cahootsWalletInitiator, account, amount, address);
+          Stonewallx2Context.newInitiator(
+              cahootsWalletInitiator, account, 1, amount, address, null);
 
       Consumer<OnlineSorobanInteraction> onInteraction =
           interaction -> {
@@ -110,7 +112,7 @@ public class SorobanCahootsServiceTest extends AbstractTest {
     try {
       // run soroban as counterparty
       CahootsContext cahootsContext =
-          CahootsContext.newCounterpartyStonewallx2(cahootsWalletCounterparty, account);
+          Stonewallx2Context.newCounterparty(cahootsWalletCounterparty, account);
       SorobanMessage lastMessage =
           sorobanCahootsService
               .contributor(cahootsContext, paymentCodeInitiator, TIMEOUT_MS)

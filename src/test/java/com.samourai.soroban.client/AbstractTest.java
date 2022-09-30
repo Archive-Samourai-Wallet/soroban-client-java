@@ -14,11 +14,11 @@ import com.samourai.wallet.bipWallet.WalletSupplier;
 import com.samourai.wallet.bipWallet.WalletSupplierImpl;
 import com.samourai.wallet.cahoots.CahootsTestUtil;
 import com.samourai.wallet.cahoots.CahootsWallet;
-import com.samourai.wallet.cahoots.SimpleCahootsWallet;
 import com.samourai.wallet.client.indexHandler.MemoryIndexHandlerSupplier;
 import com.samourai.wallet.hd.HD_Wallet;
 import com.samourai.wallet.hd.HD_WalletFactoryGeneric;
-import com.samourai.wallet.send.provider.SimpleUtxoProvider;
+import com.samourai.wallet.send.provider.MockUtxoProvider;
+import com.samourai.wallet.send.provider.SimpleCahootsUtxoProvider;
 import java.security.Provider;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.params.TestNet3Params;
@@ -36,7 +36,6 @@ public abstract class AbstractTest {
 
   protected static final int TIMEOUT_MS = 20000;
   protected static final Provider PROVIDER_JAVA = new BouncyCastleProvider();
-  private static final long FEE_PER_B = 1;
 
   protected static final NetworkParameters params = TestNet3Params.get();
   protected static final Bip47UtilJava bip47Util = Bip47UtilJava.getInstance();
@@ -54,8 +53,8 @@ public abstract class AbstractTest {
   protected CahootsWallet cahootsWalletInitiator;
   protected CahootsWallet cahootsWalletCounterparty;
 
-  protected SimpleUtxoProvider utxoProviderInitiator;
-  protected SimpleUtxoProvider utxoProviderCounterparty;
+  protected MockUtxoProvider utxoProviderInitiator;
+  protected MockUtxoProvider utxoProviderCounterparty;
 
   protected PaymentCode paymentCodeInitiator;
   protected PaymentCode paymentCodeCounterparty;
@@ -71,23 +70,25 @@ public abstract class AbstractTest {
     final HD_Wallet bip84WalletSender = computeBip84wallet(SEED_WORDS, SEED_PASSPHRASE_INITIATOR);
     WalletSupplier walletSupplierSender =
         new WalletSupplierImpl(new MemoryIndexHandlerSupplier(), bip84WalletSender);
-    utxoProviderInitiator = new SimpleUtxoProvider(params, walletSupplierSender);
+    utxoProviderInitiator = new MockUtxoProvider(params, walletSupplierSender);
     cahootsWalletInitiator =
-        new SimpleCahootsWallet(
-            walletSupplierSender, BIP_FORMAT.PROVIDER, params, utxoProviderInitiator, FEE_PER_B);
+        new CahootsWallet(
+            walletSupplierSender,
+            BIP_FORMAT.PROVIDER,
+            params,
+            new SimpleCahootsUtxoProvider(utxoProviderInitiator));
 
     final HD_Wallet bip84WalletCounterparty =
         computeBip84wallet(SEED_WORDS, SEED_PASSPHRASE_COUNTERPARTY);
     WalletSupplier walletSupplierCounterparty =
         new WalletSupplierImpl(new MemoryIndexHandlerSupplier(), bip84WalletCounterparty);
-    utxoProviderCounterparty = new SimpleUtxoProvider(params, walletSupplierCounterparty);
+    utxoProviderCounterparty = new MockUtxoProvider(params, walletSupplierCounterparty);
     cahootsWalletCounterparty =
-        new SimpleCahootsWallet(
+        new CahootsWallet(
             walletSupplierCounterparty,
             BIP_FORMAT.PROVIDER,
             params,
-            utxoProviderCounterparty,
-            FEE_PER_B);
+            new SimpleCahootsUtxoProvider(utxoProviderCounterparty));
 
     paymentCodeInitiator = cahootsWalletInitiator.getPaymentCode();
     paymentCodeCounterparty = cahootsWalletCounterparty.getPaymentCode();

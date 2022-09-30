@@ -1,6 +1,7 @@
 package com.samourai.soroban.client;
 
 import com.samourai.soroban.cahoots.CahootsContext;
+import com.samourai.soroban.cahoots.Stonewallx2Context;
 import com.samourai.soroban.client.pingPong.PingPongMessage;
 import com.samourai.soroban.client.pingPong.PingPongService;
 import com.samourai.wallet.cahoots.CahootsType;
@@ -49,7 +50,8 @@ public class PingPongServiceTest extends AbstractTest {
                 boolean last = ITERATIONS == 1;
                 PingPongMessage message = new PingPongMessage(PingPongMessage.VALUES.PING, last);
                 CahootsContext cahootsContext =
-                    CahootsContext.newInitiatorStonewallx2(cahootsWalletCounterparty, 0, 0, "foo");
+                    Stonewallx2Context.newInitiator(
+                        cahootsWalletCounterparty, 0, 0, 1234, "foo", null);
                 SorobanMessage lastMessage =
                     sorobanService
                         .initiator(
@@ -73,10 +75,10 @@ public class PingPongServiceTest extends AbstractTest {
             () -> {
               // instanciate services
               PingPongService pingPongService = new PingPongService(ITERATIONS);
-              CahootsContext cahootsContext =
-                  CahootsContext.newCounterparty(
-                      cahootsWalletCounterparty, CahootsType.STONEWALLX2, 0);
               try {
+                CahootsContext cahootsContext =
+                    CahootsContext.newCounterparty(
+                        cahootsWalletCounterparty, CahootsType.STONEWALLX2, 0);
                 // run soroban as contributor
                 SorobanMessage lastMessage =
                     sorobanService

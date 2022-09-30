@@ -7,19 +7,19 @@ import com.samourai.soroban.client.dialog.Encrypter;
 import com.samourai.soroban.client.dialog.PaynymEncrypter;
 import com.samourai.soroban.client.dialog.RpcDialog;
 import com.samourai.wallet.cahoots.CahootsWallet;
-import java.security.Provider;
+import com.samourai.wallet.crypto.CryptoUtil;
 import org.bitcoinj.core.NetworkParameters;
 
 public class RpcService {
   private static final String ENDPOINT_RPC = "/rpc";
 
   private final IHttpClient httpClient;
-  private final Provider provider;
+  private final CryptoUtil cryptoUtil;
   private boolean onion;
 
-  public RpcService(IHttpClient httpClient, Provider provider, boolean onion) {
+  public RpcService(IHttpClient httpClient, CryptoUtil cryptoUtil, boolean onion) {
     this.httpClient = httpClient;
-    this.provider = provider;
+    this.cryptoUtil = cryptoUtil;
     this.onion = onion;
   }
 
@@ -46,6 +46,6 @@ public class RpcService {
     return new PaynymEncrypter(
         cahootsWallet.getBip47Account().getNotificationAddress().getECKey(),
         cahootsWallet.getParams(),
-        provider);
+        cryptoUtil);
   }
 }
