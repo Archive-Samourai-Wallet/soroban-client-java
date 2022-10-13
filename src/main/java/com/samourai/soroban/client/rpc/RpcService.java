@@ -24,22 +24,23 @@ public class RpcService {
   }
 
   public RpcClient createRpcClient(CahootsWallet cahootsWallet) {
-    return createRpcClient(onion, cahootsWallet.getParams());
+    return createRpcClient(cahootsWallet.getParams());
   }
 
-  public RpcClient createRpcClient(boolean onion, NetworkParameters params) {
+  public RpcClient createRpcClient(NetworkParameters params) {
     return new RpcClient(httpClient, SorobanServer.get(params).getServerUrl(onion) + ENDPOINT_RPC);
   }
 
-  public RpcDialog createRpcDialog(CahootsWallet cahootsWallet, String directory) throws Exception {
+  public RpcDialog createRpcDialog(CahootsWallet cahootsWallet, String info, String directory)
+      throws Exception {
     RpcClient rpcClient = createRpcClient(cahootsWallet);
     Encrypter encrypter = getEncrypter(cahootsWallet);
-    return new RpcDialog(rpcClient, encrypter, directory);
+    return new RpcDialog(rpcClient, encrypter, info, directory);
   }
 
-  public RpcDialog createRpcDialog(CahootsWallet cahootsWallet, SorobanMessage sorobanMessage)
-      throws Exception {
-    return createRpcDialog(cahootsWallet, sorobanMessage.toPayload());
+  public RpcDialog createRpcDialog(
+      CahootsWallet cahootsWallet, String info, SorobanMessage sorobanMessage) throws Exception {
+    return createRpcDialog(cahootsWallet, info, sorobanMessage.toPayload());
   }
 
   private Encrypter getEncrypter(CahootsWallet cahootsWallet) {

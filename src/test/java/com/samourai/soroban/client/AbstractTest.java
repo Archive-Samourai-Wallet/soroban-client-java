@@ -2,23 +2,25 @@ package com.samourai.soroban.client;
 
 import com.samourai.http.client.IHttpClient;
 import com.samourai.http.client.JavaHttpClient;
-import com.samourai.soroban.client.cahoots.OnlineCahootsMessage;
-import com.samourai.soroban.client.cahoots.SorobanCahootsService;
 import com.samourai.soroban.client.meeting.SorobanMeetingService;
 import com.samourai.soroban.client.rpc.RpcService;
+import com.samourai.soroban.client.wallet.SorobanWalletService;
+import com.samourai.soroban.client.wallet.counterparty.SorobanWalletCounterparty;
+import com.samourai.soroban.client.wallet.sender.SorobanWalletInitiator;
 import com.samourai.soroban.utils.LogbackUtils;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.bip47.rpc.java.Bip47UtilJava;
 import com.samourai.wallet.bipFormat.BIP_FORMAT;
 import com.samourai.wallet.bipWallet.WalletSupplier;
 import com.samourai.wallet.bipWallet.WalletSupplierImpl;
-import com.samourai.wallet.cahoots.CahootsTestUtil;
 import com.samourai.wallet.cahoots.CahootsWallet;
 import com.samourai.wallet.client.indexHandler.MemoryIndexHandlerSupplier;
+import com.samourai.wallet.crypto.CryptoUtil;
 import com.samourai.wallet.hd.HD_Wallet;
 import com.samourai.wallet.hd.HD_WalletFactoryGeneric;
 import com.samourai.wallet.send.provider.MockUtxoProvider;
 import com.samourai.wallet.send.provider.SimpleCahootsUtxoProvider;
+import com.samourai.wallet.util.AsyncUtil;
 import java.security.Provider;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.params.TestNet3Params;
@@ -41,17 +43,21 @@ public abstract class AbstractTest {
   protected static final Bip47UtilJava bip47Util = Bip47UtilJava.getInstance();
   protected static final HD_WalletFactoryGeneric hdWalletFactory =
       HD_WalletFactoryGeneric.getInstance();
+  protected static final AsyncUtil asyncUtil = AsyncUtil.getInstance();
 
   protected IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
-  protected RpcService rpcService = new RpcService(httpClient, PROVIDER_JAVA, false);
-  protected SorobanCahootsService sorobanCahootsService =
-      new SorobanCahootsService(bip47Util, BIP_FORMAT.PROVIDER, params, rpcService);
+  protected CryptoUtil cryptoUtil = CryptoUtil.getInstance(PROVIDER_JAVA);
+  protected RpcService rpcService = new RpcService(httpClient, cryptoUtil, false);
+  protected SorobanWalletService sorobanWalletService =
+      new SorobanWalletService(bip47Util, BIP_FORMAT.PROVIDER, params, rpcService);
   protected SorobanMeetingService sorobanMeetingService =
-      sorobanCahootsService.getSorobanMeetingService();
-  protected SorobanService sorobanService = sorobanCahootsService.getSorobanService();
+      sorobanWalletService.getSorobanMeetingService();
+  protected SorobanService sorobanService = sorobanWalletService.getSorobanService();
 
   protected CahootsWallet cahootsWalletInitiator;
   protected CahootsWallet cahootsWalletCounterparty;
+  protected SorobanWalletInitiator sorobanWalletInitiator;
+  protected SorobanWalletCounterparty sorobanWalletCounterparty;
 
   protected MockUtxoProvider utxoProviderInitiator;
   protected MockUtxoProvider utxoProviderCounterparty;
@@ -77,6 +83,7 @@ public abstract class AbstractTest {
             BIP_FORMAT.PROVIDER,
             params,
             new SimpleCahootsUtxoProvider(utxoProviderInitiator));
+    sorobanWalletInitiator = sorobanWalletService.getSorobanWalletInitiator(cahootsWalletInitiator);
 
     final HD_Wallet bip84WalletCounterparty =
         computeBip84wallet(SEED_WORDS, SEED_PASSPHRASE_COUNTERPARTY);
@@ -89,6 +96,8 @@ public abstract class AbstractTest {
             BIP_FORMAT.PROVIDER,
             params,
             new SimpleCahootsUtxoProvider(utxoProviderCounterparty));
+    sorobanWalletCounterparty =
+        sorobanWalletService.getSorobanWalletCounterparty(cahootsWalletCounterparty);
 
     paymentCodeInitiator = cahootsWalletInitiator.getPaymentCode();
     paymentCodeCounterparty = cahootsWalletCounterparty.getPaymentCode();
@@ -100,16 +109,14 @@ public abstract class AbstractTest {
     }
   }
 
+  protected static void assertException(String msg) {
+    Assertions.assertNotNull(exception);
+    Assertions.assertEquals(msg, exception.getMessage());
+  }
+
   public static void setException(Exception e) {
     AbstractTest.exception = e;
     log.error("", e);
-  }
-
-  protected void verify(String expectedPayload, SorobanMessage message) throws Exception {
-    OnlineCahootsMessage onlineCahootsMessage = (OnlineCahootsMessage) message;
-    CahootsTestUtil.cleanPayload(onlineCahootsMessage.getCahoots());
-    String payloadStr = onlineCahootsMessage.toPayload();
-    Assertions.assertEquals(expectedPayload, payloadStr);
   }
 
   private static HD_Wallet computeBip84wallet(String seedWords, String passphrase)

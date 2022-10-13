@@ -6,8 +6,7 @@ import com.samourai.soroban.client.meeting.SorobanMessageWithSender;
 import com.samourai.soroban.client.rpc.RpcClient;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.util.Z85;
-import io.reactivex.Observable;
-import io.reactivex.subjects.BehaviorSubject;
+import io.reactivex.Single;
 import java.security.MessageDigest;
 import org.bouncycastle.util.encoders.Hex;
 import org.slf4j.Logger;
@@ -20,21 +19,28 @@ public class RpcDialog {
 
   private RpcClient rpc;
   private Encrypter encrypter;
+  private String info;
 
   private String nextDirectory;
   private boolean exit;
 
-  public RpcDialog(RpcClient rpc, Encrypter encrypter, String directory) throws Exception {
+  public RpcDialog(RpcClient rpc, Encrypter encrypter, String info, String directory)
+      throws Exception {
     this.rpc = rpc;
     this.encrypter = encrypter;
+    this.info = info;
 
     setNextDirectory(directory);
     this.exit = false;
   }
 
-  public Observable<SorobanMessageWithSender> receiveWithSender(long timeoutMs) throws Exception {
+  private String shortNextDirectory() {
+    return nextDirectory.substring(0, 5);
+  }
+
+  public Single<SorobanMessageWithSender> receiveWithSender(long timeoutMs) throws Exception {
     if (log.isDebugEnabled()) {
-      log.debug("watching[withSender]: " + nextDirectory);
+      log.debug(info + "watchingWithSender: " + shortNextDirectory());
     }
     return doReceive(timeoutMs)
         .map(
@@ -48,7 +54,7 @@ public class RpcDialog {
               // decrypt
               String payload = decrypt(encryptedPayload, paymentCodePartner);
               if (log.isDebugEnabled()) {
-                log.debug("(" + nextDirectory + ") <= " + payload);
+                log.debug(info + "<= received (" + shortNextDirectory() + ")");
               }
 
               // return clear object
@@ -56,10 +62,10 @@ public class RpcDialog {
             });
   }
 
-  public Observable<String> receive(final PaymentCode paymentCodePartner, long timeoutMs)
+  public Single<String> receive(final PaymentCode paymentCodePartner, long timeoutMs)
       throws Exception {
     if (log.isDebugEnabled()) {
-      log.debug("watching: " + nextDirectory);
+      log.debug(info + "watching: " + shortNextDirectory());
     }
     return doReceive(timeoutMs)
         .map(
@@ -67,7 +73,7 @@ public class RpcDialog {
               // decrypt
               String decryptedPayload = decrypt(payload, paymentCodePartner);
               if (log.isDebugEnabled()) {
-                log.debug("(" + nextDirectory + ") <= " + payload);
+                log.debug(info + "<= received (" + shortNextDirectory() + ")");
               }
 
               // check for error
@@ -79,12 +85,12 @@ public class RpcDialog {
             });
   }
 
-  private Observable<String> doReceive(long timeoutMs) throws Exception {
+  private Single<String> doReceive(long timeoutMs) throws Exception {
     if (exit) {
       throw new Exception("Canceled by user");
     }
     if (log.isDebugEnabled()) {
-      log.debug("watching: " + nextDirectory);
+      log.debug(info + "watching: " + shortNextDirectory());
     }
     return rpc.waitAndRemove(nextDirectory, timeoutMs)
         .map(
@@ -94,14 +100,13 @@ public class RpcDialog {
             });
   }
 
-  public Observable sendWithSender(
+  public Single sendWithSender(
       SorobanMessage message, PaymentCode paymentCodeMine, PaymentCode paymentCodePartner)
       throws Exception {
     checkExit(paymentCodePartner);
 
-    String payload = message.toPayload();
     if (log.isDebugEnabled()) {
-      log.debug("(" + nextDirectory + ") => [withSender] " + payload);
+      log.debug(info + "=> sendWithSender (" + shortNextDirectory() + ")");
     }
 
     // encrypt
@@ -113,14 +118,14 @@ public class RpcDialog {
     return doSend(messageWithSender.toPayload());
   }
 
-  public Observable send(SorobanMessage message, PaymentCode paymentCodePartner) throws Exception {
+  public Single send(SorobanMessage message, PaymentCode paymentCodePartner) throws Exception {
     return send(message.toPayload(), paymentCodePartner);
   }
 
-  private Observable send(String payload, PaymentCode paymentCodePartner) throws Exception {
+  private Single send(String payload, PaymentCode paymentCodePartner) throws Exception {
     checkExit(paymentCodePartner);
     if (log.isDebugEnabled()) {
-      log.debug("(" + nextDirectory + ") => " + payload);
+      log.debug(info + "=> send (" + shortNextDirectory() + ")");
     }
 
     // encrypt
@@ -128,7 +133,7 @@ public class RpcDialog {
     return doSend(encryptedPayload);
   }
 
-  protected Observable doSend(final String payload) throws Exception {
+  protected Single doSend(final String payload) throws Exception {
     return rpc.directoryAdd(nextDirectory, payload, "normal")
         .map(
             o -> {
@@ -144,17 +149,14 @@ public class RpcDialog {
     }
   }
 
-  public Observable sendError(String message, PaymentCode paymentCodePartner) {
+  public Single sendError(String message, PaymentCode paymentCodePartner) {
     // send error
     try {
       return send(ERROR_PREFIX + message, paymentCodePartner);
     } catch (Exception e) {
       // non-blocking error
-      log.error("", e);
-      BehaviorSubject s = BehaviorSubject.create();
-      s.onNext("error");
-      s.onComplete();
-      return s;
+      log.error(info + "=> error", e);
+      return Single.just("error");
     }
   }
 
@@ -170,8 +172,8 @@ public class RpcDialog {
 
   private void setNextDirectory(String nextDirectory) throws Exception {
     this.nextDirectory = encodeDirectory(nextDirectory);
-    if (log.isDebugEnabled()) {
-      log.debug("nextDirectory: " + this.nextDirectory);
+    if (log.isTraceEnabled()) {
+      log.trace(info + "nextDirectory: " + this.nextDirectory);
     }
   }
 

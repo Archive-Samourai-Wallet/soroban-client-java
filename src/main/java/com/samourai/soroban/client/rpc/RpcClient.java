@@ -1,9 +1,13 @@
 package com.samourai.soroban.client.rpc;
 
 import com.samourai.http.client.IHttpClient;
-import io.reactivex.Observable;
+import com.samourai.wallet.util.AsyncUtil;
+import io.reactivex.Single;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeoutException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,7 +39,7 @@ public class RpcClient {
     this.started = false;
   }
 
-  private Observable<Map<String, Object>> call(String method, HashMap<String, Object> params)
+  private Single<Map<String, Object>> call(String method, HashMap<String, Object> params)
       throws IOException {
 
     Map<String, String> headers = new HashMap<String, String>();
@@ -48,7 +52,7 @@ public class RpcClient {
     body.put("id", 1);
     body.put("params", Arrays.asList(params));
 
-    Observable<Map<String, Object>> result =
+    Single<Map<String, Object>> result =
         httpClient
             .postJson(url, Map.class, headers, body)
             .map(
@@ -74,7 +78,7 @@ public class RpcClient {
     return result;
   }
 
-  public Observable<String[]> directoryValues(String name) throws IOException {
+  public Single<String[]> directoryValues(String name) throws IOException {
     HashMap<String, Object> params = new HashMap<String, Object>();
     params.put("Name", name);
     params.put("Entries", new String[0]);
@@ -90,7 +94,7 @@ public class RpcClient {
             });
   }
 
-  public Observable<String> directoryValue(String name) throws IOException {
+  public Single<String> directoryValue(String name) throws IOException {
     return directoryValues(name)
         .map(
             values -> {
@@ -105,8 +109,8 @@ public class RpcClient {
             });
   }
 
-  public Observable<String> directoryValueWait(final String name, final long timeoutMs) {
-    return Observable.fromCallable(
+  public Single<String> directoryValueWait(final String name, final long timeoutMs) {
+    return Single.fromCallable(
         () -> {
           long timeStart = System.currentTimeMillis();
           long elapsedTime;
@@ -114,7 +118,7 @@ public class RpcClient {
             elapsedTime = System.currentTimeMillis() - timeStart;
 
             try {
-              String value = directoryValue(name).blockingSingle();
+              String value = AsyncUtil.getInstance().blockingGet(directoryValue(name));
               return value;
             } catch (Exception e) {
               // null value
@@ -130,24 +134,21 @@ public class RpcClient {
             } catch (InterruptedException e) {
             }
           }
-          return null;
+          throw new TimeoutException("exit"); // simulate TimeoutException on exit()
         });
   }
 
-  public Observable directoryAdd(String name, String entry, String mode) throws IOException {
+  public Single directoryAdd(String name, String entry, String mode) throws IOException {
     HashMap<String, Object> params = new HashMap<String, Object>();
 
     params.put("Name", name);
     params.put("Entry", entry);
     params.put("Mode", mode);
 
-    if (log.isDebugEnabled()) {
-      log.debug("=> " + name + " (" + mode + ")");
-    }
     return call("directory.Add", params);
   }
 
-  public Observable directoryRemove(String name, String entry) throws IOException {
+  public Single<Map<String, Object>> directoryRemove(String name, String entry) throws IOException {
     HashMap<String, Object> params = new HashMap<String, Object>();
     params.put("Name", name);
     params.put("Entry", entry);
@@ -155,10 +156,8 @@ public class RpcClient {
     return call("directory.Remove", params);
   }
 
-  public Observable<String> waitAndRemove(final String name, final long timeoutMs)
-      throws Exception {
+  public Single<String> waitAndRemove(final String name, final long timeoutMs) throws Exception {
     return directoryValueWait(name, timeoutMs)
-        .filter(value -> value != null) // value is null on exit()
         .map(
             value -> {
               directoryRemove(name, value).subscribe();

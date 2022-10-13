@@ -1,9 +1,9 @@
-package com.samourai.soroban.client;
+package com.samourai.soroban.client.pingPong;
 
 import com.samourai.soroban.cahoots.CahootsContext;
 import com.samourai.soroban.cahoots.Stonewallx2Context;
-import com.samourai.soroban.client.pingPong.PingPongMessage;
-import com.samourai.soroban.client.pingPong.PingPongService;
+import com.samourai.soroban.client.AbstractTest;
+import com.samourai.soroban.client.SorobanMessage;
 import com.samourai.wallet.cahoots.CahootsType;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,15 +53,14 @@ public class PingPongServiceTest extends AbstractTest {
                     Stonewallx2Context.newInitiator(
                         cahootsWalletCounterparty, 0, 0, 1234, "foo", null);
                 SorobanMessage lastMessage =
-                    sorobanService
-                        .initiator(
+                    asyncUtil.blockingLast(
+                        sorobanService.initiator(
                             cahootsContext,
                             pingPongService,
                             paymentCodeCounterparty,
                             TIMEOUT_MS,
                             message,
-                            onlineSorobanInteraction -> {})
-                        .blockingLast();
+                            onlineSorobanInteraction -> {}));
                 Assertions.assertEquals(lastPayload, lastMessage.toPayload());
               } catch (Exception e) {
                 setException(e);
@@ -69,8 +68,8 @@ public class PingPongServiceTest extends AbstractTest {
             });
     threadInitiator.start();
 
-    // run contributor
-    Thread threadContributor =
+    // run counterparty
+    Thread threadCounterparty =
         new Thread(
             () -> {
               // instanciate services
@@ -79,22 +78,21 @@ public class PingPongServiceTest extends AbstractTest {
                 CahootsContext cahootsContext =
                     CahootsContext.newCounterparty(
                         cahootsWalletCounterparty, CahootsType.STONEWALLX2, 0);
-                // run soroban as contributor
+                // run soroban as counterparty
                 SorobanMessage lastMessage =
-                    sorobanService
-                        .contributor(
-                            cahootsContext, pingPongService, paymentCodeInitiator, TIMEOUT_MS)
-                        .blockingLast();
+                    asyncUtil.blockingLast(
+                        sorobanService.counterparty(
+                            cahootsContext, pingPongService, paymentCodeInitiator, TIMEOUT_MS));
                 Assertions.assertEquals(lastPayload, lastMessage.toPayload());
               } catch (Exception e) {
                 setException(e);
               }
             });
-    threadContributor.start();
+    threadCounterparty.start();
 
     assertNoException();
     threadInitiator.join();
-    threadContributor.join();
+    threadCounterparty.join();
 
     assertNoException();
     log.info("threadInitiator ended");

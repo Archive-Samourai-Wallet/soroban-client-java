@@ -1,7 +1,6 @@
-package com.samourai.soroban.client;
+package com.samourai.soroban.client.meeting;
 
-import com.samourai.soroban.client.meeting.SorobanRequestMessage;
-import com.samourai.soroban.client.meeting.SorobanResponseMessage;
+import com.samourai.soroban.client.AbstractTest;
 import com.samourai.wallet.cahoots.CahootsType;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,17 +26,15 @@ public class SorobanMeetingServiceTest extends AbstractTest {
               try {
                 // request soroban meeeting
                 SorobanRequestMessage request =
-                    sorobanMeetingService
-                        .sendMeetingRequest(
+                    asyncUtil.blockingGet(
+                        sorobanMeetingService.sendMeetingRequest(
                             cahootsWalletInitiator,
                             paymentCodeCounterparty,
-                            CahootsType.STONEWALLX2)
-                        .blockingSingle();
+                            CahootsType.STONEWALLX2));
                 SorobanResponseMessage response =
-                    sorobanMeetingService
-                        .receiveMeetingResponse(
-                            cahootsWalletInitiator, paymentCodeCounterparty, request, TIMEOUT_MS)
-                        .blockingSingle();
+                    asyncUtil.blockingGet(
+                        sorobanMeetingService.receiveMeetingResponse(
+                            cahootsWalletInitiator, paymentCodeCounterparty, request, TIMEOUT_MS));
                 Assertions.assertTrue(response.isAccept());
               } catch (Exception e) {
                 setException(e);
@@ -45,34 +42,33 @@ public class SorobanMeetingServiceTest extends AbstractTest {
             });
     threadInitiator.start();
 
-    // run contributor
-    Thread threadContributor =
+    // run counterparty
+    Thread threadCounterparty =
         new Thread(
             () -> {
               try {
                 // listen for Soroban requests
                 SorobanRequestMessage requestMessage =
-                    sorobanMeetingService
-                        .receiveMeetingRequest(cahootsWalletCounterparty, TIMEOUT_MS)
-                        .blockingSingle();
+                    asyncUtil.blockingGet(
+                        sorobanMeetingService.receiveMeetingRequest(
+                            cahootsWalletCounterparty, TIMEOUT_MS));
                 Assertions.assertEquals(CahootsType.STONEWALLX2, requestMessage.getType());
                 Assertions.assertEquals(
                     paymentCodeInitiator.toString(), requestMessage.getSender());
 
                 // response accept
                 sorobanMeetingService
-                    .sendMeetingResponse(
-                        cahootsWalletCounterparty, paymentCodeInitiator, requestMessage, true)
+                    .sendMeetingResponse(cahootsWalletCounterparty, requestMessage, true)
                     .subscribe();
               } catch (Exception e) {
                 setException(e);
               }
             });
-    threadContributor.start();
+    threadCounterparty.start();
 
     assertNoException();
     threadInitiator.join();
-    threadContributor.join();
+    threadCounterparty.join();
 
     assertNoException();
     log.info("*** SOROBAN MEETING SUCCESS ***");
