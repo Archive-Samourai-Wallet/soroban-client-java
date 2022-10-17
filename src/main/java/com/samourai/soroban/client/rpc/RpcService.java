@@ -11,7 +11,7 @@ import com.samourai.wallet.crypto.CryptoUtil;
 import org.bitcoinj.core.NetworkParameters;
 
 public class RpcService {
-  private static final String ENDPOINT_RPC = "/rpc";
+  protected static final String ENDPOINT_RPC = "/rpc";
 
   private final IHttpClient httpClient;
   private final CryptoUtil cryptoUtil;

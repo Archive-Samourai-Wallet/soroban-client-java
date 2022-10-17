@@ -290,7 +290,11 @@ public class SorobanService {
   private void fail(
       String error, Subject onMessage, RpcDialog dialog, PaymentCode paymentCodePartner) {
     if (dialog != null) {
-      dialog.sendError(error, paymentCodePartner).subscribe();
+      // send error before closing dialog
+      try {
+        asyncUtil.blockingGet(dialog.sendError(error, paymentCodePartner));
+      } catch (Exception e) {
+      }
       dialog.close();
     }
 

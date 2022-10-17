@@ -1,6 +1,7 @@
 package com.samourai.soroban.client.wallet.sender;
 
 import com.samourai.soroban.cahoots.CahootsContext;
+import com.samourai.soroban.client.OnlineSorobanInteraction;
 import com.samourai.soroban.client.SorobanService;
 import com.samourai.soroban.client.cahoots.OnlineCahootsMessage;
 import com.samourai.soroban.client.cahoots.OnlineCahootsService;
@@ -12,6 +13,7 @@ import com.samourai.wallet.cahoots.Cahoots;
 import com.samourai.wallet.cahoots.CahootsType;
 import com.samourai.wallet.cahoots.CahootsWallet;
 import io.reactivex.Single;
+import io.reactivex.functions.Consumer;
 import java.lang.invoke.MethodHandles;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,20 +56,26 @@ public class SorobanWalletInitiator extends SorobanWallet {
     return meet(cahootsContext.getCahootsType(), paymentCodeCounterparty)
         .flatMap(
             meetingResponse -> {
+              listener.onResponse(meetingResponse);
               if (!meetingResponse.isAccept()) {
                 return Single.error(new Exception("Partner declined the Cahoots request"));
               }
               log.info("Soroban request accepted => starting Cahoots... " + meetingResponse);
 
               // start Cahoots
-              return initiator(cahootsContext, paymentCodeCounterparty, listener);
+              Consumer<OnlineCahootsMessage> onProgress =
+                  sorobanMessage -> listener.progress(sorobanMessage);
+              Consumer<OnlineSorobanInteraction> onInteraction =
+                  sorobanMessage -> listener.onInteraction(sorobanMessage);
+              return initiator(cahootsContext, paymentCodeCounterparty, onProgress, onInteraction);
             });
   }
 
   public Single<Cahoots> initiator(
       CahootsContext cahootsContext,
       PaymentCode paymentCodeCounterparty,
-      SorobanInitiatorListener listener)
+      Consumer<OnlineCahootsMessage> onProgress,
+      Consumer<OnlineSorobanInteraction> onInteraction)
       throws Exception {
     OnlineCahootsMessage message = onlineCahootsService.initiate(cahootsContext);
     return sorobanService
@@ -77,10 +85,10 @@ public class SorobanWalletInitiator extends SorobanWallet {
             paymentCodeCounterparty,
             timeoutDialogMs,
             message,
-            interaction -> listener.onInteraction(interaction))
+            interaction -> onInteraction.accept(interaction))
         // notify on progress
         .map(sorobanMessage -> (OnlineCahootsMessage) sorobanMessage)
-        .doOnNext(sorobanMessage -> listener.progress(sorobanMessage))
+        .doOnNext(sorobanMessage -> onProgress.accept(sorobanMessage))
         // return Cahoots on success
         .lastOrError()
         .map(onlineCahootsMessage -> onlineCahootsMessage.getCahoots());

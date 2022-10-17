@@ -19,6 +19,7 @@ import org.apache.commons.lang3.mutable.Mutable;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -200,6 +201,14 @@ public class SorobanWalletTest extends AbstractTest {
     threadCounterparty.join();
 
     assertNoException();
+  }
+
+  @Test
+  @Disabled
+  public void manualRunInitiator() throws Exception {
+    String pcode =
+        "PM8TJMMz8WtG43R88Q2XbUDUSJCyHZrgpcXMQCXpdbuGEsoNSVuXBxqoqHDyy9LXhwwScaixTGLCocjbNZZzJmu91DhHFM7vcXGYNHtWZbj9A54muq3Q";
+    runInitiator(false, 0, new PaymentCode(pcode));
   }
 
   private Cahoots runInitiator(

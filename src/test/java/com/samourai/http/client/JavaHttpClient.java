@@ -5,8 +5,6 @@ import com.samourai.wallet.api.backend.beans.HttpException;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.eclipse.jetty.client.HttpClient;
-import org.eclipse.jetty.client.ProxyConfiguration;
-import org.eclipse.jetty.client.Socks4Proxy;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.client.api.Request;
 import org.eclipse.jetty.client.util.FormContentProvider;
@@ -27,7 +25,7 @@ public class JavaHttpClient extends JacksonHttpClient {
   private long requestTimeout;
 
   public JavaHttpClient(long requestTimeout) {
-    this(computeHttpClient(true), requestTimeout);
+    this(computeHttpClient(), requestTimeout);
   }
 
   public JavaHttpClient(HttpClient httpClient, long requestTimeout) {
@@ -36,16 +34,10 @@ public class JavaHttpClient extends JacksonHttpClient {
     this.requestTimeout = requestTimeout;
   }
 
-  protected static HttpClient computeHttpClient(boolean torProxy) {
+  protected static HttpClient computeHttpClient() {
     // we use jetty for proxy SOCKS support
     HttpClient jettyHttpClient = new HttpClient(new SslContextFactory());
     jettyHttpClient.setUserAgentField(new HttpField(HttpHeader.USER_AGENT, "soroban-client"));
-
-    // tor proxy
-    if (torProxy) {
-      ProxyConfiguration.Proxy jettyProxy = new Socks4Proxy("127.0.0.1", 9050);
-      jettyHttpClient.getProxyConfiguration().getProxies().add(jettyProxy);
-    }
     return jettyHttpClient;
   }
 

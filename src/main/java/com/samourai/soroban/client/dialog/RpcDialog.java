@@ -4,6 +4,7 @@ import com.google.common.base.Charsets;
 import com.samourai.soroban.client.SorobanMessage;
 import com.samourai.soroban.client.meeting.SorobanMessageWithSender;
 import com.samourai.soroban.client.rpc.RpcClient;
+import com.samourai.soroban.client.rpc.RpcMode;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.util.Z85;
 import io.reactivex.Single;
@@ -35,7 +36,7 @@ public class RpcDialog {
   }
 
   private String shortNextDirectory() {
-    return nextDirectory.substring(0, 5);
+    return RpcClient.shortDirectory(nextDirectory);
   }
 
   public Single<SorobanMessageWithSender> receiveWithSender(long timeoutMs) throws Exception {
@@ -45,6 +46,7 @@ public class RpcDialog {
     return doReceive(timeoutMs)
         .map(
             payloadWithSender -> {
+              // read paymentCode from sender
               SorobanMessageWithSender messageWithSender =
                   SorobanMessageWithSender.parse(payloadWithSender);
               String encryptedPayload = messageWithSender.getPayload();
@@ -64,9 +66,6 @@ public class RpcDialog {
 
   public Single<String> receive(final PaymentCode paymentCodePartner, long timeoutMs)
       throws Exception {
-    if (log.isDebugEnabled()) {
-      log.debug(info + "watching: " + shortNextDirectory());
-    }
     return doReceive(timeoutMs)
         .map(
             payload -> {
@@ -92,7 +91,7 @@ public class RpcDialog {
     if (log.isDebugEnabled()) {
       log.debug(info + "watching: " + shortNextDirectory());
     }
-    return rpc.waitAndRemove(nextDirectory, timeoutMs)
+    return rpc.directoryValueWaitAndRemove(nextDirectory, timeoutMs)
         .map(
             payload -> {
               setNextDirectory(payload);
@@ -134,7 +133,7 @@ public class RpcDialog {
   }
 
   protected Single doSend(final String payload) throws Exception {
-    return rpc.directoryAdd(nextDirectory, payload, "normal")
+    return rpc.directoryAdd(nextDirectory, payload, RpcMode.normal.name())
         .map(
             o -> {
               setNextDirectory(payload);

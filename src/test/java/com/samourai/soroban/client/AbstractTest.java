@@ -1,6 +1,5 @@
 package com.samourai.soroban.client;
 
-import com.samourai.http.client.IHttpClient;
 import com.samourai.http.client.JavaHttpClient;
 import com.samourai.soroban.client.meeting.SorobanMeetingService;
 import com.samourai.soroban.client.rpc.RpcService;
@@ -45,7 +44,7 @@ public abstract class AbstractTest {
       HD_WalletFactoryGeneric.getInstance();
   protected static final AsyncUtil asyncUtil = AsyncUtil.getInstance();
 
-  protected IHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
+  protected JavaHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
   protected CryptoUtil cryptoUtil = CryptoUtil.getInstance(PROVIDER_JAVA);
   protected RpcService rpcService = new RpcService(httpClient, cryptoUtil, false);
   protected SorobanWalletService sorobanWalletService =
@@ -101,6 +100,8 @@ public abstract class AbstractTest {
 
     paymentCodeInitiator = cahootsWalletInitiator.getPaymentCode();
     paymentCodeCounterparty = cahootsWalletCounterparty.getPaymentCode();
+
+    httpClient.getJettyHttpClient().start();
   }
 
   protected static void assertNoException() {

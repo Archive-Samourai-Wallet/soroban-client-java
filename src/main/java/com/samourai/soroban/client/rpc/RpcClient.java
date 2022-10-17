@@ -8,14 +8,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class RpcClient {
   private static final Logger log = LoggerFactory.getLogger(RpcClient.class);
-
-  private static final int WAIT_DELAY_MS = 500;
+  private static final int WAIT_RETRY_DELAY_MS = 1000;
 
   private final IHttpClient httpClient;
   private final String url;
@@ -25,6 +24,10 @@ public class RpcClient {
     this.httpClient = httpClient;
     this.url = url;
     this.started = true;
+  }
+
+  public static String shortDirectory(String directory) {
+    return directory.substring(0, Math.min(directory.length(), 5));
   }
 
   public String getUrl() {
@@ -99,43 +102,52 @@ public class RpcClient {
         .map(
             values -> {
               if (values == null || values.length == 0) {
-                throw new Exception("No value");
+                throw new NoValueRpcException();
               }
               String value = values[values.length - 1];
               if (value.isEmpty()) {
-                throw new Exception("No value");
+                throw new NoValueRpcException();
               }
               return value;
             });
   }
 
-  public Single<String> directoryValueWait(final String name, final long timeoutMs) {
-    return Single.fromCallable(
-        () -> {
-          long timeStart = System.currentTimeMillis();
-          long elapsedTime;
-          while (started) {
-            elapsedTime = System.currentTimeMillis() - timeStart;
-
-            try {
-              String value = AsyncUtil.getInstance().blockingGet(directoryValue(name));
-              return value;
-            } catch (Exception e) {
-              // null value
-            }
-
-            // always check values at least once, or more when timeout not expired
-            if (elapsedTime >= timeoutMs) {
-              throw new TimeoutException(
-                  String.format("Waited " + Math.round(elapsedTime / 1000) + "s, aborting"));
-            }
-            try {
-              Thread.sleep(WAIT_DELAY_MS);
-            } catch (InterruptedException e) {
-            }
-          }
-          throw new TimeoutException("exit"); // simulate TimeoutException on exit()
-        });
+  public Single<String> directoryValueWait(final String name, final long timeoutMs)
+      throws IOException {
+    if (log.isDebugEnabled()) {
+      log.debug("Waiting for " + shortDirectory(name) + "... ");
+    }
+    long timeStart = System.currentTimeMillis();
+    return directoryValue(name)
+        .retry(
+            error -> {
+              try {
+                // wait for retry delay
+                AsyncUtil.getInstance()
+                    .blockingGet(Single.timer(WAIT_RETRY_DELAY_MS, TimeUnit.MILLISECONDS));
+              } catch (Exception e) {
+                // ok
+              }
+              if (!started) {
+                if (log.isDebugEnabled()) {
+                  log.debug("exit");
+                }
+                return false; // exit
+              }
+              long elapsedTime = System.currentTimeMillis() - timeStart;
+              if (log.isTraceEnabled()) {
+                log.trace(
+                    "Waiting for "
+                        + shortDirectory(name)
+                        + "... "
+                        + elapsedTime
+                        + "/"
+                        + timeoutMs
+                        + "ms");
+              }
+              return true; // retry
+            })
+        .timeout(timeoutMs, TimeUnit.MILLISECONDS);
   }
 
   public Single directoryAdd(String name, String entry, String mode) throws IOException {
@@ -156,7 +168,8 @@ public class RpcClient {
     return call("directory.Remove", params);
   }
 
-  public Single<String> waitAndRemove(final String name, final long timeoutMs) throws Exception {
+  public Single<String> directoryValueWaitAndRemove(final String name, final long timeoutMs)
+      throws Exception {
     return directoryValueWait(name, timeoutMs)
         .map(
             value -> {
