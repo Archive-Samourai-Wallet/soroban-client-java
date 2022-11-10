@@ -13,6 +13,7 @@ import com.samourai.wallet.cahoots.CahootsWallet;
 import com.samourai.wallet.cahoots.multi.MultiCahootsService;
 import com.samourai.wallet.cahoots.stonewallx2.Stonewallx2Service;
 import com.samourai.wallet.cahoots.stowaway.StowawayService;
+import com.samourai.wallet.chain.ChainSupplier;
 import org.bitcoinj.core.NetworkParameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,12 +29,13 @@ public class SorobanWalletService {
   public SorobanWalletService(
       BIP47UtilGeneric bip47Util,
       BipFormatSupplier bipFormatSupplier,
+      ChainSupplier chainSupplier,
       NetworkParameters params,
       RpcService rpcService) {
-    StowawayService stowawayService = new StowawayService(bipFormatSupplier, params);
-    Stonewallx2Service stonewallx2Service = new Stonewallx2Service(bipFormatSupplier, params);
+    StowawayService stowawayService = new StowawayService(bipFormatSupplier, chainSupplier, params);
+    Stonewallx2Service stonewallx2Service = new Stonewallx2Service(bipFormatSupplier, chainSupplier, params);
     MultiCahootsService multiCahootsService =
-        new MultiCahootsService(bipFormatSupplier, params, stonewallx2Service, stowawayService);
+        new MultiCahootsService(bipFormatSupplier, chainSupplier, params, stonewallx2Service, stowawayService);
 
     this.onlineCahootsService =
         new OnlineCahootsService(stowawayService, stonewallx2Service, multiCahootsService);
