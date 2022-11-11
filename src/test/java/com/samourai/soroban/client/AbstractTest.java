@@ -57,7 +57,7 @@ public abstract class AbstractTest {
   protected CryptoUtil cryptoUtil = CryptoUtil.getInstance(PROVIDER_JAVA);
   protected RpcService rpcService = new RpcService(httpClient, cryptoUtil, false);
   protected SorobanWalletService sorobanWalletService =
-      new SorobanWalletService(bip47Util, BIP_FORMAT.PROVIDER, chainSupplier, params, rpcService);
+      new SorobanWalletService(bip47Util, BIP_FORMAT.PROVIDER, params, rpcService);
   protected SorobanMeetingService sorobanMeetingService =
       sorobanWalletService.getSorobanMeetingService();
   protected SorobanService sorobanService = sorobanWalletService.getSorobanService();
@@ -88,6 +88,7 @@ public abstract class AbstractTest {
     cahootsWalletInitiator =
         new CahootsWallet(
             walletSupplierSender,
+            chainSupplier,
             BIP_FORMAT.PROVIDER,
             params,
             new SimpleCahootsUtxoProvider(utxoProviderInitiator));
@@ -101,6 +102,7 @@ public abstract class AbstractTest {
     cahootsWalletCounterparty =
         new CahootsWallet(
             walletSupplierCounterparty,
+            chainSupplier,
             BIP_FORMAT.PROVIDER,
             params,
             new SimpleCahootsUtxoProvider(utxoProviderCounterparty));
