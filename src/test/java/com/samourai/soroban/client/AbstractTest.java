@@ -7,12 +7,14 @@ import com.samourai.soroban.client.wallet.SorobanWalletService;
 import com.samourai.soroban.client.wallet.counterparty.SorobanWalletCounterparty;
 import com.samourai.soroban.client.wallet.sender.SorobanWalletInitiator;
 import com.samourai.soroban.utils.LogbackUtils;
+import com.samourai.wallet.api.backend.beans.WalletResponse;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.bip47.rpc.java.Bip47UtilJava;
 import com.samourai.wallet.bipFormat.BIP_FORMAT;
 import com.samourai.wallet.bipWallet.WalletSupplier;
 import com.samourai.wallet.bipWallet.WalletSupplierImpl;
 import com.samourai.wallet.cahoots.CahootsWallet;
+import com.samourai.wallet.chain.ChainSupplier;
 import com.samourai.wallet.client.indexHandler.MemoryIndexHandlerSupplier;
 import com.samourai.wallet.crypto.CryptoUtil;
 import com.samourai.wallet.hd.HD_Wallet;
@@ -40,6 +42,13 @@ public abstract class AbstractTest {
 
   protected static final NetworkParameters params = TestNet3Params.get();
   protected static final Bip47UtilJava bip47Util = Bip47UtilJava.getInstance();
+
+  protected static final ChainSupplier chainSupplier = () -> {
+    WalletResponse.InfoBlock infoBlock = new WalletResponse.InfoBlock();
+    infoBlock.height = 1234;
+    return infoBlock;
+  };
+
   protected static final HD_WalletFactoryGeneric hdWalletFactory =
       HD_WalletFactoryGeneric.getInstance();
   protected static final AsyncUtil asyncUtil = AsyncUtil.getInstance();
@@ -79,6 +88,7 @@ public abstract class AbstractTest {
     cahootsWalletInitiator =
         new CahootsWallet(
             walletSupplierSender,
+            chainSupplier,
             BIP_FORMAT.PROVIDER,
             params,
             new SimpleCahootsUtxoProvider(utxoProviderInitiator));
@@ -92,6 +102,7 @@ public abstract class AbstractTest {
     cahootsWalletCounterparty =
         new CahootsWallet(
             walletSupplierCounterparty,
+            chainSupplier,
             BIP_FORMAT.PROVIDER,
             params,
             new SimpleCahootsUtxoProvider(utxoProviderCounterparty));

@@ -12,7 +12,7 @@
         <dependency>
             <groupId>io.samourai.code.wallet</groupId>
             <artifactId>extlibj</artifactId>
-            <version>0.0.34.0-adaptCahootsForCli</version>
+            <version>81088505</version>
         </dependency>
         <dependency>
             <groupId>ch.qos.logback</groupId>
