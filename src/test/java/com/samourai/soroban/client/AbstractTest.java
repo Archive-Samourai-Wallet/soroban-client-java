@@ -43,11 +43,12 @@ public abstract class AbstractTest {
   protected static final NetworkParameters params = TestNet3Params.get();
   protected static final Bip47UtilJava bip47Util = Bip47UtilJava.getInstance();
 
-  protected static final ChainSupplier chainSupplier = () -> {
-    WalletResponse.InfoBlock infoBlock = new WalletResponse.InfoBlock();
-    infoBlock.height = 1234;
-    return infoBlock;
-  };
+  protected static final ChainSupplier chainSupplier =
+      () -> {
+        WalletResponse.InfoBlock infoBlock = new WalletResponse.InfoBlock();
+        infoBlock.height = 1234;
+        return infoBlock;
+      };
 
   protected static final HD_WalletFactoryGeneric hdWalletFactory =
       HD_WalletFactoryGeneric.getInstance();
