@@ -11,13 +11,18 @@ import org.slf4j.LoggerFactory;
 public class PaynymEncrypter implements Encrypter {
   private static final Logger log = LoggerFactory.getLogger(PaynymEncrypter.class);
 
-  private ECKey myKey;
+  private PaymentCode paymentCode;
+  private ECKey paymentCodeKey;
   private NetworkParameters params;
   private CryptoUtil cryptoUtil;
 
   public PaynymEncrypter(
-      ECKey notificationAddressKey, NetworkParameters params, CryptoUtil cryptoUtil) {
-    this.myKey = notificationAddressKey;
+      PaymentCode paymentCode,
+      ECKey paymentCodeKey,
+      NetworkParameters params,
+      CryptoUtil cryptoUtil) {
+    this.paymentCode = paymentCode;
+    this.paymentCodeKey = paymentCodeKey;
     this.params = params;
     this.cryptoUtil = cryptoUtil;
   }
@@ -25,18 +30,23 @@ public class PaynymEncrypter implements Encrypter {
   @Override
   public String decrypt(byte[] encrypted, PaymentCode paymentCodePartner) throws Exception {
     ECKey partnerKey = getPartnerKey(paymentCodePartner);
-    ECDHKeySet sharedSecret = cryptoUtil.getSharedSecret(myKey, partnerKey);
+    ECDHKeySet sharedSecret = cryptoUtil.getSharedSecret(paymentCodeKey, partnerKey);
     return cryptoUtil.decryptString(encrypted, sharedSecret);
   }
 
   @Override
   public byte[] encrypt(String payload, PaymentCode paymentCodePartner) throws Exception {
     ECKey partnerKey = getPartnerKey(paymentCodePartner);
-    ECDHKeySet sharedSecret = cryptoUtil.getSharedSecret(myKey, partnerKey);
+    ECDHKeySet sharedSecret = cryptoUtil.getSharedSecret(paymentCodeKey, partnerKey);
     return cryptoUtil.encrypt(payload.getBytes(), sharedSecret);
   }
 
   protected ECKey getPartnerKey(PaymentCode paymentCodePartner) {
     return paymentCodePartner.notificationAddress(params).getECKey();
+  }
+
+  @Override
+  public PaymentCode getPaymentCode() {
+    return paymentCode;
   }
 }

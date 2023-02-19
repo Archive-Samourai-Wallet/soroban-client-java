@@ -22,7 +22,7 @@ public class SorobanMeetingService {
   public Single<SorobanRequestMessage> sendMeetingRequest(
       CahootsWallet cahootsWallet, PaymentCode paymentCodePartner, CahootsType type)
       throws Exception {
-    String info = "[initiator] ";
+    String info = "[initiator]";
     // send request
     RpcDialog dialog =
         rpcService.createRpcDialog(cahootsWallet, info, paymentCodePartner.toString());
@@ -31,13 +31,13 @@ public class SorobanMeetingService {
       log.debug(info + "sending meeting request: " + request);
     }
     return dialog
-        .sendWithSender(request, cahootsWallet.getPaymentCode(), paymentCodePartner)
+        .sendWithSender(request, paymentCodePartner)
         .map((Function<Object, SorobanRequestMessage>) o -> request);
   }
 
   public Single<SorobanRequestMessage> receiveMeetingRequest(
       CahootsWallet cahootsWallet, long timeoutMs) throws Exception {
-    String info = "[counterparty] ";
+    String info = "[counterparty]";
     RpcDialog dialog =
         rpcService.createRpcDialog(cahootsWallet, info, cahootsWallet.getPaymentCode().toString());
     if (log.isDebugEnabled()) {
@@ -59,7 +59,7 @@ public class SorobanMeetingService {
 
   public Single<SorobanResponseMessage> sendMeetingResponse(
       CahootsWallet cahootsWallet, SorobanRequestMessage request, boolean accept) throws Exception {
-    String info = "[counterparty] ";
+    String info = "[counterparty]";
     RpcDialog dialog = rpcService.createRpcDialog(cahootsWallet, info, request);
     final SorobanResponseMessage response = new SorobanResponseMessage(accept);
     PaymentCode paymentCodePartner = new PaymentCode(request.getSender());
@@ -82,7 +82,7 @@ public class SorobanMeetingService {
       final long timeoutMs)
       throws Exception {
     // send request
-    String info = "[initiator] ";
+    String info = "[initiator]";
     final RpcDialog dialog = rpcService.createRpcDialog(cahootsWallet, info, request);
     return dialog
         .receive(paymentCodePartner, timeoutMs)

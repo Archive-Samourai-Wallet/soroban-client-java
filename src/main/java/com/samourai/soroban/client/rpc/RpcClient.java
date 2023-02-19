@@ -1,6 +1,7 @@
 package com.samourai.soroban.client.rpc;
 
 import com.samourai.http.client.IHttpClient;
+import com.samourai.soroban.client.SorobanServer;
 import com.samourai.wallet.util.AsyncUtil;
 import io.reactivex.Single;
 import java.io.IOException;
@@ -9,18 +10,25 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import org.bitcoinj.core.NetworkParameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class RpcClient {
-  private static final Logger log = LoggerFactory.getLogger(RpcClient.class);
+  private Logger log;
   private static final int WAIT_RETRY_DELAY_MS = 1000;
+  private static final String ENDPOINT_RPC = "/rpc";
 
   private final IHttpClient httpClient;
   private final String url;
   private boolean started;
 
-  public RpcClient(IHttpClient httpClient, String url) {
+  public RpcClient(String info, IHttpClient httpClient, NetworkParameters params, boolean onion) {
+    this(info, httpClient, SorobanServer.get(params).getServerUrl(onion) + ENDPOINT_RPC);
+  }
+
+  protected RpcClient(String info, IHttpClient httpClient, String url) {
+    this.log = LoggerFactory.getLogger(RpcClient.class.getName() + info);
     this.httpClient = httpClient;
     this.url = url;
     this.started = true;
@@ -44,6 +52,9 @@ public class RpcClient {
 
   private Single<Map<String, Object>> call(String method, HashMap<String, Object> params)
       throws IOException {
+    if (!started) {
+      throw new IOException("RpcClient stopped");
+    }
 
     Map<String, String> headers = new HashMap<String, String>();
     headers.put("content-type", "application/json");
@@ -82,6 +93,9 @@ public class RpcClient {
   }
 
   public Single<String[]> directoryValues(String name) throws IOException {
+    if (log.isDebugEnabled()) {
+      log.debug("get " + shortDirectory(name));
+    }
     HashMap<String, Object> params = new HashMap<String, Object>();
     params.put("Name", name);
     params.put("Entries", new String[0]);
@@ -115,7 +129,7 @@ public class RpcClient {
   public Single<String> directoryValueWait(final String name, final long timeoutMs)
       throws IOException {
     if (log.isDebugEnabled()) {
-      log.debug("Waiting for " + shortDirectory(name) + "... ");
+      log.debug("wait " + shortDirectory(name) + "... ");
     }
     long timeStart = System.currentTimeMillis();
     return directoryValue(name)
@@ -151,6 +165,9 @@ public class RpcClient {
   }
 
   public Single directoryAdd(String name, String entry, String mode) throws IOException {
+    if (log.isDebugEnabled()) {
+      log.debug("add " + shortDirectory(name) + ": " + entry);
+    }
     HashMap<String, Object> params = new HashMap<String, Object>();
 
     params.put("Name", name);
@@ -161,6 +178,9 @@ public class RpcClient {
   }
 
   public Single<Map<String, Object>> directoryRemove(String name, String entry) throws IOException {
+    if (log.isDebugEnabled()) {
+      log.debug("--" + shortDirectory(name) + ": " + entry);
+    }
     HashMap<String, Object> params = new HashMap<String, Object>();
     params.put("Name", name);
     params.put("Entry", entry);

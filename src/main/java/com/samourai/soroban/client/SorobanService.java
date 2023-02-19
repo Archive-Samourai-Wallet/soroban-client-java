@@ -44,7 +44,7 @@ public class SorobanService {
     SorobanInteractionHandler interactionHandler = new SorobanInteractionHandler(onInteraction);
     final BehaviorSubject<SorobanMessage> onMessage = BehaviorSubject.create();
     CahootsWallet cahootsWallet = cahootsContext.getCahootsWallet();
-    String info = "[initiator] ";
+    String info = "[initiator]";
     Thread t =
         new Thread(
             () -> {
@@ -85,7 +85,7 @@ public class SorobanService {
       throws Exception {
     final BehaviorSubject onMessage = BehaviorSubject.create();
     CahootsWallet cahootsWallet = cahootsContext.getCahootsWallet();
-    String info = "[counterparty] ";
+    String info = "[counterparty]";
     Thread t =
         new Thread(
             () -> {
