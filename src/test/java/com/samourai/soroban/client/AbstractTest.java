@@ -2,7 +2,7 @@ package com.samourai.soroban.client;
 
 import com.samourai.http.client.JavaHttpClient;
 import com.samourai.soroban.client.meeting.SorobanMeetingService;
-import com.samourai.soroban.client.rpc.RpcService;
+import com.samourai.soroban.client.rpc.RpcClientService;
 import com.samourai.soroban.client.wallet.SorobanWalletService;
 import com.samourai.soroban.client.wallet.counterparty.SorobanWalletCounterparty;
 import com.samourai.soroban.client.wallet.sender.SorobanWalletInitiator;
@@ -56,9 +56,10 @@ public abstract class AbstractTest {
 
   protected JavaHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
   protected CryptoUtil cryptoUtil = CryptoUtil.getInstance(PROVIDER_JAVA);
-  protected RpcService rpcService = new RpcService(httpClient, cryptoUtil, false);
+  protected RpcClientService rpcClientService =
+      new RpcClientService(httpClient, cryptoUtil, false, params);
   protected SorobanWalletService sorobanWalletService =
-      new SorobanWalletService(bip47Util, BIP_FORMAT.PROVIDER, params, rpcService);
+      new SorobanWalletService(bip47Util, BIP_FORMAT.PROVIDER, params, rpcClientService);
   protected SorobanMeetingService sorobanMeetingService =
       sorobanWalletService.getSorobanMeetingService();
   protected SorobanService sorobanService = sorobanWalletService.getSorobanService();
@@ -91,7 +92,6 @@ public abstract class AbstractTest {
             walletSupplierSender,
             chainSupplier,
             BIP_FORMAT.PROVIDER,
-            params,
             new SimpleCahootsUtxoProvider(utxoProviderInitiator));
     sorobanWalletInitiator = sorobanWalletService.getSorobanWalletInitiator(cahootsWalletInitiator);
 
@@ -105,7 +105,6 @@ public abstract class AbstractTest {
             walletSupplierCounterparty,
             chainSupplier,
             BIP_FORMAT.PROVIDER,
-            params,
             new SimpleCahootsUtxoProvider(utxoProviderCounterparty));
     sorobanWalletCounterparty =
         sorobanWalletService.getSorobanWalletCounterparty(cahootsWalletCounterparty);

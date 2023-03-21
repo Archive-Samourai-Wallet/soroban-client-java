@@ -2,7 +2,8 @@ package com.samourai.soroban.client;
 
 import com.samourai.soroban.cahoots.CahootsContext;
 import com.samourai.soroban.client.dialog.RpcDialog;
-import com.samourai.soroban.client.rpc.RpcService;
+import com.samourai.soroban.client.rpc.RpcClient;
+import com.samourai.soroban.client.rpc.RpcClientService;
 import com.samourai.wallet.bip47.BIP47UtilGeneric;
 import com.samourai.wallet.bip47.rpc.BIP47Wallet;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
@@ -24,13 +25,13 @@ public class SorobanService {
 
   private BIP47UtilGeneric bip47Util;
   private NetworkParameters params;
-  private RpcService rpcService;
+  private RpcClientService rpcClientService;
 
   public SorobanService(
-      BIP47UtilGeneric bip47Util, NetworkParameters params, RpcService rpcService) {
+      BIP47UtilGeneric bip47Util, NetworkParameters params, RpcClientService rpcClientService) {
     this.bip47Util = bip47Util;
     this.params = params;
-    this.rpcService = rpcService;
+    this.rpcClientService = rpcClientService;
   }
 
   public Observable<SorobanMessage> initiator(
@@ -53,7 +54,9 @@ public class SorobanService {
                 String initialDirectory =
                     getMeeetingAddressSend(cahootsWallet, paymentCodeCounterParty, params)
                         .getBech32AsString();
-                dialogOrNull = rpcService.createRpcDialog(cahootsWallet, info, initialDirectory);
+                RpcWallet rpcWallet = cahootsWallet.getRpcWallet();
+                RpcClient rpcClient = rpcClientService.getRpcClient(info);
+                dialogOrNull = rpcClient.createRpcDialog(rpcWallet, initialDirectory);
                 final RpcDialog dialog = dialogOrNull;
                 closeDialogOnError(onMessage, dialog, paymentCodeCounterParty, interactionHandler);
                 dialog(
@@ -94,7 +97,9 @@ public class SorobanService {
                 String initialDirectory =
                     getMeeetingAddressReceive(cahootsWallet, paymentCodeInitiator, params)
                         .getBech32AsString();
-                dialogOrNull = rpcService.createRpcDialog(cahootsWallet, info, initialDirectory);
+                RpcWallet rpcWallet = cahootsWallet.getRpcWallet();
+                RpcClient rpcClient = rpcClientService.getRpcClient(info);
+                dialogOrNull = rpcClient.createRpcDialog(rpcWallet, initialDirectory);
                 final RpcDialog dialog = dialogOrNull;
                 closeDialogOnError(onMessage, dialog, paymentCodeInitiator, null);
 
@@ -175,7 +180,7 @@ public class SorobanService {
       if (onMessage != null) {
         onMessage.onNext(message);
       }
-      asyncUtil.blockingGet(dialog.send(message, paymentCodePartner));
+      asyncUtil.blockingAwait(dialog.send(message, paymentCodePartner));
 
       if (message.isDone()) {
         // done
@@ -292,7 +297,7 @@ public class SorobanService {
     if (dialog != null) {
       // send error before closing dialog
       try {
-        asyncUtil.blockingGet(dialog.sendError(error, paymentCodePartner));
+        asyncUtil.blockingAwait(dialog.sendError(error, paymentCodePartner));
       } catch (Exception e) {
       }
       dialog.close();
@@ -305,8 +310,9 @@ public class SorobanService {
   private SegwitAddress getMeeetingAddressReceive(
       CahootsWallet cahootsWallet, PaymentCode paymentCodeCounterparty, NetworkParameters params)
       throws Exception {
-    BIP47Wallet bip47Wallet = cahootsWallet.getBip47Wallet();
-    int bip47Account = cahootsWallet.getBip47Account().getId();
+    RpcWallet rpcWallet = cahootsWallet.getRpcWallet();
+    BIP47Wallet bip47Wallet = rpcWallet.getBip47Wallet();
+    int bip47Account = rpcWallet.getBip47Account().getId();
     SegwitAddress receiveAddress =
         bip47Util
             .getReceiveAddress(bip47Wallet, bip47Account, paymentCodeCounterparty, 0, params)
@@ -317,8 +323,9 @@ public class SorobanService {
   private SegwitAddress getMeeetingAddressSend(
       CahootsWallet cahootsWallet, PaymentCode paymentCodeInitiator, NetworkParameters params)
       throws Exception {
-    BIP47Wallet bip47Wallet = cahootsWallet.getBip47Wallet();
-    int bip47Account = cahootsWallet.getBip47Account().getId();
+    RpcWallet rpcWallet = cahootsWallet.getRpcWallet();
+    BIP47Wallet bip47Wallet = rpcWallet.getBip47Wallet();
+    int bip47Account = rpcWallet.getBip47Account().getId();
     SegwitAddress sendAddress =
         bip47Util
             .getSendAddress(bip47Wallet, bip47Account, paymentCodeInitiator, 0, params)
@@ -326,7 +333,7 @@ public class SorobanService {
     return sendAddress;
   }
 
-  public RpcService getRpcService() {
-    return rpcService;
+  public RpcClientService getRpcClientService() {
+    return rpcClientService;
   }
 }

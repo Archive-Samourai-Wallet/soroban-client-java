@@ -4,7 +4,7 @@ import com.samourai.soroban.cahoots.ManualCahootsService;
 import com.samourai.soroban.client.SorobanService;
 import com.samourai.soroban.client.cahoots.OnlineCahootsService;
 import com.samourai.soroban.client.meeting.SorobanMeetingService;
-import com.samourai.soroban.client.rpc.RpcService;
+import com.samourai.soroban.client.rpc.RpcClientService;
 import com.samourai.soroban.client.wallet.counterparty.SorobanWalletCounterparty;
 import com.samourai.soroban.client.wallet.sender.SorobanWalletInitiator;
 import com.samourai.wallet.bip47.BIP47UtilGeneric;
@@ -29,7 +29,7 @@ public class SorobanWalletService {
       BIP47UtilGeneric bip47Util,
       BipFormatSupplier bipFormatSupplier,
       NetworkParameters params,
-      RpcService rpcService) {
+      RpcClientService rpcClientService) {
     StowawayService stowawayService = new StowawayService(bipFormatSupplier, params);
     Stonewallx2Service stonewallx2Service = new Stonewallx2Service(bipFormatSupplier, params);
     MultiCahootsService multiCahootsService =
@@ -37,8 +37,8 @@ public class SorobanWalletService {
 
     this.onlineCahootsService =
         new OnlineCahootsService(stowawayService, stonewallx2Service, multiCahootsService);
-    this.sorobanService = new SorobanService(bip47Util, params, rpcService);
-    this.sorobanMeetingService = new SorobanMeetingService(rpcService);
+    this.sorobanService = new SorobanService(bip47Util, params, rpcClientService);
+    this.sorobanMeetingService = new SorobanMeetingService(rpcClientService);
     this.manualCahootsService =
         new ManualCahootsService(stowawayService, stonewallx2Service, multiCahootsService);
   }

@@ -20,7 +20,7 @@ public class RpcClientTest extends AbstractTest {
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    this.rpcClient = new RpcClient("test", httpClient, params, false);
+    this.rpcClient = rpcClientService.getRpcClient("test");
   }
 
   @Test

@@ -6,6 +6,7 @@ import com.samourai.soroban.client.meeting.SorobanMessageWithSender;
 import com.samourai.soroban.client.rpc.RpcClient;
 import com.samourai.soroban.client.rpc.RpcClientEncrypted;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
+import io.reactivex.Completable;
 import io.reactivex.Single;
 import java.security.MessageDigest;
 import java.util.function.Consumer;
@@ -37,28 +38,28 @@ public class RpcDialog {
   }
 
   public Single<SorobanMessageWithSender> receiveWithSender(long timeoutMs) throws Exception {
-    return rpc.receiveWithSender(nextDirectory, timeoutMs);
+    return rpc.receiveEncryptedWithSender(nextDirectory, timeoutMs);
   }
 
   public Single<String> receive(final PaymentCode paymentCodePartner, long timeoutMs)
       throws Exception {
-    return rpc.receive(nextDirectory, timeoutMs, paymentCodePartner);
+    return rpc.receiveEncrypted(nextDirectory, timeoutMs, paymentCodePartner);
   }
 
-  public Single sendWithSender(SorobanMessageSimple message, PaymentCode paymentCodePartner)
+  public Completable sendWithSender(SorobanMessageSimple message, PaymentCode paymentCodePartner)
       throws Exception {
     checkExit(paymentCodePartner);
-    return rpc.sendWithSender(nextDirectory, message, paymentCodePartner);
+    return rpc.sendEncryptedWithSender(nextDirectory, message, paymentCodePartner);
   }
 
-  public Single send(SorobanMessageSimple message, PaymentCode paymentCodePartner)
+  public Completable send(SorobanMessageSimple message, PaymentCode paymentCodePartner)
       throws Exception {
     return send(message.toPayload(), paymentCodePartner);
   }
 
-  private Single send(String payload, PaymentCode paymentCodePartner) throws Exception {
+  private Completable send(String payload, PaymentCode paymentCodePartner) throws Exception {
     checkExit(paymentCodePartner);
-    return rpc.send(nextDirectory, payload, paymentCodePartner);
+    return rpc.sendEncrypted(nextDirectory, payload, paymentCodePartner);
   }
 
   private void checkExit(PaymentCode paymentCodePartner) throws Exception {
@@ -68,7 +69,7 @@ public class RpcDialog {
     }
   }
 
-  public Single sendError(String message, PaymentCode paymentCodePartner) {
+  public Completable sendError(String message, PaymentCode paymentCodePartner) {
     return rpc.sendError(nextDirectory, message, paymentCodePartner);
   }
 

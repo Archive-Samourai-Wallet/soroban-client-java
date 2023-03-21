@@ -1,7 +1,12 @@
 package com.samourai.soroban.client.rpc;
 
 import com.samourai.http.client.IHttpClient;
+import com.samourai.soroban.client.RpcWallet;
+import com.samourai.soroban.client.SorobanMessage;
 import com.samourai.soroban.client.SorobanServer;
+import com.samourai.soroban.client.dialog.Encrypter;
+import com.samourai.soroban.client.dialog.RpcDialog;
+import com.samourai.wallet.crypto.CryptoUtil;
 import com.samourai.wallet.util.AsyncUtil;
 import io.reactivex.Single;
 import java.io.IOException;
@@ -20,18 +25,41 @@ public class RpcClient {
   private static final String ENDPOINT_RPC = "/rpc";
 
   private final IHttpClient httpClient;
+  private final CryptoUtil cryptoUtil;
   private final String url;
   private boolean started;
 
-  public RpcClient(String info, IHttpClient httpClient, NetworkParameters params, boolean onion) {
-    this(info, httpClient, SorobanServer.get(params).getServerUrl(onion) + ENDPOINT_RPC);
+  public RpcClient(
+      String info,
+      IHttpClient httpClient,
+      CryptoUtil cryptoUtil,
+      NetworkParameters params,
+      boolean onion) {
+    this(
+        info, httpClient, cryptoUtil, SorobanServer.get(params).getServerUrl(onion) + ENDPOINT_RPC);
   }
 
-  protected RpcClient(String info, IHttpClient httpClient, String url) {
+  protected RpcClient(String info, IHttpClient httpClient, CryptoUtil cryptoUtil, String url) {
     this.log = LoggerFactory.getLogger(RpcClient.class.getName() + info);
     this.httpClient = httpClient;
+    this.cryptoUtil = cryptoUtil;
     this.url = url;
     this.started = true;
+  }
+
+  public RpcClientEncrypted createRpcClientEncrypted(RpcWallet rpcWallet) {
+    Encrypter encrypter = cryptoUtil.getEncrypter(rpcWallet);
+    return new RpcClientEncrypted(this, encrypter, null);
+  }
+
+  public RpcDialog createRpcDialog(RpcWallet rpcWallet, String directory) throws Exception {
+    Encrypter encrypter = cryptoUtil.getEncrypter(rpcWallet);
+    return new RpcDialog(directory, this, encrypter);
+  }
+
+  public RpcDialog createRpcDialog(RpcWallet rpcWallet, SorobanMessage sorobanMessage)
+      throws Exception {
+    return createRpcDialog(rpcWallet, sorobanMessage.toPayload());
   }
 
   public static String shortDirectory(String directory) {
