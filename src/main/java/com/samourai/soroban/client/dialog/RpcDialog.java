@@ -1,7 +1,7 @@
 package com.samourai.soroban.client.dialog;
 
 import com.google.common.base.Charsets;
-import com.samourai.soroban.client.SorobanMessageSimple;
+import com.samourai.soroban.client.SorobanPayload;
 import com.samourai.soroban.client.meeting.SorobanMessageWithSender;
 import com.samourai.soroban.client.rpc.RpcClient;
 import com.samourai.soroban.client.rpc.RpcClientEncrypted;
@@ -46,14 +46,13 @@ public class RpcDialog {
     return rpc.receiveEncrypted(nextDirectory, timeoutMs, paymentCodePartner);
   }
 
-  public Completable sendWithSender(SorobanMessageSimple message, PaymentCode paymentCodePartner)
+  public Completable sendWithSender(SorobanPayload message, PaymentCode paymentCodePartner)
       throws Exception {
     checkExit(paymentCodePartner);
     return rpc.sendEncryptedWithSender(nextDirectory, message, paymentCodePartner);
   }
 
-  public Completable send(SorobanMessageSimple message, PaymentCode paymentCodePartner)
-      throws Exception {
+  public Completable send(SorobanPayload message, PaymentCode paymentCodePartner) throws Exception {
     return send(message.toPayload(), paymentCodePartner);
   }
 

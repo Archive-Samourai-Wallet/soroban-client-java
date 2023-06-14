@@ -1,6 +1,6 @@
 package com.samourai.soroban.client.rpc;
 
-import com.samourai.soroban.client.SorobanMessageSimple;
+import com.samourai.soroban.client.SorobanPayload;
 import com.samourai.soroban.client.dialog.Encrypter;
 import com.samourai.soroban.client.dialog.SorobanException;
 import com.samourai.soroban.client.meeting.SorobanMessageWithSender;
@@ -38,7 +38,11 @@ public class RpcClientEncrypted {
             payloads -> {
               Collection<SorobanMessageWithSender> results = new LinkedList<>();
               for (String payload : payloads) {
-                results.add(decryptSorobanMessageWithSender(payload));
+                try {
+                  results.add(decryptSorobanMessageWithSender(payload));
+                } catch (Exception e) {
+                  log.error("listWithSender: could not decrypt payload, skipping: " + payload, e);
+                }
               }
               return results;
             });
@@ -100,8 +104,7 @@ public class RpcClientEncrypted {
   }
 
   public Completable sendEncryptedWithSender(
-      String directory, SorobanMessageSimple message, PaymentCode paymentCodePartner)
-      throws Exception {
+      String directory, SorobanPayload message, PaymentCode paymentCodePartner) throws Exception {
     if (log.isDebugEnabled()) {
       log.debug("=> sendWithSender (" + RpcClient.shortDirectory(directory) + ")");
     }

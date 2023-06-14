@@ -11,6 +11,7 @@ import com.samourai.wallet.api.backend.beans.WalletResponse;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.bip47.rpc.java.Bip47UtilJava;
 import com.samourai.wallet.bipFormat.BIP_FORMAT;
+import com.samourai.wallet.bipFormat.BipFormatSupplier;
 import com.samourai.wallet.bipWallet.WalletSupplier;
 import com.samourai.wallet.bipWallet.WalletSupplierImpl;
 import com.samourai.wallet.cahoots.CahootsWallet;
@@ -42,6 +43,7 @@ public abstract class AbstractTest {
 
   protected static final NetworkParameters params = TestNet3Params.get();
   protected static final Bip47UtilJava bip47Util = Bip47UtilJava.getInstance();
+  protected static final BipFormatSupplier bipFormatSupplier = BIP_FORMAT.PROVIDER;
 
   protected static final ChainSupplier chainSupplier =
       () -> {
@@ -85,7 +87,8 @@ public abstract class AbstractTest {
   public void setUp() throws Exception {
     final HD_Wallet bip84WalletSender = computeBip84wallet(SEED_WORDS, SEED_PASSPHRASE_INITIATOR);
     WalletSupplier walletSupplierSender =
-        new WalletSupplierImpl(new MemoryIndexHandlerSupplier(), bip84WalletSender);
+        new WalletSupplierImpl(
+            bipFormatSupplier, new MemoryIndexHandlerSupplier(), bip84WalletSender);
     utxoProviderInitiator = new MockUtxoProvider(params, walletSupplierSender);
     cahootsWalletInitiator =
         new CahootsWallet(
@@ -98,7 +101,8 @@ public abstract class AbstractTest {
     final HD_Wallet bip84WalletCounterparty =
         computeBip84wallet(SEED_WORDS, SEED_PASSPHRASE_COUNTERPARTY);
     WalletSupplier walletSupplierCounterparty =
-        new WalletSupplierImpl(new MemoryIndexHandlerSupplier(), bip84WalletCounterparty);
+        new WalletSupplierImpl(
+            bipFormatSupplier, new MemoryIndexHandlerSupplier(), bip84WalletCounterparty);
     utxoProviderCounterparty = new MockUtxoProvider(params, walletSupplierCounterparty);
     cahootsWalletCounterparty =
         new CahootsWallet(
@@ -131,7 +135,7 @@ public abstract class AbstractTest {
     log.error("", e);
   }
 
-  private static HD_Wallet computeBip84wallet(String seedWords, String passphrase)
+  protected static HD_Wallet computeBip84wallet(String seedWords, String passphrase)
       throws Exception {
     byte[] seed = hdWalletFactory.computeSeedFromWords(seedWords);
     HD_Wallet bip84w = hdWalletFactory.getBIP84(seed, passphrase, params);
