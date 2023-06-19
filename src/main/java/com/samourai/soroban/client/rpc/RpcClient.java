@@ -3,18 +3,21 @@ package com.samourai.soroban.client.rpc;
 import com.samourai.http.client.IHttpClient;
 import com.samourai.soroban.client.RpcWallet;
 import com.samourai.soroban.client.SorobanMessage;
-import com.samourai.soroban.client.SorobanServer;
+import com.samourai.soroban.client.SorobanServerDex;
 import com.samourai.soroban.client.dialog.Encrypter;
 import com.samourai.soroban.client.dialog.RpcDialog;
+import com.samourai.wallet.bipFormat.BIP_FORMAT;
 import com.samourai.wallet.crypto.CryptoUtil;
 import com.samourai.wallet.util.AsyncUtil;
+import com.samourai.wallet.util.MessageSignUtilGeneric;
 import io.reactivex.Single;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
+import java.time.Instant;
+import java.util.*;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import org.apache.commons.lang3.ArrayUtils;
+import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +32,9 @@ public class RpcClient {
   private final String url;
   private boolean started;
 
+  private ECKey authenticationKey; // null until setAuthentication()
+  private NetworkParameters networkParams; // null until setAuthentication()
+
   public RpcClient(
       String info,
       IHttpClient httpClient,
@@ -36,7 +42,10 @@ public class RpcClient {
       NetworkParameters params,
       boolean onion) {
     this(
-        info, httpClient, cryptoUtil, SorobanServer.get(params).getServerUrl(onion) + ENDPOINT_RPC);
+        info,
+        httpClient,
+        cryptoUtil,
+        SorobanServerDex.get(params).getServerUrlRandom(onion) + ENDPOINT_RPC);
   }
 
   protected RpcClient(String info, IHttpClient httpClient, CryptoUtil cryptoUtil, String url) {
@@ -45,6 +54,7 @@ public class RpcClient {
     this.cryptoUtil = cryptoUtil;
     this.url = url;
     this.started = true;
+    this.authenticationKey = null;
   }
 
   public RpcClientEncrypted createRpcClientEncrypted(RpcWallet rpcWallet) {
@@ -78,21 +88,25 @@ public class RpcClient {
     this.started = false;
   }
 
-  private Single<Map<String, Object>> call(String method, HashMap<String, Object> params)
+  private Single<Map<String, Object>> call(String method, Map<String, Object> params)
       throws IOException {
     if (!started) {
       throw new IOException("RpcClient stopped");
     }
 
-    Map<String, String> headers = new HashMap<String, String>();
+    Map<String, String> headers = new HashMap<>();
     headers.put("content-type", "application/json");
     headers.put("User-Agent", "HotJava/1.1.2 FCS");
 
-    HashMap<String, Object> body = new HashMap<String, Object>();
+    Map<String, Object> body = new HashMap<>();
     body.put("method", method);
     body.put("jsonrpc", "2.0");
     body.put("id", 1);
     body.put("params", Arrays.asList(params));
+
+    if (log.isDebugEnabled()) {
+      log.debug("call: body=" + ArrayUtils.toString(body));
+    }
 
     Single<Map<String, Object>> result =
         httpClient
@@ -112,7 +126,7 @@ public class RpcClient {
                   if (result1 != null) {
                     String status = result1.get("Status");
                     if (status != null && !status.equals("success")) {
-                      throw new IOException("invalid status: " + status);
+                      throw new IOException("RPC call failed: status=" + status);
                     }
                   }
                   return rpc;
@@ -124,15 +138,15 @@ public class RpcClient {
     if (log.isDebugEnabled()) {
       log.debug("get " + shortDirectory(name));
     }
-    HashMap<String, Object> params = new HashMap<String, Object>();
-    params.put("Name", name);
-    params.put("Entries", new String[0]);
-
+    Map<String, Object> params = computeParams(name);
     return call("directory.List", params)
         .map(
             rpc -> {
               Map<?, ?> result = (Map<?, ?>) rpc.get("result");
               ArrayList<?> src = (ArrayList<?>) result.get("Entries");
+              if (src == null) {
+                throw new PermissionDeniedRpcException();
+              }
               String[] dest = new String[src.size()];
               System.arraycopy(src.toArray(), 0, dest, 0, src.size());
               return dest;
@@ -159,7 +173,7 @@ public class RpcClient {
     if (log.isDebugEnabled()) {
       log.debug("wait " + shortDirectory(name) + "... ");
     }
-    long timeStart = System.currentTimeMillis();
+    long timeStart = System.nanoTime();
     return directoryValue(name)
         .retry(
             error -> {
@@ -176,7 +190,7 @@ public class RpcClient {
                 }
                 return false; // exit
               }
-              long elapsedTime = System.currentTimeMillis() - timeStart;
+              long elapsedTime = System.nanoTime() - timeStart;
               if (log.isTraceEnabled()) {
                 log.trace(
                     "Waiting for "
@@ -196,10 +210,7 @@ public class RpcClient {
     if (log.isDebugEnabled()) {
       log.debug("add " + shortDirectory(name) + ": " + entry);
     }
-    HashMap<String, Object> params = new HashMap<String, Object>();
-
-    params.put("Name", name);
-    params.put("Entry", entry);
+    Map<String, Object> params = computeParams(name, entry);
     params.put("Mode", mode);
 
     return call("directory.Add", params);
@@ -209,10 +220,7 @@ public class RpcClient {
     if (log.isDebugEnabled()) {
       log.debug("--" + shortDirectory(name) + ": " + entry);
     }
-    HashMap<String, Object> params = new HashMap<String, Object>();
-    params.put("Name", name);
-    params.put("Entry", entry);
-
+    Map<String, Object> params = computeParams(name, entry);
     return call("directory.Remove", params);
   }
 
@@ -224,5 +232,40 @@ public class RpcClient {
               directoryRemove(name, value).subscribe();
               return value;
             });
+  }
+
+  protected Map<String, Object> computeParams(String name, String entryOrNull) {
+      Map<String, Object> params = new HashMap<>();
+      params.put("Name", name);
+      appendParamsAuthentication(name, params, entryOrNull);
+      if (entryOrNull != null) {
+          params.put("Entry", entryOrNull);
+      }
+      return params;
+  }
+
+  protected Map<String, Object> computeParams(String name) {
+    return computeParams(name, null);
+  }
+
+  protected void appendParamsAuthentication(String name, Map<String, Object> params, String entryOrNull) {
+    if (authenticationKey != null) {
+      String signatureAddress = BIP_FORMAT.LEGACY.getToAddress(authenticationKey, networkParams);
+        long timestamp = Instant.now().toEpochMilli()*1000000;
+      String signedMessage = name+"."+timestamp+(entryOrNull!=null?"."+entryOrNull:"");
+      if (log.isDebugEnabled()) {
+        log.debug("signatureAddress=" + signatureAddress+", signedMessage="+signedMessage);
+      }
+      params.put("Algorithm", "testnet3");
+      params.put("PublicKey", signatureAddress);
+      params.put("Timestamp", timestamp);
+      String signature = MessageSignUtilGeneric.getInstance().signMessage(authenticationKey, signedMessage);
+      params.put("Signature", signature);
+    }
+  }
+
+  public void setAuthentication(ECKey signatureKey, NetworkParameters networkParams) {
+    this.authenticationKey = signatureKey;
+    this.networkParams = networkParams;
   }
 }

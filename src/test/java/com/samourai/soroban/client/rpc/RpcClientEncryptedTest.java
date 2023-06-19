@@ -3,14 +3,13 @@ package com.samourai.soroban.client.rpc;
 import com.samourai.soroban.client.AbstractTest;
 import com.samourai.soroban.client.SorobanPayload;
 import com.samourai.soroban.client.meeting.SorobanMessageWithSender;
+import java.util.Collection;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Collection;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 public class RpcClientEncryptedTest extends AbstractTest {
   private static final Logger log = LoggerFactory.getLogger(RpcClientEncryptedTest.class);
@@ -36,7 +35,7 @@ public class RpcClientEncryptedTest extends AbstractTest {
 
   @Test
   public void sendEncrypted_receiveEncrypted() throws Exception {
-    String key = "key"+ System.currentTimeMillis();
+    String key = "key" + System.currentTimeMillis();
     String value = "valueOne";
 
     // cleanup
@@ -57,12 +56,13 @@ public class RpcClientEncryptedTest extends AbstractTest {
 
   @Test
   public void sendEncryptedWithSender_receiveEncryptedWithSender() throws Exception {
-    String key = "key"+System.currentTimeMillis();
+    String key = "key" + System.currentTimeMillis();
     String value = "valueOne";
 
     // cleanup
     asyncUtil.blockingGet(rpcClientInitiator.directoryRemove(key, value));
-    int nbExisting = asyncUtil.blockingGet(rpcClientCounterpartyEncrypted.listWithSender(key)).size();
+    int nbExisting =
+        asyncUtil.blockingGet(rpcClientCounterpartyEncrypted.listWithSender(key)).size();
 
     // send
     SorobanPayload sorobanPayload =
@@ -79,7 +79,7 @@ public class RpcClientEncryptedTest extends AbstractTest {
     // listWithSender
     Collection<SorobanMessageWithSender> results =
         asyncUtil.blockingGet(rpcClientCounterpartyEncrypted.listWithSender(key));
-    Assertions.assertEquals(nbExisting+1, results.size());
+    Assertions.assertEquals(nbExisting + 1, results.size());
     SorobanMessageWithSender mws = results.iterator().next();
     Assertions.assertEquals(paymentCodeInitiator.toString(), mws.getSender());
     Assertions.assertEquals(value, mws.getPayload());

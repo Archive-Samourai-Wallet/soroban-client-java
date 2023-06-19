@@ -1,5 +1,6 @@
 package com.samourai.soroban.client;
 
+import com.samourai.dex.config.DexConfigProvider;
 import com.samourai.http.client.JavaHttpClient;
 import com.samourai.soroban.client.meeting.SorobanMeetingService;
 import com.samourai.soroban.client.rpc.RpcClientService;
@@ -24,6 +25,8 @@ import com.samourai.wallet.send.provider.MockUtxoProvider;
 import com.samourai.wallet.send.provider.SimpleCahootsUtxoProvider;
 import com.samourai.wallet.util.AsyncUtil;
 import java.security.Provider;
+import java.util.Arrays;
+import java.util.Collection;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.params.TestNet3Params;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -117,6 +120,14 @@ public abstract class AbstractTest {
     paymentCodeCounterparty = cahootsWalletCounterparty.getPaymentCode();
 
     httpClient.getJettyHttpClient().start();
+
+    // only keep 1 SorobanServerDex to avoid RPC propagation delay
+    Collection<String> sorobanServerTestnetClearUrls =
+        DexConfigProvider.getInstance().getSamouraiConfig().getSorobanServerDexTestnetClear();
+    DexConfigProvider.getInstance()
+        .getSamouraiConfig()
+        .setSorobanServerDexTestnetClear(
+            Arrays.asList(sorobanServerTestnetClearUrls.iterator().next()));
   }
 
   protected static void assertNoException() {

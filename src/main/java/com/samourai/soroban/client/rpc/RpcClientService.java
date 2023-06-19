@@ -4,6 +4,7 @@ import com.samourai.http.client.IHttpClient;
 import com.samourai.wallet.crypto.CryptoUtil;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 
 public class RpcClientService {
@@ -23,13 +24,22 @@ public class RpcClientService {
   }
 
   public RpcClient getRpcClient(String info) {
-    if (!rpcClients.containsKey(info)) {
-      rpcClients.put(info, createRpcClient(info));
-    }
-    return rpcClients.get(info);
+    return getRpcClient(info, null);
   }
 
-  private RpcClient createRpcClient(String info) {
-    return new RpcClient(info, httpClient, cryptoUtil, params, onion);
+  public RpcClient getRpcClient(String info, ECKey authenticationKey) {
+    String k = info + (authenticationKey != null ? authenticationKey.getPublicKeyAsHex() : "");
+    if (!rpcClients.containsKey(k)) {
+      rpcClients.put(k, createRpcClient(info, authenticationKey));
+    }
+    return rpcClients.get(k);
+  }
+
+  protected RpcClient createRpcClient(String info, ECKey authenticationKey) {
+    RpcClient rpcClient = new RpcClient(info, httpClient, cryptoUtil, params, onion);
+    if (authenticationKey != null) {
+      rpcClient.setAuthentication(authenticationKey, params);
+    }
+    return rpcClient;
   }
 }
