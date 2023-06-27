@@ -10,10 +10,12 @@ public class SorobanMessageWithSender {
 
   private String sender;
   private String payload;
+  private String initialPayload; // encrypted
 
-  public SorobanMessageWithSender(String sender, String payload) {
+  public SorobanMessageWithSender(String sender, String payload, String initialPayload) {
     this.sender = sender;
     this.payload = payload;
+    this.initialPayload = initialPayload;
   }
 
   public static SorobanMessageWithSender parse(String payloadStr) throws Exception {
@@ -24,14 +26,26 @@ public class SorobanMessageWithSender {
     if (StringUtils.isEmpty(sender) || StringUtils.isEmpty(payload)) {
       throw new Exception("Invalid SorobanMessageWithSender");
     }
-    return new SorobanMessageWithSender(sender, payload);
+    return new SorobanMessageWithSender(sender, payload, payloadStr);
   }
 
-  public String toPayload() {
+  public static String toPayload(String sender, String payload) {
     JSONObject obj = new JSONObject();
     obj.put("sender", sender);
     obj.put("payload", payload);
     return obj.toString();
+  }
+
+  @Override
+  public String toString() {
+    return "SorobanMessageWithSender{"
+        + "sender='"
+        + sender
+        + '\''
+        + ", payload='"
+        + payload
+        + '\''
+        + '}';
   }
 
   public String getSender() {
@@ -48,5 +62,13 @@ public class SorobanMessageWithSender {
 
   public void setPayload(String payload) {
     this.payload = payload;
+  }
+
+  public String getInitialPayload() {
+    return initialPayload;
+  }
+
+  public void setInitialPayload(String initialPayload) {
+    this.initialPayload = initialPayload;
   }
 }

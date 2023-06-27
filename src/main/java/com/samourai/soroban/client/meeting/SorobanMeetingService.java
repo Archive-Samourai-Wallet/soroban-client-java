@@ -1,8 +1,8 @@
 package com.samourai.soroban.client.meeting;
 
 import com.samourai.soroban.client.dialog.RpcDialog;
-import com.samourai.soroban.client.rpc.RpcClient;
 import com.samourai.soroban.client.rpc.RpcClientService;
+import com.samourai.soroban.client.rpc.RpcSession;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.cahoots.CahootsType;
 import com.samourai.wallet.cahoots.CahootsWallet;
@@ -24,23 +24,24 @@ public class SorobanMeetingService {
       throws Exception {
     String info = "[initiator]";
     // send request
-    RpcClient rpcClient = rpcClientService.getRpcClient(info);
+    RpcSession rpcSession = rpcClientService.getRpcSession(info);
     RpcDialog dialog =
-        rpcClient.createRpcDialog(cahootsWallet.getRpcWallet(), paymentCodePartner.toString());
+        rpcSession.createRpcDialog(
+            cahootsWallet.getRpcWallet().getEncrypter(), paymentCodePartner.toString());
     final SorobanRequestMessage request = new SorobanRequestMessage(type);
     if (log.isDebugEnabled()) {
       log.debug(info + "sending meeting request: " + request);
     }
-    return dialog.sendWithSender(request, paymentCodePartner).toSingle(() -> request);
+    return dialog.sendWithSender(request, paymentCodePartner).map(payload -> request);
   }
 
   public Single<SorobanRequestMessage> receiveMeetingRequest(
       CahootsWallet cahootsWallet, long timeoutMs) throws Exception {
     String info = "[counterparty]";
-    RpcClient rpcClient = rpcClientService.getRpcClient(info);
+    RpcSession rpcSession = rpcClientService.getRpcSession(info);
     RpcDialog dialog =
-        rpcClient.createRpcDialog(
-            cahootsWallet.getRpcWallet(), cahootsWallet.getPaymentCode().toString());
+        rpcSession.createRpcDialog(
+            cahootsWallet.getRpcWallet().getEncrypter(), cahootsWallet.getPaymentCode().toString());
     if (log.isDebugEnabled()) {
       log.debug(info + "listening for meeting request...");
     }
@@ -61,14 +62,16 @@ public class SorobanMeetingService {
   public Single<SorobanResponseMessage> sendMeetingResponse(
       CahootsWallet cahootsWallet, SorobanRequestMessage request, boolean accept) throws Exception {
     String info = "[counterparty]";
-    RpcClient rpcClient = rpcClientService.getRpcClient(info);
-    RpcDialog dialog = rpcClient.createRpcDialog(cahootsWallet.getRpcWallet(), request);
+    RpcSession rpcSession = rpcClientService.getRpcSession(info);
+    RpcDialog dialog =
+        rpcSession.createRpcDialog(
+            cahootsWallet.getRpcWallet().getEncrypter(), request.toPayload());
     final SorobanResponseMessage response = new SorobanResponseMessage(accept);
     PaymentCode paymentCodePartner = new PaymentCode(request.getSender());
     return dialog
         .send(response, paymentCodePartner)
-        .toSingle(
-            () -> {
+        .map(
+            payload -> {
               if (log.isDebugEnabled()) {
                 log.debug(info + "meeting response sent: " + response);
               }
@@ -84,8 +87,10 @@ public class SorobanMeetingService {
       throws Exception {
     // send request
     String info = "[initiator]";
-    RpcClient rpcClient = rpcClientService.getRpcClient(info);
-    final RpcDialog dialog = rpcClient.createRpcDialog(cahootsWallet.getRpcWallet(), request);
+    RpcSession rpcSession = rpcClientService.getRpcSession(info);
+    final RpcDialog dialog =
+        rpcSession.createRpcDialog(
+            cahootsWallet.getRpcWallet().getEncrypter(), request.toPayload());
     return dialog
         .receive(paymentCodePartner, timeoutMs)
         .map(

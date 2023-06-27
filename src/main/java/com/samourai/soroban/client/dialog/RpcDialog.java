@@ -3,10 +3,11 @@ package com.samourai.soroban.client.dialog;
 import com.google.common.base.Charsets;
 import com.samourai.soroban.client.SorobanPayload;
 import com.samourai.soroban.client.meeting.SorobanMessageWithSender;
-import com.samourai.soroban.client.rpc.RpcClient;
 import com.samourai.soroban.client.rpc.RpcClientEncrypted;
+import com.samourai.soroban.client.rpc.RpcMode;
+import com.samourai.soroban.client.rpc.RpcSession;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
-import io.reactivex.Completable;
+import com.samourai.wallet.util.CallbackWithArg;
 import io.reactivex.Single;
 import java.security.MessageDigest;
 import java.util.function.Consumer;
@@ -17,13 +18,18 @@ import org.slf4j.LoggerFactory;
 public class RpcDialog {
   private static final Logger log = LoggerFactory.getLogger(RpcDialog.class);
 
-  private RpcClientEncrypted rpc;
+  private RpcSession rpcSession;
+  private Encrypter encrypter;
+  private Consumer<String> onEncryptedPayload;
+  private long retryDelayMs;
 
   private String nextDirectory;
   private boolean exit;
 
-  public RpcDialog(String directory, RpcClient rpcClient, Encrypter encrypter) throws Exception {
-    Consumer<String> setNextDirectoryConsumer =
+  public RpcDialog(String directory, RpcSession rpcSession, Encrypter encrypter) throws Exception {
+    this.rpcSession = rpcSession;
+    this.encrypter = encrypter;
+    this.onEncryptedPayload =
         payload -> {
           try {
             setNextDirectory(payload);
@@ -31,34 +37,41 @@ public class RpcDialog {
             log.error("", e);
           }
         };
-    this.rpc = new RpcClientEncrypted(rpcClient, encrypter, setNextDirectoryConsumer);
+    this.retryDelayMs = 2000;
 
     setNextDirectory(directory);
     this.exit = false;
   }
 
   public Single<SorobanMessageWithSender> receiveWithSender(long timeoutMs) throws Exception {
-    return rpc.receiveEncryptedWithSender(nextDirectory, timeoutMs);
+    return withRpcClientEncrypted(
+        rce -> rce.receiveEncryptedWithSender(nextDirectory, timeoutMs, retryDelayMs));
   }
 
   public Single<String> receive(final PaymentCode paymentCodePartner, long timeoutMs)
       throws Exception {
-    return rpc.receiveEncrypted(nextDirectory, timeoutMs, paymentCodePartner);
+    return withRpcClientEncrypted(
+        rce -> rce.receiveEncrypted(nextDirectory, timeoutMs, paymentCodePartner, retryDelayMs));
   }
 
-  public Completable sendWithSender(SorobanPayload message, PaymentCode paymentCodePartner)
+  public Single<String> sendWithSender(SorobanPayload message, PaymentCode paymentCodePartner)
       throws Exception {
     checkExit(paymentCodePartner);
-    return rpc.sendEncryptedWithSender(nextDirectory, message, paymentCodePartner);
+    return withRpcClientEncrypted(
+        rce ->
+            rce.sendEncryptedWithSender(
+                nextDirectory, message, paymentCodePartner, RpcMode.NORMAL));
   }
 
-  public Completable send(SorobanPayload message, PaymentCode paymentCodePartner) throws Exception {
+  public Single<String> send(SorobanPayload message, PaymentCode paymentCodePartner)
+      throws Exception {
     return send(message.toPayload(), paymentCodePartner);
   }
 
-  private Completable send(String payload, PaymentCode paymentCodePartner) throws Exception {
+  private Single<String> send(String payload, PaymentCode paymentCodePartner) throws Exception {
     checkExit(paymentCodePartner);
-    return rpc.sendEncrypted(nextDirectory, payload, paymentCodePartner);
+    return withRpcClientEncrypted(
+        rce -> rce.sendEncrypted(nextDirectory, payload, paymentCodePartner, RpcMode.NORMAL));
   }
 
   private void checkExit(PaymentCode paymentCodePartner) throws Exception {
@@ -68,8 +81,8 @@ public class RpcDialog {
     }
   }
 
-  public Completable sendError(String message, PaymentCode paymentCodePartner) {
-    return rpc.sendError(nextDirectory, message, paymentCodePartner);
+  public Single<String> sendError(String message, PaymentCode paymentCodePartner) throws Exception {
+    return withRpcClientEncrypted(rce -> rce.sendError(nextDirectory, message, paymentCodePartner));
   }
 
   private static String encodeDirectory(String payload) throws Exception {
@@ -89,8 +102,22 @@ public class RpcDialog {
     }
   }
 
+  protected <R> R withRpcClientEncrypted(CallbackWithArg<RpcClientEncrypted, R> callable)
+      throws Exception {
+    return rpcSession.withRpcClientEncrypted(
+        encrypter,
+        rce -> {
+          rce.setOnEncryptedPayload(onEncryptedPayload);
+          return callable.apply(rce);
+        });
+  }
+
   public void close() {
     exit = true;
-    rpc.getRpcClient().exit();
+    rpcSession.close();
+  }
+
+  public void setRetryDelayMs(long retryDelayMs) {
+    this.retryDelayMs = retryDelayMs;
   }
 }

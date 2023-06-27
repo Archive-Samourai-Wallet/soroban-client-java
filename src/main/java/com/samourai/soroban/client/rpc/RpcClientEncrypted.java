@@ -1,5 +1,6 @@
 package com.samourai.soroban.client.rpc;
 
+import com.samourai.http.client.IHttpClient;
 import com.samourai.soroban.client.SorobanPayload;
 import com.samourai.soroban.client.dialog.Encrypter;
 import com.samourai.soroban.client.dialog.SorobanException;
@@ -11,29 +12,32 @@ import io.reactivex.Single;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.function.Consumer;
+import org.bitcoinj.core.NetworkParameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class RpcClientEncrypted {
+public class RpcClientEncrypted extends RpcClient {
   private static final Logger log = LoggerFactory.getLogger(RpcClientEncrypted.class);
   private static final String ERROR_PREFIX = "ERROR:";
 
   private static final Z85 z85 = Z85.getInstance();
-  private RpcClient rpcClient;
   private Encrypter encrypter;
   private Consumer<String> onEncryptedPayload;
 
   public RpcClientEncrypted(
-      RpcClient rpcClient, Encrypter encrypter, Consumer<String> onEncryptedPayload) {
-    this.rpcClient = rpcClient;
+      IHttpClient httpClient, String url, NetworkParameters params, Encrypter encrypter) {
+    super(httpClient, url, params);
     this.encrypter = encrypter;
+    this.onEncryptedPayload = null;
+  }
+
+  public void setOnEncryptedPayload(Consumer<String> onEncryptedPayload) {
     this.onEncryptedPayload = onEncryptedPayload;
   }
 
   public Single<Collection<SorobanMessageWithSender>> listWithSender(String directory)
       throws Exception {
-    return rpcClient
-        .directoryValues(directory)
+    return directoryValues(directory)
         .map(
             payloads -> {
               Collection<SorobanMessageWithSender> results = new LinkedList<>();
@@ -43,6 +47,15 @@ public class RpcClientEncrypted {
                 } catch (Exception e) {
                   log.error("listWithSender: could not decrypt payload, skipping: " + payload, e);
                 }
+              }
+              if (log.isTraceEnabled()) {
+                log.trace(
+                    "<= list "
+                        + RpcClient.shortDirectory(directory)
+                        + ": "
+                        + results.size()
+                        + " entries: "
+                        + results);
               }
               return results;
             });
@@ -60,23 +73,38 @@ public class RpcClientEncrypted {
     String payload = decrypt(encryptedPayload, paymentCodePartner);
 
     // return clear object
-    return new SorobanMessageWithSender(sender, payload);
+    return new SorobanMessageWithSender(sender, payload, payloadWithSender);
   }
 
   public Single<SorobanMessageWithSender> receiveEncryptedWithSender(
-      String directory, long timeoutMs) throws Exception {
-    return doReceiveEncrypted(directory, timeoutMs).map(this::decryptSorobanMessageWithSender);
+      String directory, long timeoutMs, long retryDelayMs) throws Exception {
+    return doReceiveEncrypted(directory, timeoutMs, retryDelayMs)
+        .map(
+            encrypted -> {
+              SorobanMessageWithSender messageWithSender =
+                  decryptSorobanMessageWithSender(encrypted);
+              if (log.isTraceEnabled()) {
+                log.trace(
+                    "<= receive "
+                        + RpcClient.shortDirectory(directory)
+                        + ": "
+                        + messageWithSender.toString());
+              }
+              return messageWithSender;
+            });
   }
 
   public Single<String> receiveEncrypted(
-      String directory, long timeoutMs, final PaymentCode paymentCodePartner) throws Exception {
-    return doReceiveEncrypted(directory, timeoutMs)
+      String directory, long timeoutMs, final PaymentCode paymentCodePartner, long retryDelayMs)
+      throws Exception {
+    return doReceiveEncrypted(directory, timeoutMs, retryDelayMs)
         .map(
             payload -> {
               // decrypt
               String decryptedPayload = decrypt(payload, paymentCodePartner);
-              if (log.isDebugEnabled()) {
-                log.debug("<= received (" + RpcClient.shortDirectory(directory) + ")");
+              if (log.isTraceEnabled()) {
+                log.trace(
+                    "<= receive " + RpcClient.shortDirectory(directory) + ": " + decryptedPayload);
               }
 
               // check for error
@@ -88,14 +116,11 @@ public class RpcClientEncrypted {
             });
   }
 
-  private Single<String> doReceiveEncrypted(String directory, long timeoutMs) throws Exception {
-    return rpcClient
-        .directoryValueWaitAndRemove(directory, timeoutMs)
+  private Single<String> doReceiveEncrypted(String directory, long timeoutMs, long retryDelayMs)
+      throws Exception {
+    return directoryValueWaitAndRemove(directory, timeoutMs, retryDelayMs)
         .map(
             payload -> {
-              if (log.isDebugEnabled()) {
-                log.debug("<= received (" + RpcClient.shortDirectory(directory) + ")");
-              }
               if (onEncryptedPayload != null) {
                 onEncryptedPayload.accept(payload);
               }
@@ -103,45 +128,37 @@ public class RpcClientEncrypted {
             });
   }
 
-  public Completable sendEncryptedWithSender(
-      String directory, SorobanPayload message, PaymentCode paymentCodePartner) throws Exception {
-    if (log.isDebugEnabled()) {
-      log.debug("=> sendWithSender (" + RpcClient.shortDirectory(directory) + ")");
-    }
+  public Single<String> sendEncryptedWithSender(
+      String directory, SorobanPayload message, PaymentCode paymentCodePartner, RpcMode rpcMode)
+      throws Exception {
 
     // encrypt
     String encryptedPayload = encrypt(message.toPayload(), paymentCodePartner);
 
     // wrap with clear sender
     PaymentCode paymentCodeMine = encrypter.getPaymentCode();
-    SorobanMessageWithSender messageWithSender =
-        new SorobanMessageWithSender(paymentCodeMine.toString(), encryptedPayload);
-    return doSendEncrypted(directory, messageWithSender.toPayload());
+    String payload =
+        SorobanMessageWithSender.toPayload(paymentCodeMine.toString(), encryptedPayload);
+    return doSendEncrypted(directory, payload, rpcMode).toSingle(() -> encryptedPayload);
   }
 
-  public Completable sendEncrypted(String directory, String payload, PaymentCode paymentCodePartner)
+  public Single<String> sendEncrypted(
+      String directory, String payload, PaymentCode paymentCodePartner, RpcMode rpcMode)
       throws Exception {
     // encrypt
     String encryptedPayload = encrypt(payload, paymentCodePartner);
-    return doSendEncrypted(directory, encryptedPayload);
+    return doSendEncrypted(directory, encryptedPayload, rpcMode).toSingle(() -> encryptedPayload);
   }
 
-  private Completable doSendEncrypted(String directory, final String payload) throws Exception {
-    return send(directory, payload)
+  private Completable doSendEncrypted(String directory, final String payload, RpcMode rpcMode)
+      throws Exception {
+    return directoryAdd(directory, payload, rpcMode)
         .doOnComplete(
             () -> {
               if (onEncryptedPayload != null) {
                 onEncryptedPayload.accept(payload);
               }
             });
-  }
-
-  public Completable send(String directory, final String payload) throws Exception {
-    if (log.isDebugEnabled()) {
-      log.debug("=> send (" + directory + ")");
-    }
-    return Completable.fromSingle(
-        rpcClient.directoryAdd(directory, payload, RpcMode.normal.name()));
   }
 
   protected String encrypt(String payload, PaymentCode paymentCodePartner) throws Exception {
@@ -161,26 +178,19 @@ public class RpcClientEncrypted {
     return null;
   }
 
-  public Completable sendError(String directory, String message, PaymentCode paymentCodePartner) {
+  public Single<String> sendError(
+      String directory, String message, PaymentCode paymentCodePartner) {
     // send error
     try {
-      return sendEncrypted(directory, ERROR_PREFIX + message, paymentCodePartner);
+      return sendEncrypted(directory, ERROR_PREFIX + message, paymentCodePartner, RpcMode.NORMAL);
     } catch (Exception e) {
       // non-blocking error
       log.error("=> error", e);
-      return Completable.error(e);
+      return Single.error(e);
     }
-  }
-
-  public RpcClient getRpcClient() {
-    return rpcClient;
   }
 
   public PaymentCode getPaymentCode() {
     return encrypter.getPaymentCode();
-  }
-
-  public void exit() {
-    rpcClient.exit();
   }
 }

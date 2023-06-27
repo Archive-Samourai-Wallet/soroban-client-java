@@ -1,45 +1,63 @@
 package com.samourai.soroban.client.rpc;
 
+import com.samourai.http.client.HttpUsage;
 import com.samourai.http.client.IHttpClient;
-import com.samourai.wallet.crypto.CryptoUtil;
+import com.samourai.http.client.IHttpClientService;
+import com.samourai.soroban.client.dialog.Encrypter;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 
 public class RpcClientService {
-  private final IHttpClient httpClient;
-  private final CryptoUtil cryptoUtil;
+  private final IHttpClientService httpClientService;
   private boolean onion;
   private NetworkParameters params;
-  private Map<String, RpcClient> rpcClients;
+  private Map<String, RpcSession> rpcSessions;
 
   public RpcClientService(
-      IHttpClient httpClient, CryptoUtil cryptoUtil, boolean onion, NetworkParameters params) {
-    this.httpClient = httpClient;
-    this.cryptoUtil = cryptoUtil;
+      IHttpClientService httpClientService, boolean onion, NetworkParameters params) {
+    this.httpClientService = httpClientService;
     this.onion = onion;
     this.params = params;
-    this.rpcClients = new LinkedHashMap<>();
+    this.rpcSessions = new LinkedHashMap<>();
   }
 
-  public RpcClient getRpcClient(String info) {
-    return getRpcClient(info, null);
-  }
-
-  public RpcClient getRpcClient(String info, ECKey authenticationKey) {
-    String k = info + (authenticationKey != null ? authenticationKey.getPublicKeyAsHex() : "");
-    if (!rpcClients.containsKey(k)) {
-      rpcClients.put(k, createRpcClient(info, authenticationKey));
+  public RpcSession getRpcSession(String key) {
+    if (!rpcSessions.containsKey(key)) {
+      rpcSessions.put(key, createRpcSession());
     }
-    return rpcClients.get(k);
+    return rpcSessions.get(key);
   }
 
-  protected RpcClient createRpcClient(String info, ECKey authenticationKey) {
-    RpcClient rpcClient = new RpcClient(info, httpClient, cryptoUtil, params, onion);
-    if (authenticationKey != null) {
-      rpcClient.setAuthentication(authenticationKey, params);
-    }
-    return rpcClient;
+  public RpcSession createRpcSession() {
+    return new RpcSession(this);
+  }
+
+  /*public RpcClient createRpcClientRandomServer() {
+    return createRpcClientRandomServer(null);
+  }
+
+  public RpcClient createRpcClientRandomServer(ECKey authenticationKey) {
+    // use random SorobanServerDex
+    String url = SorobanServerDex.get(params).getServerUrlRandom(onion) + RpcClient.ENDPOINT_RPC;
+    return createRpcClient(authenticationKey, url);
+  }*/
+
+  protected RpcClient createRpcClient(String url) {
+    IHttpClient httpClient = httpClientService.getHttpClient(HttpUsage.SOROBAN);
+    return new RpcClient(httpClient, url, params);
+  }
+
+  protected RpcClientEncrypted createRpcClientEncrypted(String url, Encrypter encrypter) {
+    IHttpClient httpClient = httpClientService.getHttpClient(HttpUsage.SOROBAN);
+    return new RpcClientEncrypted(httpClient, url, params, encrypter);
+  }
+
+  public NetworkParameters getParams() {
+    return params;
+  }
+
+  public boolean isOnion() {
+    return onion;
   }
 }

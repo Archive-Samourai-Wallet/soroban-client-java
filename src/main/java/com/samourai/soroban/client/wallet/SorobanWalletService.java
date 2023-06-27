@@ -1,6 +1,7 @@
 package com.samourai.soroban.client.wallet;
 
 import com.samourai.soroban.cahoots.ManualCahootsService;
+import com.samourai.soroban.client.SorobanProtocol;
 import com.samourai.soroban.client.SorobanService;
 import com.samourai.soroban.client.cahoots.OnlineCahootsService;
 import com.samourai.soroban.client.meeting.SorobanMeetingService;
@@ -20,6 +21,7 @@ import org.slf4j.LoggerFactory;
 public class SorobanWalletService {
   private final Logger log = LoggerFactory.getLogger(SorobanWalletService.class);
 
+  private SorobanProtocol sorobanProtocol;
   private OnlineCahootsService onlineCahootsService;
   private SorobanService sorobanService;
   private SorobanMeetingService sorobanMeetingService;
@@ -35,9 +37,10 @@ public class SorobanWalletService {
     MultiCahootsService multiCahootsService =
         new MultiCahootsService(bipFormatSupplier, params, stonewallx2Service, stowawayService);
 
+    this.sorobanProtocol = new SorobanProtocol();
     this.onlineCahootsService =
         new OnlineCahootsService(stowawayService, stonewallx2Service, multiCahootsService);
-    this.sorobanService = new SorobanService(bip47Util, params, rpcClientService);
+    this.sorobanService = new SorobanService(bip47Util, params, rpcClientService, sorobanProtocol);
     this.sorobanMeetingService = new SorobanMeetingService(rpcClientService);
     this.manualCahootsService =
         new ManualCahootsService(stowawayService, stonewallx2Service, multiCahootsService);
@@ -51,6 +54,10 @@ public class SorobanWalletService {
   public SorobanWalletCounterparty getSorobanWalletCounterparty(CahootsWallet cahootsWallet) {
     return new SorobanWalletCounterparty(
         onlineCahootsService, sorobanService, sorobanMeetingService, cahootsWallet);
+  }
+
+  public SorobanProtocol getSorobanProtocol() {
+    return sorobanProtocol;
   }
 
   public SorobanService getSorobanService() {

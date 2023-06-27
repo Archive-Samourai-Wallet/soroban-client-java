@@ -4,6 +4,8 @@ import com.samourai.soroban.client.AbstractTest;
 import com.samourai.wallet.hd.HD_Wallet;
 import com.samourai.wallet.hd.HD_WalletFactoryGeneric;
 import java.io.IOException;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -19,16 +21,71 @@ public class RpcClientTest extends AbstractTest {
   private static final ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(5);
 
   private static final String SIGNATURE_SEED_WORDS =
-      "all all all all all all all all all all all all";
-  private static final String SIGNATURE_SEED_PASSPHRASE = "test";
+      "income wisdom battle label wolf confirm shoulder tumble ecology current news taste";
+  private static final String SIGNATURE_SEED_PASSPHRASE = "Test@K3y";
 
   private RpcClient rpcClient;
+  private RpcClient rpcClientAuth;
 
   @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    this.rpcClient = rpcClientService.getRpcClient("test");
+    this.rpcClient = rpcClientService.createRpcSession().withRpcClient(rpcClient -> rpcClient);
+
+    HD_Wallet hdw =
+        HD_WalletFactoryGeneric.getInstance()
+            .restoreWallet(SIGNATURE_SEED_WORDS, SIGNATURE_SEED_PASSPHRASE, params);
+    ECKey authKey = hdw.getAddressAt(0, 0, 0).getECKey();
+    this.rpcClientAuth = rpcClientService.createRpcSession().withRpcClient(rpcClient -> rpcClient);
+    this.rpcClientAuth.setAuthenticationKey(authKey);
+  }
+
+  @Test
+  public void testKey() throws Exception {
+    String key = "com.samourai.whirlpool.ro.coordinators.TESTNET";
+
+    Map<String, Integer> messagesByServer = new LinkedHashMap<>();
+    for (String serverUrl : initialSorobanServerTestnetClearUrls) {
+      try {
+        synchronized (this) {
+          try {
+            wait(100);
+          } catch (InterruptedException e) {
+          }
+        }
+        int nbValues =
+            asyncUtil.blockingGet(
+                    rpcClientService
+                        .createRpcClient(serverUrl + RpcClient.ENDPOINT_RPC)
+                        .directoryValues(key))
+                .length;
+        messagesByServer.put(serverUrl, nbValues);
+      } catch (Exception e) {
+        messagesByServer.put(serverUrl, -1);
+        log.error("", e);
+      }
+    }
+    System.out.println("RESULT=" + messagesByServer);
+
+    for (Map.Entry<String, Integer> entry : messagesByServer.entrySet()) {
+      String url = entry.getKey().replace("http://", "").replace(":", " ");
+      if (entry.getValue() == -1) {
+        System.out.println("DexServer is down: " + url);
+      }
+    }
+    for (Map.Entry<String, Integer> entry : messagesByServer.entrySet()) {
+      String url = entry.getKey().replace("http://", "").replace(":", " ");
+      if (entry.getValue() == 0) {
+        System.out.println("DexServer is desynchronized: " + url + ": 0 message");
+      }
+    }
+    for (Map.Entry<String, Integer> entry : messagesByServer.entrySet()) {
+      String url = entry.getKey().replace("http://", "").replace(":", " ");
+      if (entry.getValue() > 0) {
+        System.out.println("DexServer is OK: " + url + ": " + entry.getValue() + " messages");
+      }
+    }
   }
 
   @Test
@@ -37,9 +94,9 @@ public class RpcClientTest extends AbstractTest {
     String value = "valueOne";
 
     // cleanup
-    asyncUtil.blockingGet(rpcClient.directoryRemove(key, value));
+    asyncUtil.blockingAwait(rpcClient.directoryRemove(key, value));
 
-    asyncUtil.blockingGet(rpcClient.directoryAdd(key, value, RpcMode.normal.name()));
+    asyncUtil.blockingAwait(rpcClient.directoryAdd(key, value, RpcMode.NORMAL));
     Assertions.assertEquals(value, asyncUtil.blockingGet(rpcClient.directoryValue(key)));
   }
 
@@ -49,9 +106,9 @@ public class RpcClientTest extends AbstractTest {
     String value = "valueOne";
 
     // cleanup
-    asyncUtil.blockingGet(rpcClient.directoryRemove(key, value));
+    asyncUtil.blockingAwait(rpcClient.directoryRemove(key, value));
 
-    asyncUtil.blockingGet(rpcClient.directoryAdd(key, value, RpcMode.normal.name()));
+    asyncUtil.blockingAwait(rpcClient.directoryAdd(key, value, RpcMode.NORMAL));
     Assertions.assertEquals(value, asyncUtil.blockingGet(rpcClient.directoryValues(key))[0]);
   }
 
@@ -61,7 +118,7 @@ public class RpcClientTest extends AbstractTest {
     String value = "valueOne";
 
     // cleanup
-    asyncUtil.blockingGet(rpcClient.directoryRemove(key, value));
+    asyncUtil.blockingAwait(rpcClient.directoryRemove(key, value));
 
     try {
       asyncUtil.blockingGet(rpcClient.directoryValue(key));
@@ -77,10 +134,10 @@ public class RpcClientTest extends AbstractTest {
     String value = "valueOne";
 
     // allow cleanup
-    asyncUtil.blockingGet(rpcClient.directoryRemove(key, value));
+    asyncUtil.blockingAwait(rpcClient.directoryRemove(key, value));
 
     // allow writing
-    asyncUtil.blockingGet(rpcClient.directoryAdd(key, value, RpcMode.normal.name()));
+    asyncUtil.blockingAwait(rpcClient.directoryAdd(key, value, RpcMode.NORMAL));
 
     // deny reading
     Assertions.assertThrows(
@@ -88,30 +145,19 @@ public class RpcClientTest extends AbstractTest {
         () -> asyncUtil.blockingGet(rpcClient.directoryValues(key)));
   }
 
-  private void setAuthentication() throws Exception {
-    HD_Wallet hdw =
-        HD_WalletFactoryGeneric.getInstance()
-            .restoreWallet(SIGNATURE_SEED_WORDS, SIGNATURE_SEED_PASSPHRASE, params);
-    ECKey signatureKey = hdw.getAddressAt(0, 0, 0).getECKey();
-    rpcClient.setAuthentication(signatureKey, params);
-  }
-
   @Test
   public void read_on_writeOnly_allow() throws Exception {
     String key = "com.samourai.whirlpool.wo";
     String value = "valueOne";
 
-    // enable signature
-    setAuthentication();
-
     // allow cleanup
-    asyncUtil.blockingGet(rpcClient.directoryRemove(key, value));
+    asyncUtil.blockingAwait(rpcClientAuth.directoryRemove(key, value));
 
     // allow writing
-    asyncUtil.blockingGet(rpcClient.directoryAdd(key, value, RpcMode.normal.name()));
+    asyncUtil.blockingAwait(rpcClientAuth.directoryAdd(key, value, RpcMode.NORMAL));
 
     // allow reading with signature
-    Assertions.assertEquals(1, asyncUtil.blockingGet(rpcClient.directoryValues(key)).length);
+    Assertions.assertEquals(1, asyncUtil.blockingGet(rpcClientAuth.directoryValues(key)).length);
   }
 
   @Test
@@ -123,12 +169,12 @@ public class RpcClientTest extends AbstractTest {
 
     // deny remove
     Assertions.assertThrows(
-        IOException.class, () -> asyncUtil.blockingGet(rpcClient.directoryRemove(key, value)));
+        IOException.class, () -> asyncUtil.blockingAwait(rpcClient.directoryRemove(key, value)));
 
     // deny writing
     Assertions.assertThrows(
         IOException.class,
-        () -> asyncUtil.blockingGet(rpcClient.directoryAdd(key, value, RpcMode.normal.name())));
+        () -> asyncUtil.blockingAwait(rpcClient.directoryAdd(key, value, RpcMode.NORMAL)));
 
     // allow reading
     Assertions.assertEquals(nbValues, asyncUtil.blockingGet(rpcClient.directoryValues(key)).length);
@@ -139,18 +185,15 @@ public class RpcClientTest extends AbstractTest {
     String key = "com.samourai.whirlpool.ro";
     String value = "valueOne";
 
-    // enable signature
-    setAuthentication();
-
     // allow remove with signature
-    asyncUtil.blockingGet(rpcClient.directoryRemove(key, value));
-    Assertions.assertTrue(asyncUtil.blockingGet(rpcClient.directoryValues(key)).length == 0);
+    asyncUtil.blockingAwait(rpcClientAuth.directoryRemove(key, value));
+    Assertions.assertTrue(asyncUtil.blockingGet(rpcClientAuth.directoryValues(key)).length == 0);
 
     // allow writing with signature
-    asyncUtil.blockingGet(rpcClient.directoryAdd(key, value, RpcMode.normal.name()));
+    asyncUtil.blockingAwait(rpcClientAuth.directoryAdd(key, value, RpcMode.NORMAL));
 
     // allow reading
-    Assertions.assertTrue(asyncUtil.blockingGet(rpcClient.directoryValues(key)).length == 1);
+    Assertions.assertTrue(asyncUtil.blockingGet(rpcClientAuth.directoryValues(key)).length == 1);
   }
 
   @Test
@@ -159,14 +202,14 @@ public class RpcClientTest extends AbstractTest {
     String value = "valueOne";
 
     // cleanup
-    asyncUtil.blockingGet(rpcClient.directoryRemove(key, value));
+    asyncUtil.blockingAwait(rpcClient.directoryRemove(key, value));
 
     // add after 2 seconds
     executor.schedule(
         () -> {
           try {
             log.info("directoryAdd");
-            asyncUtil.blockingGet(rpcClient.directoryAdd(key, value, RpcMode.normal.name()));
+            asyncUtil.blockingAwait(rpcClient.directoryAdd(key, value, RpcMode.NORMAL));
           } catch (Exception e) {
             setException(e);
           }
@@ -176,7 +219,9 @@ public class RpcClientTest extends AbstractTest {
 
     // wait immediately
     log.info("wait...");
-    Assertions.assertEquals(value, asyncUtil.blockingGet(rpcClient.directoryValueWait(key, 2000)));
+    Assertions.assertEquals(
+        value,
+        asyncUtil.blockingGet(rpcClient.directoryValueWait(key, TIMEOUT_MS, RETRY_DELAY_MS)));
   }
 
   @Test
@@ -185,14 +230,14 @@ public class RpcClientTest extends AbstractTest {
     String value = "valueOne";
 
     // cleanup
-    asyncUtil.blockingGet(rpcClient.directoryRemove(key, value));
+    asyncUtil.blockingAwait(rpcClient.directoryRemove(key, value));
 
     // add too late
     executor.schedule(
         () -> {
           try {
             log.info("directoryAdd");
-            asyncUtil.blockingGet(rpcClient.directoryAdd(key, value, RpcMode.normal.name()));
+            asyncUtil.blockingAwait(rpcClient.directoryAdd(key, value, RpcMode.NORMAL));
           } catch (Exception e) {
             setException(e);
           }
@@ -203,7 +248,7 @@ public class RpcClientTest extends AbstractTest {
     // wait immediately
     log.info("wait...");
     try {
-      asyncUtil.blockingGet(rpcClient.directoryValueWait(key, 1000));
+      asyncUtil.blockingGet(rpcClient.directoryValueWait(key, TIMEOUT_MS, RETRY_DELAY_MS));
       Assertions.assertTrue(false);
     } catch (TimeoutException e) {
       // ok
@@ -216,14 +261,14 @@ public class RpcClientTest extends AbstractTest {
     String value = "valueOne";
 
     // cleanup
-    asyncUtil.blockingGet(rpcClient.directoryRemove(key, value));
+    asyncUtil.blockingAwait(rpcClient.directoryRemove(key, value));
 
     // add after 2 seconds
     executor.schedule(
         () -> {
           try {
             log.info("directoryAdd");
-            asyncUtil.blockingGet(rpcClient.directoryAdd(key, value, RpcMode.normal.name()));
+            asyncUtil.blockingAwait(rpcClient.directoryAdd(key, value, RpcMode.NORMAL));
           } catch (Exception e) {
             setException(e);
           }
@@ -234,7 +279,9 @@ public class RpcClientTest extends AbstractTest {
     // wait immediately
     log.info("waitAndRemove...");
     Assertions.assertEquals(
-        value, asyncUtil.blockingGet(rpcClient.directoryValueWaitAndRemove(key, 2000)));
+        value,
+        asyncUtil.blockingGet(
+            rpcClient.directoryValueWaitAndRemove(key, TIMEOUT_MS, RETRY_DELAY_MS)));
 
     // verify it has been removed
     try {

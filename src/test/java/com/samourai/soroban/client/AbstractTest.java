@@ -1,6 +1,9 @@
 package com.samourai.soroban.client;
 
 import com.samourai.dex.config.DexConfigProvider;
+import com.samourai.http.client.HttpUsage;
+import com.samourai.http.client.IHttpClient;
+import com.samourai.http.client.IHttpClientService;
 import com.samourai.http.client.JavaHttpClient;
 import com.samourai.soroban.client.meeting.SorobanMeetingService;
 import com.samourai.soroban.client.rpc.RpcClientService;
@@ -42,6 +45,7 @@ public abstract class AbstractTest {
   protected static final String SEED_PASSPHRASE_COUNTERPARTY = "counterparty";
 
   protected static final int TIMEOUT_MS = 20000;
+  protected static final int RETRY_DELAY_MS = 1000;
   protected static final Provider PROVIDER_JAVA = new BouncyCastleProvider();
 
   protected static final NetworkParameters params = TestNet3Params.get();
@@ -60,11 +64,22 @@ public abstract class AbstractTest {
   protected static final AsyncUtil asyncUtil = AsyncUtil.getInstance();
 
   protected JavaHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
+  protected IHttpClientService httpClientService =
+      new IHttpClientService() {
+        @Override
+        public IHttpClient getHttpClient(HttpUsage httpUsage) {
+          return httpClient;
+        }
+
+        @Override
+        public void stop() {}
+      };
   protected CryptoUtil cryptoUtil = CryptoUtil.getInstance(PROVIDER_JAVA);
   protected RpcClientService rpcClientService =
-      new RpcClientService(httpClient, cryptoUtil, false, params);
+      new RpcClientService(httpClientService, false, params);
   protected SorobanWalletService sorobanWalletService =
       new SorobanWalletService(bip47Util, BIP_FORMAT.PROVIDER, params, rpcClientService);
+  protected SorobanProtocol sorobanProtocol = sorobanWalletService.getSorobanProtocol();
   protected SorobanMeetingService sorobanMeetingService =
       sorobanWalletService.getSorobanMeetingService();
   protected SorobanService sorobanService = sorobanWalletService.getSorobanService();
@@ -79,6 +94,8 @@ public abstract class AbstractTest {
 
   protected PaymentCode paymentCodeInitiator;
   protected PaymentCode paymentCodeCounterparty;
+
+  protected Collection<String> initialSorobanServerTestnetClearUrls;
 
   private static volatile Exception exception = null;
 
@@ -98,7 +115,8 @@ public abstract class AbstractTest {
             walletSupplierSender,
             chainSupplier,
             BIP_FORMAT.PROVIDER,
-            new SimpleCahootsUtxoProvider(utxoProviderInitiator));
+            new SimpleCahootsUtxoProvider(utxoProviderInitiator),
+            cryptoUtil);
     sorobanWalletInitiator = sorobanWalletService.getSorobanWalletInitiator(cahootsWalletInitiator);
 
     final HD_Wallet bip84WalletCounterparty =
@@ -112,7 +130,8 @@ public abstract class AbstractTest {
             walletSupplierCounterparty,
             chainSupplier,
             BIP_FORMAT.PROVIDER,
-            new SimpleCahootsUtxoProvider(utxoProviderCounterparty));
+            new SimpleCahootsUtxoProvider(utxoProviderCounterparty),
+            cryptoUtil);
     sorobanWalletCounterparty =
         sorobanWalletService.getSorobanWalletCounterparty(cahootsWalletCounterparty);
 
@@ -122,12 +141,12 @@ public abstract class AbstractTest {
     httpClient.getJettyHttpClient().start();
 
     // only keep 1 SorobanServerDex to avoid RPC propagation delay
-    Collection<String> sorobanServerTestnetClearUrls =
+    initialSorobanServerTestnetClearUrls =
         DexConfigProvider.getInstance().getSamouraiConfig().getSorobanServerDexTestnetClear();
     DexConfigProvider.getInstance()
         .getSamouraiConfig()
         .setSorobanServerDexTestnetClear(
-            Arrays.asList(sorobanServerTestnetClearUrls.iterator().next()));
+            Arrays.asList(initialSorobanServerTestnetClearUrls.iterator().next()));
   }
 
   protected static void assertNoException() {

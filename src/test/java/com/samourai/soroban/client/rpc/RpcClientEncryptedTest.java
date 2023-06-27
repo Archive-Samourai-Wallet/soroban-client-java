@@ -15,22 +15,24 @@ public class RpcClientEncryptedTest extends AbstractTest {
   private static final Logger log = LoggerFactory.getLogger(RpcClientEncryptedTest.class);
   private static final ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(5);
 
-  private RpcClient rpcClientInitiator;
+  private RpcSession rpcClientInitiator;
   private RpcClientEncrypted rpcClientInitiatorEncrypted;
-  private RpcClient rpcClientCounterparty;
+  private RpcSession rpcClientCounterparty;
   private RpcClientEncrypted rpcClientCounterpartyEncrypted;
 
   @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    this.rpcClientInitiator = rpcClientService.getRpcClient("initiator");
+    this.rpcClientInitiator = rpcClientService.getRpcSession("initiator");
     this.rpcClientInitiatorEncrypted =
-        rpcClientInitiator.createRpcClientEncrypted(cahootsWalletInitiator.getRpcWallet());
+        rpcClientInitiator.withRpcClientEncrypted(
+            cahootsWalletInitiator.getRpcWallet().getEncrypter(), rce -> rce);
 
-    this.rpcClientCounterparty = rpcClientService.getRpcClient("counterparty");
+    this.rpcClientCounterparty = rpcClientService.getRpcSession("counterparty");
     this.rpcClientCounterpartyEncrypted =
-        rpcClientCounterparty.createRpcClientEncrypted(cahootsWalletCounterparty.getRpcWallet());
+        rpcClientCounterparty.withRpcClientEncrypted(
+            cahootsWalletCounterparty.getRpcWallet().getEncrypter(), rce -> rce);
   }
 
   @Test
@@ -39,18 +41,20 @@ public class RpcClientEncryptedTest extends AbstractTest {
     String value = "valueOne";
 
     // cleanup
-    asyncUtil.blockingGet(rpcClientInitiator.directoryRemove(key, value));
+    asyncUtil.blockingAwait(rpcClientInitiator.withRpcClient(rc -> rc).directoryRemove(key, value));
     Assertions.assertTrue(
         asyncUtil.blockingGet(rpcClientInitiatorEncrypted.listWithSender(key)).isEmpty());
 
     // send
-    asyncUtil.blockingAwait(
-        rpcClientInitiatorEncrypted.sendEncrypted(key, value, paymentCodeCounterparty));
+    asyncUtil.blockingGet(
+        rpcClientInitiatorEncrypted.sendEncrypted(
+            key, value, paymentCodeCounterparty, RpcMode.NORMAL));
 
     // receive
     String result =
         asyncUtil.blockingGet(
-            rpcClientCounterpartyEncrypted.receiveEncrypted(key, TIMEOUT_MS, paymentCodeInitiator));
+            rpcClientCounterpartyEncrypted.receiveEncrypted(
+                key, TIMEOUT_MS, paymentCodeInitiator, RETRY_DELAY_MS));
     Assertions.assertEquals(value, result);
   }
 
@@ -60,7 +64,7 @@ public class RpcClientEncryptedTest extends AbstractTest {
     String value = "valueOne";
 
     // cleanup
-    asyncUtil.blockingGet(rpcClientInitiator.directoryRemove(key, value));
+    asyncUtil.blockingAwait(rpcClientInitiator.withRpcClient(rc -> rc).directoryRemove(key, value));
     int nbExisting =
         asyncUtil.blockingGet(rpcClientCounterpartyEncrypted.listWithSender(key)).size();
 
@@ -72,9 +76,9 @@ public class RpcClientEncryptedTest extends AbstractTest {
             return value;
           }
         };
-    asyncUtil.blockingAwait(
+    asyncUtil.blockingGet(
         rpcClientInitiatorEncrypted.sendEncryptedWithSender(
-            key, sorobanPayload, paymentCodeCounterparty));
+            key, sorobanPayload, paymentCodeCounterparty, RpcMode.NORMAL));
 
     // listWithSender
     Collection<SorobanMessageWithSender> results =
@@ -87,7 +91,8 @@ public class RpcClientEncryptedTest extends AbstractTest {
     // receive
     mws =
         asyncUtil.blockingGet(
-            rpcClientCounterpartyEncrypted.receiveEncryptedWithSender(key, TIMEOUT_MS));
+            rpcClientCounterpartyEncrypted.receiveEncryptedWithSender(
+                key, TIMEOUT_MS, RETRY_DELAY_MS));
     Assertions.assertEquals(paymentCodeInitiator.toString(), mws.getSender());
     Assertions.assertEquals(value, mws.getPayload());
   }

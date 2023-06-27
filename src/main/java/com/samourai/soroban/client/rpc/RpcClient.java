@@ -1,79 +1,47 @@
 package com.samourai.soroban.client.rpc;
 
 import com.samourai.http.client.IHttpClient;
-import com.samourai.soroban.client.RpcWallet;
-import com.samourai.soroban.client.SorobanMessage;
-import com.samourai.soroban.client.SorobanServerDex;
-import com.samourai.soroban.client.dialog.Encrypter;
-import com.samourai.soroban.client.dialog.RpcDialog;
 import com.samourai.wallet.bipFormat.BIP_FORMAT;
-import com.samourai.wallet.crypto.CryptoUtil;
-import com.samourai.wallet.util.AsyncUtil;
 import com.samourai.wallet.util.MessageSignUtilGeneric;
+import com.samourai.wallet.util.Util;
+import io.reactivex.Completable;
 import io.reactivex.Single;
 import java.io.IOException;
 import java.time.Instant;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import org.apache.commons.lang3.ArrayUtils;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class RpcClient {
-  private Logger log;
-  private static final int WAIT_RETRY_DELAY_MS = 1000;
-  private static final String ENDPOINT_RPC = "/rpc";
+  private static final Logger log = LoggerFactory.getLogger(RpcClient.class.getName());
+  public static final String ENDPOINT_RPC = "/rpc";
 
   private final IHttpClient httpClient;
-  private final CryptoUtil cryptoUtil;
   private final String url;
+  private NetworkParameters params;
   private boolean started;
+  private ECKey authenticationKey;
 
-  private ECKey authenticationKey; // null until setAuthentication()
-  private NetworkParameters networkParams; // null until setAuthentication()
-
-  public RpcClient(
-      String info,
-      IHttpClient httpClient,
-      CryptoUtil cryptoUtil,
-      NetworkParameters params,
-      boolean onion) {
-    this(
-        info,
-        httpClient,
-        cryptoUtil,
-        SorobanServerDex.get(params).getServerUrlRandom(onion) + ENDPOINT_RPC);
-  }
-
-  protected RpcClient(String info, IHttpClient httpClient, CryptoUtil cryptoUtil, String url) {
-    this.log = LoggerFactory.getLogger(RpcClient.class.getName() + info);
+  protected RpcClient(IHttpClient httpClient, String url, NetworkParameters params) {
     this.httpClient = httpClient;
-    this.cryptoUtil = cryptoUtil;
     this.url = url;
+    this.params = params;
     this.started = true;
     this.authenticationKey = null;
   }
 
-  public RpcClientEncrypted createRpcClientEncrypted(RpcWallet rpcWallet) {
-    Encrypter encrypter = cryptoUtil.getEncrypter(rpcWallet);
-    return new RpcClientEncrypted(this, encrypter, null);
-  }
-
-  public RpcDialog createRpcDialog(RpcWallet rpcWallet, String directory) throws Exception {
-    Encrypter encrypter = cryptoUtil.getEncrypter(rpcWallet);
-    return new RpcDialog(directory, this, encrypter);
-  }
-
-  public RpcDialog createRpcDialog(RpcWallet rpcWallet, SorobanMessage sorobanMessage)
-      throws Exception {
-    return createRpcDialog(rpcWallet, sorobanMessage.toPayload());
+  public void setAuthenticationKey(ECKey authenticationKey) {
+    this.authenticationKey = authenticationKey;
   }
 
   public static String shortDirectory(String directory) {
-    return directory.substring(0, Math.min(directory.length(), 5));
+    return Util.maskString(directory, 30);
   }
 
   public String getUrl() {
@@ -104,10 +72,6 @@ public class RpcClient {
     body.put("id", 1);
     body.put("params", Arrays.asList(params));
 
-    if (log.isDebugEnabled()) {
-      log.debug("call: body=" + ArrayUtils.toString(body));
-    }
-
     Single<Map<String, Object>> result =
         httpClient
             .postJson(url, Map.class, headers, body)
@@ -135,8 +99,8 @@ public class RpcClient {
   }
 
   public Single<String[]> directoryValues(String name) throws IOException {
-    if (log.isDebugEnabled()) {
-      log.debug("get " + shortDirectory(name));
+    if (log.isTraceEnabled()) {
+      log.trace("=> list " + shortDirectory(name));
     }
     Map<String, Object> params = computeParams(name);
     return call("directory.List", params)
@@ -149,6 +113,9 @@ public class RpcClient {
               }
               String[] dest = new String[src.size()];
               System.arraycopy(src.toArray(), 0, dest, 0, src.size());
+              if (log.isDebugEnabled()) {
+                log.debug("<= list " + shortDirectory(name) + ": " + src.size() + " entries");
+              }
               return dest;
             });
   }
@@ -168,21 +135,21 @@ public class RpcClient {
             });
   }
 
-  public Single<String> directoryValueWait(final String name, final long timeoutMs)
-      throws IOException {
-    if (log.isDebugEnabled()) {
-      log.debug("wait " + shortDirectory(name) + "... ");
+  public Single<String> directoryValueWait(
+      final String name, final long timeoutMs, final long retryDelayMs) throws IOException {
+    if (log.isTraceEnabled()) {
+      log.trace("=> valueWait " + shortDirectory(name) + "... ");
     }
     long timeStart = System.nanoTime();
     return directoryValue(name)
         .retry(
             error -> {
-              try {
-                // wait for retry delay
-                AsyncUtil.getInstance()
-                    .blockingGet(Single.timer(WAIT_RETRY_DELAY_MS, TimeUnit.MILLISECONDS));
-              } catch (Exception e) {
-                // ok
+              // wait for retry delay
+              synchronized (this) {
+                try {
+                  wait(retryDelayMs);
+                } catch (InterruptedException e) {
+                }
               }
               if (!started) {
                 if (log.isDebugEnabled()) {
@@ -190,10 +157,10 @@ public class RpcClient {
                 }
                 return false; // exit
               }
-              long elapsedTime = System.nanoTime() - timeStart;
+              long elapsedTime = (System.nanoTime() - timeStart) / 1000000;
               if (log.isTraceEnabled()) {
                 log.trace(
-                    "Waiting for "
+                    "=> valueWait "
                         + shortDirectory(name)
                         + "... "
                         + elapsedTime
@@ -203,30 +170,42 @@ public class RpcClient {
               }
               return true; // retry
             })
-        .timeout(timeoutMs, TimeUnit.MILLISECONDS);
+        .timeout(timeoutMs, TimeUnit.MILLISECONDS)
+        .map(
+            res -> {
+              if (log.isTraceEnabled()) {
+                log.trace("<= valueWait " + shortDirectory(name) + ": " + res);
+              } else if (log.isDebugEnabled()) {
+                log.debug("<= valueWait " + shortDirectory(name));
+              }
+              return res;
+            });
   }
 
-  public Single directoryAdd(String name, String entry, String mode) throws IOException {
-    if (log.isDebugEnabled()) {
-      log.debug("add " + shortDirectory(name) + ": " + entry);
+  public Completable directoryAdd(String name, String entry, RpcMode rpcMode) throws IOException {
+    if (log.isTraceEnabled()) {
+      log.trace("=> add " + shortDirectory(name) + ": " + entry);
+    } else if (log.isDebugEnabled()) {
+      log.debug("=> add " + shortDirectory(name));
     }
     Map<String, Object> params = computeParams(name, entry);
-    params.put("Mode", mode);
-
-    return call("directory.Add", params);
+    params.put("Mode", rpcMode.getValue());
+    return Completable.fromSingle(call("directory.Add", params));
   }
 
-  public Single<Map<String, Object>> directoryRemove(String name, String entry) throws IOException {
-    if (log.isDebugEnabled()) {
-      log.debug("--" + shortDirectory(name) + ": " + entry);
+  public Completable directoryRemove(String name, String entry) throws IOException {
+    if (log.isTraceEnabled()) {
+      log.trace("=> remove " + shortDirectory(name) + ": " + entry);
+    } else if (log.isDebugEnabled()) {
+      log.debug("=> remove " + shortDirectory(name));
     }
     Map<String, Object> params = computeParams(name, entry);
-    return call("directory.Remove", params);
+    return Completable.fromSingle(call("directory.Remove", params));
   }
 
-  public Single<String> directoryValueWaitAndRemove(final String name, final long timeoutMs)
-      throws Exception {
-    return directoryValueWait(name, timeoutMs)
+  public Single<String> directoryValueWaitAndRemove(
+      final String name, final long timeoutMs, final long retryDelayMs) throws Exception {
+    return directoryValueWait(name, timeoutMs, retryDelayMs)
         .map(
             value -> {
               directoryRemove(name, value).subscribe();
@@ -235,37 +214,31 @@ public class RpcClient {
   }
 
   protected Map<String, Object> computeParams(String name, String entryOrNull) {
-      Map<String, Object> params = new HashMap<>();
-      params.put("Name", name);
-      appendParamsAuthentication(name, params, entryOrNull);
-      if (entryOrNull != null) {
-          params.put("Entry", entryOrNull);
-      }
-      return params;
-  }
-
-  protected Map<String, Object> computeParams(String name) {
-    return computeParams(name, null);
-  }
-
-  protected void appendParamsAuthentication(String name, Map<String, Object> params, String entryOrNull) {
+    Map<String, Object> params = new HashMap<>();
+    params.put("Name", name);
+    if (entryOrNull != null) {
+      params.put("Entry", entryOrNull);
+    }
     if (authenticationKey != null) {
-      String signatureAddress = BIP_FORMAT.LEGACY.getToAddress(authenticationKey, networkParams);
-        long timestamp = Instant.now().toEpochMilli()*1000000;
-      String signedMessage = name+"."+timestamp+(entryOrNull!=null?"."+entryOrNull:"");
-      if (log.isDebugEnabled()) {
-        log.debug("signatureAddress=" + signatureAddress+", signedMessage="+signedMessage);
+      // authenticate
+      String signatureAddress = BIP_FORMAT.LEGACY.getToAddress(authenticationKey, this.params);
+      long timestamp = Instant.now().toEpochMilli() * 1000000;
+      String signedMessage =
+          name + "." + timestamp + (entryOrNull != null ? "." + entryOrNull : "");
+      if (log.isTraceEnabled()) {
+        log.trace("signatureAddress=" + signatureAddress + ", signedMessage=" + signedMessage);
       }
       params.put("Algorithm", "testnet3");
       params.put("PublicKey", signatureAddress);
       params.put("Timestamp", timestamp);
-      String signature = MessageSignUtilGeneric.getInstance().signMessage(authenticationKey, signedMessage);
+      String signature =
+          MessageSignUtilGeneric.getInstance().signMessage(authenticationKey, signedMessage);
       params.put("Signature", signature);
     }
+    return params;
   }
 
-  public void setAuthentication(ECKey signatureKey, NetworkParameters networkParams) {
-    this.authenticationKey = signatureKey;
-    this.networkParams = networkParams;
+  protected Map<String, Object> computeParams(String name) {
+    return computeParams(name, null);
   }
 }
