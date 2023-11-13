@@ -33,12 +33,12 @@ public class SorobanWalletInitiator extends SorobanWallet {
       CahootsType cahootsType, PaymentCode paymentCodeCounterparty) throws Exception {
     // send request
     return sorobanMeetingService
-        .sendMeetingRequest(cahootsWallet, paymentCodeCounterparty, cahootsType)
+        .sendMeetingRequest(rpcSession, paymentCodeCounterparty, cahootsType)
         // receive response
         .flatMap(
             request ->
                 sorobanMeetingService.receiveMeetingResponse(
-                    cahootsWallet, paymentCodeCounterparty, request, timeoutMeetingMs));
+                    rpcSession, paymentCodeCounterparty, request, timeoutMeetingMs));
   }
 
   public Single<Cahoots> meetAndInitiate(

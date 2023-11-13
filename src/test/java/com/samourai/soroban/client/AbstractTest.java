@@ -6,12 +6,16 @@ import com.samourai.http.client.IHttpClient;
 import com.samourai.http.client.IHttpClientService;
 import com.samourai.http.client.JavaHttpClient;
 import com.samourai.soroban.client.meeting.SorobanMeetingService;
+import com.samourai.soroban.client.protocol.SorobanProtocolMeeting;
 import com.samourai.soroban.client.rpc.RpcClientService;
+import com.samourai.soroban.client.rpc.RpcSession;
+import com.samourai.soroban.client.rpc.RpcWalletImpl;
 import com.samourai.soroban.client.wallet.SorobanWalletService;
 import com.samourai.soroban.client.wallet.counterparty.SorobanWalletCounterparty;
 import com.samourai.soroban.client.wallet.sender.SorobanWalletInitiator;
 import com.samourai.soroban.utils.LogbackUtils;
 import com.samourai.wallet.api.backend.beans.WalletResponse;
+import com.samourai.wallet.bip47.rpc.BIP47Wallet;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.bip47.rpc.java.Bip47UtilJava;
 import com.samourai.wallet.bipFormat.BIP_FORMAT;
@@ -27,11 +31,11 @@ import com.samourai.wallet.hd.HD_WalletFactoryGeneric;
 import com.samourai.wallet.send.provider.MockUtxoProvider;
 import com.samourai.wallet.send.provider.SimpleCahootsUtxoProvider;
 import com.samourai.wallet.util.AsyncUtil;
+import com.samourai.whirlpool.client.wallet.beans.WhirlpoolNetwork;
 import java.security.Provider;
 import java.util.Arrays;
 import java.util.Collection;
 import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.params.TestNet3Params;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
@@ -44,11 +48,11 @@ public abstract class AbstractTest {
   protected static final String SEED_PASSPHRASE_INITIATOR = "initiator";
   protected static final String SEED_PASSPHRASE_COUNTERPARTY = "counterparty";
 
-  protected static final int TIMEOUT_MS = 20000;
-  protected static final int RETRY_DELAY_MS = 1000;
+  protected static final int TIMEOUT_MS = 10000;
   protected static final Provider PROVIDER_JAVA = new BouncyCastleProvider();
 
-  protected static final NetworkParameters params = TestNet3Params.get();
+  protected static final WhirlpoolNetwork whirlpoolNetwork = WhirlpoolNetwork.TESTNET;
+  protected static final NetworkParameters params = whirlpoolNetwork.getParams();
   protected static final Bip47UtilJava bip47Util = Bip47UtilJava.getInstance();
   protected static final BipFormatSupplier bipFormatSupplier = BIP_FORMAT.PROVIDER;
 
@@ -76,10 +80,10 @@ public abstract class AbstractTest {
       };
   protected CryptoUtil cryptoUtil = CryptoUtil.getInstance(PROVIDER_JAVA);
   protected RpcClientService rpcClientService =
-      new RpcClientService(httpClientService, false, params);
+      new RpcClientService(httpClientService, cryptoUtil, bip47Util, false, params);
   protected SorobanWalletService sorobanWalletService =
       new SorobanWalletService(bip47Util, BIP_FORMAT.PROVIDER, params, rpcClientService);
-  protected SorobanProtocol sorobanProtocol = sorobanWalletService.getSorobanProtocol();
+  protected SorobanProtocolMeeting sorobanProtocol = sorobanWalletService.getSorobanProtocol();
   protected SorobanMeetingService sorobanMeetingService =
       sorobanWalletService.getSorobanMeetingService();
   protected SorobanService sorobanService = sorobanWalletService.getSorobanService();
@@ -88,6 +92,16 @@ public abstract class AbstractTest {
   protected CahootsWallet cahootsWalletCounterparty;
   protected SorobanWalletInitiator sorobanWalletInitiator;
   protected SorobanWalletCounterparty sorobanWalletCounterparty;
+
+  protected BIP47Wallet bip47WalletInitiator;
+  protected RpcWallet rpcWalletInitiator;
+  protected RpcSession rpcSessionInitiator;
+  protected SorobanClient sorobanClientInitiator;
+
+  protected BIP47Wallet bip47WalletCounterparty;
+  protected RpcWallet rpcWalletCounterparty;
+  protected RpcSession rpcSessionCounterparty;
+  protected SorobanClient sorobanClientCounterparty;
 
   protected MockUtxoProvider utxoProviderInitiator;
   protected MockUtxoProvider utxoProviderCounterparty;
@@ -116,7 +130,8 @@ public abstract class AbstractTest {
             chainSupplier,
             BIP_FORMAT.PROVIDER,
             new SimpleCahootsUtxoProvider(utxoProviderInitiator),
-            cryptoUtil);
+            cryptoUtil,
+            bip47Util);
     sorobanWalletInitiator = sorobanWalletService.getSorobanWalletInitiator(cahootsWalletInitiator);
 
     final HD_Wallet bip84WalletCounterparty =
@@ -131,12 +146,13 @@ public abstract class AbstractTest {
             chainSupplier,
             BIP_FORMAT.PROVIDER,
             new SimpleCahootsUtxoProvider(utxoProviderCounterparty),
-            cryptoUtil);
+            cryptoUtil,
+            bip47Util);
     sorobanWalletCounterparty =
         sorobanWalletService.getSorobanWalletCounterparty(cahootsWalletCounterparty);
 
-    paymentCodeInitiator = cahootsWalletInitiator.getPaymentCode();
-    paymentCodeCounterparty = cahootsWalletCounterparty.getPaymentCode();
+    paymentCodeInitiator = cahootsWalletInitiator.getBip47Wallet().getPaymentCode();
+    paymentCodeCounterparty = cahootsWalletCounterparty.getBip47Wallet().getPaymentCode();
 
     httpClient.getJettyHttpClient().start();
 
@@ -147,6 +163,16 @@ public abstract class AbstractTest {
         .getSamouraiConfig()
         .setSorobanServerDexTestnetClear(
             Arrays.asList(initialSorobanServerTestnetClearUrls.iterator().next()));
+
+    this.bip47WalletInitiator = cahootsWalletInitiator.getBip47Wallet();
+    this.rpcWalletInitiator = rpcClientService.getRpcWallet(bip47WalletInitiator);
+    this.rpcSessionInitiator = ((RpcWalletImpl) rpcWalletInitiator).createRpcSession();
+    this.sorobanClientInitiator = rpcSessionInitiator.withSorobanClient(sc -> sc);
+
+    this.bip47WalletCounterparty = cahootsWalletCounterparty.getBip47Wallet();
+    this.rpcWalletCounterparty = rpcClientService.getRpcWallet(bip47WalletCounterparty);
+    this.rpcSessionCounterparty = ((RpcWalletImpl) rpcWalletCounterparty).createRpcSession();
+    this.sorobanClientCounterparty = rpcSessionCounterparty.withSorobanClient(sc -> sc);
   }
 
   protected static void assertNoException() {

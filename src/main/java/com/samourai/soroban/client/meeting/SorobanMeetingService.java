@@ -5,11 +5,11 @@ import com.samourai.soroban.client.rpc.RpcClientService;
 import com.samourai.soroban.client.rpc.RpcSession;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.cahoots.CahootsType;
-import com.samourai.wallet.cahoots.CahootsWallet;
 import io.reactivex.Single;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Deprecated // TODO
 public class SorobanMeetingService {
   private static final Logger log = LoggerFactory.getLogger(SorobanMeetingService.class);
 
@@ -20,28 +20,23 @@ public class SorobanMeetingService {
   }
 
   public Single<SorobanRequestMessage> sendMeetingRequest(
-      CahootsWallet cahootsWallet, PaymentCode paymentCodePartner, CahootsType type)
-      throws Exception {
+      RpcSession rpcSession, PaymentCode paymentCodePartner, CahootsType type) throws Exception {
     String info = "[initiator]";
     // send request
-    RpcSession rpcSession = rpcClientService.getRpcSession(info);
-    RpcDialog dialog =
-        rpcSession.createRpcDialog(
-            cahootsWallet.getRpcWallet().getEncrypter(), paymentCodePartner.toString());
+    RpcDialog dialog = rpcSession.createRpcDialog(paymentCodePartner.toString());
     final SorobanRequestMessage request = new SorobanRequestMessage(type);
     if (log.isDebugEnabled()) {
       log.debug(info + "sending meeting request: " + request);
     }
-    return dialog.sendWithSender(request, paymentCodePartner).map(payload -> request);
+    return dialog.sendWithSender(request, paymentCodePartner).toSingle(() -> request);
   }
 
-  public Single<SorobanRequestMessage> receiveMeetingRequest(
-      CahootsWallet cahootsWallet, long timeoutMs) throws Exception {
+  public Single<SorobanRequestMessage> receiveMeetingRequest(RpcSession rpcSession, long timeoutMs)
+      throws Exception {
     String info = "[counterparty]";
-    RpcSession rpcSession = rpcClientService.getRpcSession(info);
-    RpcDialog dialog =
-        rpcSession.createRpcDialog(
-            cahootsWallet.getRpcWallet().getEncrypter(), cahootsWallet.getPaymentCode().toString());
+    PaymentCode paymentCodeCounterparty =
+        rpcSession.getRpcWallet().getBip47Wallet().getPaymentCode();
+    RpcDialog dialog = rpcSession.createRpcDialog(paymentCodeCounterparty.toString());
     if (log.isDebugEnabled()) {
       log.debug(info + "listening for meeting request...");
     }
@@ -60,18 +55,15 @@ public class SorobanMeetingService {
   }
 
   public Single<SorobanResponseMessage> sendMeetingResponse(
-      CahootsWallet cahootsWallet, SorobanRequestMessage request, boolean accept) throws Exception {
+      RpcSession rpcSession, SorobanRequestMessage request, boolean accept) throws Exception {
     String info = "[counterparty]";
-    RpcSession rpcSession = rpcClientService.getRpcSession(info);
-    RpcDialog dialog =
-        rpcSession.createRpcDialog(
-            cahootsWallet.getRpcWallet().getEncrypter(), request.toPayload());
+    RpcDialog dialog = rpcSession.createRpcDialog(request.toPayload());
     final SorobanResponseMessage response = new SorobanResponseMessage(accept);
     PaymentCode paymentCodePartner = new PaymentCode(request.getSender());
     return dialog
         .send(response, paymentCodePartner)
-        .map(
-            payload -> {
+        .toSingle(
+            () -> {
               if (log.isDebugEnabled()) {
                 log.debug(info + "meeting response sent: " + response);
               }
@@ -80,17 +72,14 @@ public class SorobanMeetingService {
   }
 
   public Single<SorobanResponseMessage> receiveMeetingResponse(
-      CahootsWallet cahootsWallet,
+      RpcSession rpcSession,
       PaymentCode paymentCodePartner,
       SorobanRequestMessage request,
       final long timeoutMs)
       throws Exception {
     // send request
     String info = "[initiator]";
-    RpcSession rpcSession = rpcClientService.getRpcSession(info);
-    final RpcDialog dialog =
-        rpcSession.createRpcDialog(
-            cahootsWallet.getRpcWallet().getEncrypter(), request.toPayload());
+    final RpcDialog dialog = rpcSession.createRpcDialog(request.toPayload());
     return dialog
         .receive(paymentCodePartner, timeoutMs)
         .map(

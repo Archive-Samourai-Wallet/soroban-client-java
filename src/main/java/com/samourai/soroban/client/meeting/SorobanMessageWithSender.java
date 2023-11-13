@@ -1,21 +1,27 @@
 package com.samourai.soroban.client.meeting;
 
+import com.samourai.soroban.client.SorobanPayload;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class SorobanMessageWithSender {
+@Deprecated // TODO
+public class SorobanMessageWithSender implements SorobanPayload {
   private static final Logger log = LoggerFactory.getLogger(SorobanMessageWithSender.class);
 
   private String sender;
   private String payload;
-  private String initialPayload; // encrypted
+  private long timePayload;
 
-  public SorobanMessageWithSender(String sender, String payload, String initialPayload) {
+  public SorobanMessageWithSender(String sender, String payload, long timePayload) {
     this.sender = sender;
     this.payload = payload;
-    this.initialPayload = initialPayload;
+    this.timePayload = timePayload;
+  }
+
+  public SorobanMessageWithSender(String sender, String payload) {
+    this(sender, payload, System.currentTimeMillis());
   }
 
   public static SorobanMessageWithSender parse(String payloadStr) throws Exception {
@@ -26,7 +32,7 @@ public class SorobanMessageWithSender {
     if (StringUtils.isEmpty(sender) || StringUtils.isEmpty(payload)) {
       throw new Exception("Invalid SorobanMessageWithSender");
     }
-    return new SorobanMessageWithSender(sender, payload, payloadStr);
+    return new SorobanMessageWithSender(sender, payload);
   }
 
   public static String toPayload(String sender, String payload) {
@@ -37,6 +43,19 @@ public class SorobanMessageWithSender {
   }
 
   @Override
+  public String toPayload() {
+    return toPayload(sender, payload);
+  }
+
+  public String getTypePayload() {
+    return SorobanMessageWithSender.class.getName();
+  }
+
+  public long getTimePayload() {
+    return timePayload;
+  }
+
+  @Override
   public String toString() {
     return "SorobanMessageWithSender{"
         + "sender='"
@@ -44,7 +63,8 @@ public class SorobanMessageWithSender {
         + '\''
         + ", payload='"
         + payload
-        + '\''
+        + "\', timePayload="
+        + timePayload
         + '}';
   }
 
@@ -62,13 +82,5 @@ public class SorobanMessageWithSender {
 
   public void setPayload(String payload) {
     this.payload = payload;
-  }
-
-  public String getInitialPayload() {
-    return initialPayload;
-  }
-
-  public void setInitialPayload(String initialPayload) {
-    this.initialPayload = initialPayload;
   }
 }

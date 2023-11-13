@@ -7,6 +7,7 @@ import com.samourai.soroban.client.cahoots.OnlineCahootsService;
 import com.samourai.soroban.client.meeting.SorobanMeetingService;
 import com.samourai.soroban.client.meeting.SorobanRequestMessage;
 import com.samourai.soroban.client.meeting.SorobanResponseMessage;
+import com.samourai.soroban.client.rpc.NoValueRpcException;
 import com.samourai.soroban.client.wallet.SorobanWallet;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.cahoots.Cahoots;
@@ -14,7 +15,6 @@ import com.samourai.wallet.cahoots.CahootsWallet;
 import io.reactivex.Single;
 import io.reactivex.functions.Consumer;
 import java.lang.invoke.MethodHandles;
-import java.util.concurrent.TimeoutException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,7 +45,7 @@ public class SorobanWalletCounterparty extends SorobanWallet {
                   SorobanRequestMessage request = asyncUtil.blockingGet(receiveMeetingRequest());
                   log.info("New Soroban request: " + request);
                   listener.onRequest(request);
-                } catch (TimeoutException e) {
+                } catch (NoValueRpcException e) {
                   // ignore
                 } catch (Exception e) {
                   log.error("Failed listening for Soroban requests", e);
@@ -67,12 +67,12 @@ public class SorobanWalletCounterparty extends SorobanWallet {
   }
 
   public Single<SorobanRequestMessage> receiveMeetingRequest() throws Exception {
-    return sorobanMeetingService.receiveMeetingRequest(cahootsWallet, timeoutMeetingMs);
+    return sorobanMeetingService.receiveMeetingRequest(rpcSession, timeoutMeetingMs);
   }
 
   public Single<SorobanResponseMessage> sendMeetingResponse(
       SorobanRequestMessage cahootsRequest, boolean accept) throws Exception {
-    return sorobanMeetingService.sendMeetingResponse(cahootsWallet, cahootsRequest, accept);
+    return sorobanMeetingService.sendMeetingResponse(rpcSession, cahootsRequest, accept);
   }
 
   public Single<SorobanResponseMessage> decline(SorobanRequestMessage cahootsRequest)

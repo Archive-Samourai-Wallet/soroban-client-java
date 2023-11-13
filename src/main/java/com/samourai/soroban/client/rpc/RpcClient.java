@@ -2,8 +2,8 @@ package com.samourai.soroban.client.rpc;
 
 import com.samourai.http.client.IHttpClient;
 import com.samourai.wallet.bipFormat.BIP_FORMAT;
+import com.samourai.wallet.util.AsyncUtil;
 import com.samourai.wallet.util.MessageSignUtilGeneric;
-import com.samourai.wallet.util.Util;
 import io.reactivex.Completable;
 import io.reactivex.Single;
 import java.io.IOException;
@@ -12,7 +12,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.slf4j.Logger;
@@ -41,7 +40,7 @@ public class RpcClient {
   }
 
   public static String shortDirectory(String directory) {
-    return Util.maskString(directory, 30);
+    return /*Util.maskString(*/ directory /*)*/; // TODO enable maskString
   }
 
   public String getUrl() {
@@ -114,7 +113,8 @@ public class RpcClient {
               String[] dest = new String[src.size()];
               System.arraycopy(src.toArray(), 0, dest, 0, src.size());
               if (log.isDebugEnabled()) {
-                log.debug("<= list " + shortDirectory(name) + ": " + src.size() + " entries");
+                log.debug(
+                    "<= list " + shortDirectory(name) + ": " + src.size() + " entries, url=" + url);
               }
               return dest;
             });
@@ -135,58 +135,11 @@ public class RpcClient {
             });
   }
 
-  public Single<String> directoryValueWait(
-      final String name, final long timeoutMs, final long retryDelayMs) throws IOException {
-    if (log.isTraceEnabled()) {
-      log.trace("=> valueWait " + shortDirectory(name) + "... ");
-    }
-    long timeStart = System.nanoTime();
-    return directoryValue(name)
-        .retry(
-            error -> {
-              // wait for retry delay
-              synchronized (this) {
-                try {
-                  wait(retryDelayMs);
-                } catch (InterruptedException e) {
-                }
-              }
-              if (!started) {
-                if (log.isDebugEnabled()) {
-                  log.debug("exit");
-                }
-                return false; // exit
-              }
-              long elapsedTime = (System.nanoTime() - timeStart) / 1000000;
-              if (log.isTraceEnabled()) {
-                log.trace(
-                    "=> valueWait "
-                        + shortDirectory(name)
-                        + "... "
-                        + elapsedTime
-                        + "/"
-                        + timeoutMs
-                        + "ms");
-              }
-              return true; // retry
-            })
-        .timeout(timeoutMs, TimeUnit.MILLISECONDS)
-        .map(
-            res -> {
-              if (log.isTraceEnabled()) {
-                log.trace("<= valueWait " + shortDirectory(name) + ": " + res);
-              } else if (log.isDebugEnabled()) {
-                log.debug("<= valueWait " + shortDirectory(name));
-              }
-              return res;
-            });
-  }
-
   public Completable directoryAdd(String name, String entry, RpcMode rpcMode) throws IOException {
     if (log.isTraceEnabled()) {
-      log.trace("=> add " + shortDirectory(name) + ": " + entry);
+      log.trace("=> add " + shortDirectory(name) + " => " + entry + ", url=" + url);
     } else if (log.isDebugEnabled()) {
-      log.debug("=> add " + shortDirectory(name));
+      log.debug("=> add " + shortDirectory(name) + ", url=" + url);
     }
     Map<String, Object> params = computeParams(name, entry);
     params.put("Mode", rpcMode.getValue());
@@ -195,22 +148,29 @@ public class RpcClient {
 
   public Completable directoryRemove(String name, String entry) throws IOException {
     if (log.isTraceEnabled()) {
-      log.trace("=> remove " + shortDirectory(name) + ": " + entry);
+      log.trace("=> remove " + shortDirectory(name) + ": " + entry + ", url=" + url);
     } else if (log.isDebugEnabled()) {
-      log.debug("=> remove " + shortDirectory(name));
+      log.debug("=> remove " + shortDirectory(name) + ", url=" + url);
     }
     Map<String, Object> params = computeParams(name, entry);
     return Completable.fromSingle(call("directory.Remove", params));
   }
 
-  public Single<String> directoryValueWaitAndRemove(
-      final String name, final long timeoutMs, final long retryDelayMs) throws Exception {
-    return directoryValueWait(name, timeoutMs, retryDelayMs)
-        .map(
-            value -> {
-              directoryRemove(name, value).subscribe();
-              return value;
-            });
+  public Completable directoryRemoveAll(String name) throws IOException {
+    return Completable.fromSingle(
+        directoryValues(name)
+            .map(
+                entries -> {
+                  Arrays.stream(entries)
+                      .forEach(
+                          entry -> {
+                            try {
+                              AsyncUtil.getInstance().blockingAwait(directoryRemove(name, entry));
+                            } catch (Exception e) {
+                            }
+                          });
+                  return entries;
+                }));
   }
 
   protected Map<String, Object> computeParams(String name, String entryOrNull) {
@@ -240,5 +200,9 @@ public class RpcClient {
 
   protected Map<String, Object> computeParams(String name) {
     return computeParams(name, null);
+  }
+
+  public NetworkParameters getParams() {
+    return params;
   }
 }

@@ -1,13 +1,14 @@
-package com.samourai.soroban.client;
+package com.samourai.soroban.client.protocol;
 
+import com.samourai.soroban.client.AbstractTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class SorobanProtocolTest extends AbstractTest {
-  private static final Logger log = LoggerFactory.getLogger(SorobanProtocolTest.class);
+public class SorobanProtocolMeetingTest extends AbstractTest {
+  private static final Logger log = LoggerFactory.getLogger(SorobanProtocolMeetingTest.class);
 
   @BeforeEach
   @Override
@@ -19,8 +20,8 @@ public class SorobanProtocolTest extends AbstractTest {
   public void getMeeetingAddressReceive() throws Exception {
     String addressReceive =
         sorobanProtocol.getMeeetingAddressReceive(
-            cahootsWalletInitiator.getRpcWallet(),
-            cahootsWalletCounterparty.getPaymentCode(),
+            rpcWalletInitiator,
+            cahootsWalletCounterparty.getBip47Wallet().getPaymentCode(),
             params,
             bip47Util);
     Assertions.assertEquals("tb1q2s8kr83fkxc65q9axmhk0mfmqn6astjsn0fzzd", addressReceive);
@@ -30,8 +31,8 @@ public class SorobanProtocolTest extends AbstractTest {
   public void getMeeetingAddressSend() throws Exception {
     String addressSend =
         sorobanProtocol.getMeeetingAddressSend(
-            cahootsWalletCounterparty.getRpcWallet(),
-            cahootsWalletInitiator.getPaymentCode(),
+            rpcWalletCounterparty,
+            cahootsWalletInitiator.getBip47Wallet().getPaymentCode(),
             params,
             bip47Util);
     Assertions.assertEquals("tb1q2s8kr83fkxc65q9axmhk0mfmqn6astjsn0fzzd", addressSend);

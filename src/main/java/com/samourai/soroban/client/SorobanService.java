@@ -2,8 +2,8 @@ package com.samourai.soroban.client;
 
 import com.samourai.soroban.cahoots.CahootsContext;
 import com.samourai.soroban.client.dialog.RpcDialog;
+import com.samourai.soroban.client.protocol.SorobanProtocolMeeting;
 import com.samourai.soroban.client.rpc.RpcClientService;
-import com.samourai.soroban.client.rpc.RpcSession;
 import com.samourai.wallet.bip47.BIP47UtilGeneric;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.cahoots.CahootsWallet;
@@ -24,13 +24,13 @@ public class SorobanService {
   private BIP47UtilGeneric bip47Util;
   private NetworkParameters params;
   private RpcClientService rpcClientService;
-  private SorobanProtocol sorobanProtocol;
+  private SorobanProtocolMeeting sorobanProtocol;
 
   public SorobanService(
       BIP47UtilGeneric bip47Util,
       NetworkParameters params,
       RpcClientService rpcClientService,
-      SorobanProtocol sorobanProtocol) {
+      SorobanProtocolMeeting sorobanProtocol) {
     this.bip47Util = bip47Util;
     this.params = params;
     this.rpcClientService = rpcClientService;
@@ -54,13 +54,11 @@ public class SorobanService {
             () -> {
               RpcDialog dialogOrNull = null;
               try {
-                RpcWallet rpcWallet = cahootsWallet.getRpcWallet();
+                RpcWallet rpcWallet = rpcClientService.getRpcWallet(cahootsWallet.getBip47Wallet());
                 String initialDirectory =
                     sorobanProtocol.getMeeetingAddressSend(
                         rpcWallet, paymentCodeCounterParty, params, bip47Util);
-                RpcSession rpcSession = rpcClientService.getRpcSession(info);
-                dialogOrNull =
-                    rpcSession.createRpcDialog(rpcWallet.getEncrypter(), initialDirectory);
+                dialogOrNull = rpcClientService.createRpcDialog(cahootsWallet, initialDirectory);
                 final RpcDialog dialog = dialogOrNull;
                 closeDialogOnError(onMessage, dialog, paymentCodeCounterParty, interactionHandler);
                 dialog(
@@ -98,13 +96,11 @@ public class SorobanService {
             () -> {
               RpcDialog dialogOrNull = null;
               try {
-                RpcWallet rpcWallet = cahootsWallet.getRpcWallet();
+                RpcWallet rpcWallet = rpcClientService.getRpcWallet(cahootsWallet.getBip47Wallet());
                 String initialDirectory =
                     sorobanProtocol.getMeeetingAddressReceive(
                         rpcWallet, paymentCodeInitiator, params, bip47Util);
-                RpcSession rpcSession = rpcClientService.getRpcSession(info);
-                dialogOrNull =
-                    rpcSession.createRpcDialog(rpcWallet.getEncrypter(), initialDirectory);
+                dialogOrNull = rpcClientService.createRpcDialog(cahootsWallet, initialDirectory);
                 final RpcDialog dialog = dialogOrNull;
                 closeDialogOnError(onMessage, dialog, paymentCodeInitiator, null);
 
@@ -185,7 +181,7 @@ public class SorobanService {
       if (onMessage != null) {
         onMessage.onNext(message);
       }
-      asyncUtil.blockingGet(dialog.send(message, paymentCodePartner));
+      asyncUtil.blockingAwait(dialog.send(message, paymentCodePartner));
 
       if (message.isDone()) {
         // done

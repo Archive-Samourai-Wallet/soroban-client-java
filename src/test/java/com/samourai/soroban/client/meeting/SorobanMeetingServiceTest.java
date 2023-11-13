@@ -28,13 +28,11 @@ public class SorobanMeetingServiceTest extends AbstractTest {
                 SorobanRequestMessage request =
                     asyncUtil.blockingGet(
                         sorobanMeetingService.sendMeetingRequest(
-                            cahootsWalletInitiator,
-                            paymentCodeCounterparty,
-                            CahootsType.STONEWALLX2));
+                            rpcSessionInitiator, paymentCodeCounterparty, CahootsType.STONEWALLX2));
                 SorobanResponseMessage response =
                     asyncUtil.blockingGet(
                         sorobanMeetingService.receiveMeetingResponse(
-                            cahootsWalletInitiator, paymentCodeCounterparty, request, TIMEOUT_MS));
+                            rpcSessionInitiator, paymentCodeCounterparty, request, TIMEOUT_MS));
                 Assertions.assertTrue(response.isAccept());
               } catch (Exception e) {
                 setException(e);
@@ -51,14 +49,14 @@ public class SorobanMeetingServiceTest extends AbstractTest {
                 SorobanRequestMessage requestMessage =
                     asyncUtil.blockingGet(
                         sorobanMeetingService.receiveMeetingRequest(
-                            cahootsWalletCounterparty, TIMEOUT_MS));
+                            rpcSessionCounterparty, TIMEOUT_MS));
                 Assertions.assertEquals(CahootsType.STONEWALLX2, requestMessage.getType());
                 Assertions.assertEquals(
                     paymentCodeInitiator.toString(), requestMessage.getSender());
 
                 // response accept
                 sorobanMeetingService
-                    .sendMeetingResponse(cahootsWalletCounterparty, requestMessage, true)
+                    .sendMeetingResponse(rpcSessionCounterparty, requestMessage, true)
                     .subscribe();
               } catch (Exception e) {
                 setException(e);

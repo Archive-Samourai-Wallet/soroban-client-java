@@ -3,6 +3,7 @@ package com.samourai.soroban.client.wallet;
 import com.samourai.soroban.client.SorobanService;
 import com.samourai.soroban.client.cahoots.OnlineCahootsService;
 import com.samourai.soroban.client.meeting.SorobanMeetingService;
+import com.samourai.soroban.client.rpc.RpcSession;
 import com.samourai.wallet.cahoots.CahootsWallet;
 import com.samourai.wallet.util.AsyncUtil;
 import java.lang.invoke.MethodHandles;
@@ -17,6 +18,7 @@ public abstract class SorobanWallet {
   protected SorobanService sorobanService;
   protected SorobanMeetingService sorobanMeetingService;
   protected CahootsWallet cahootsWallet;
+  protected RpcSession rpcSession;
   protected int timeoutMeetingMs = 120000;
   protected int timeoutDialogMs = 60000;
 
@@ -29,6 +31,11 @@ public abstract class SorobanWallet {
     this.sorobanService = sorobanService;
     this.sorobanMeetingService = sorobanMeetingService;
     this.cahootsWallet = cahootsWallet;
+    this.rpcSession =
+        sorobanService
+            .getRpcClientService()
+            .getRpcWallet(cahootsWallet.getBip47Wallet())
+            .createRpcSession();
   }
 
   public int getTimeoutMeetingMs() {
@@ -61,5 +68,9 @@ public abstract class SorobanWallet {
 
   public SorobanMeetingService getSorobanMeetingService() {
     return sorobanMeetingService;
+  }
+
+  public RpcSession getRpcSession() {
+    return rpcSession;
   }
 }
