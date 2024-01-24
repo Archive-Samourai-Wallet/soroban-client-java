@@ -34,7 +34,7 @@ public abstract class SorobanWallet {
     this.rpcSession =
         sorobanService
             .getRpcClientService()
-            .getRpcWallet(cahootsWallet.getBip47Wallet())
+            .getRpcWallet(cahootsWallet.getBip47Account())
             .createRpcSession();
   }
 

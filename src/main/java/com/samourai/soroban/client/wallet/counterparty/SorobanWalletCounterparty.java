@@ -42,7 +42,8 @@ public class SorobanWalletCounterparty extends SorobanWallet {
               while (listening) {
                 log.info("Listening for Soroban requests...");
                 try {
-                  SorobanRequestMessage request = asyncUtil.blockingGet(receiveMeetingRequest());
+                  SorobanRequestMessage request =
+                      asyncUtil.blockingGet(receiveMeetingRequest(), getTimeoutMeetingMs());
                   log.info("New Soroban request: " + request);
                   listener.onRequest(request);
                 } catch (NoValueRpcException e) {
@@ -67,7 +68,7 @@ public class SorobanWalletCounterparty extends SorobanWallet {
   }
 
   public Single<SorobanRequestMessage> receiveMeetingRequest() throws Exception {
-    return sorobanMeetingService.receiveMeetingRequest(rpcSession, timeoutMeetingMs);
+    return sorobanMeetingService.receiveMeetingRequest(rpcSession);
   }
 
   public Single<SorobanResponseMessage> sendMeetingResponse(

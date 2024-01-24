@@ -57,7 +57,9 @@ public class SorobanWalletTest extends AbstractTest {
             () -> {
               try {
                 SorobanRequestMessage request =
-                    asyncUtil.blockingGet(sorobanWalletCounterparty.receiveMeetingRequest());
+                    asyncUtil.blockingGet(
+                        sorobanWalletCounterparty.receiveMeetingRequest(),
+                        sorobanWalletCounterparty.getTimeoutMeetingMs());
                 Assertions.assertEquals(cahootsType, request.getType());
                 asyncUtil.blockingGet(sorobanWalletCounterparty.decline(request));
               } catch (Exception e) {

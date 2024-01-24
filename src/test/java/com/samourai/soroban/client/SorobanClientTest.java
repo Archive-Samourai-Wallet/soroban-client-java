@@ -273,7 +273,7 @@ public class SorobanClientTest extends AbstractTest {
 
           // add encrypted payload
           PaymentCode invalidPaymentCode =
-              rpcClientService.generateRpcWallet().getBip47Wallet().getPaymentCode();
+              rpcClientService.generateRpcWallet().getBip47Account().getPaymentCode();
           String encryptedPayload = sorobanClient.encrypt(payload.toPayload(), invalidPaymentCode);
           asyncUtil.blockingAwait(rpcClient.directoryAdd(key, encryptedPayload, RpcMode.NORMAL));
           return null;

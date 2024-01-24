@@ -6,27 +6,27 @@ import com.samourai.wallet.bip47.rpc.*;
 import com.samourai.wallet.crypto.CryptoUtil;
 
 public class RpcWalletImpl implements RpcWallet {
-  private BIP47Wallet bip47Wallet;
+  private BIP47Account bip47Account;
   private CryptoUtil cryptoUtil;
   private BIP47UtilGeneric bip47Util;
   private Bip47Encrypter bip47Encrypter;
   private RpcClientService rpcClientService; // TODO
 
   public RpcWalletImpl(
-      BIP47Wallet bip47Wallet,
+      BIP47Account bip47Account,
       CryptoUtil cryptoUtil,
       BIP47UtilGeneric bip47Util,
       RpcClientService rpcClientService) {
-    this.bip47Wallet = bip47Wallet;
+    this.bip47Account = bip47Account;
     this.cryptoUtil = cryptoUtil;
     this.bip47Util = bip47Util;
-    this.bip47Encrypter = new Bip47EncrypterImpl(bip47Wallet, cryptoUtil, bip47Util);
+    this.bip47Encrypter = new Bip47EncrypterImpl(bip47Account, cryptoUtil, bip47Util);
     this.rpcClientService = rpcClientService;
   }
 
   @Override
-  public BIP47Wallet getBip47Wallet() {
-    return bip47Wallet;
+  public BIP47Account getBip47Account() {
+    return bip47Account;
   }
 
   @Override
@@ -37,7 +37,7 @@ public class RpcWalletImpl implements RpcWallet {
   @Override
   public Bip47Partner getBip47Partner(PaymentCode paymentCodePartner, boolean initiator)
       throws Exception {
-    return new Bip47PartnerImpl(bip47Wallet, paymentCodePartner, initiator, cryptoUtil, bip47Util);
+    return new Bip47PartnerImpl(bip47Account, paymentCodePartner, initiator, cryptoUtil, bip47Util);
   }
 
   @Override

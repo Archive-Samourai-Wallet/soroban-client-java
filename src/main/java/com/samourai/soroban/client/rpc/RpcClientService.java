@@ -5,6 +5,7 @@ import com.samourai.http.client.IHttpClient;
 import com.samourai.http.client.IHttpClientService;
 import com.samourai.soroban.client.dialog.RpcDialog;
 import com.samourai.wallet.bip47.BIP47UtilGeneric;
+import com.samourai.wallet.bip47.rpc.BIP47Account;
 import com.samourai.wallet.bip47.rpc.BIP47Wallet;
 import com.samourai.wallet.cahoots.CahootsWallet;
 import com.samourai.wallet.crypto.CryptoUtil;
@@ -32,21 +33,21 @@ public class RpcClientService {
     this.params = params;
   }
 
-  public RpcWalletImpl getRpcWallet(BIP47Wallet bip47Wallet) {
-    return new RpcWalletImpl(bip47Wallet, cryptoUtil, bip47Util, this);
+  public RpcWalletImpl getRpcWallet(BIP47Account bip47Account) {
+    return new RpcWalletImpl(bip47Account, cryptoUtil, bip47Util, this);
   }
 
   public RpcDialog createRpcDialog(CahootsWallet cahootsWallet, String directory)
       throws Exception { // TODO
-    return getRpcWallet(cahootsWallet.getBip47Wallet())
+    return getRpcWallet(cahootsWallet.getBip47Account())
         .createRpcSession()
         .createRpcDialog(directory);
   }
 
   public RpcWalletImpl generateRpcWallet() {
     HD_Wallet hdw = HD_WalletFactoryGeneric.getInstance().generateWallet(44, params);
-    BIP47Wallet bip47Wallet = new BIP47Wallet(hdw);
-    return new RpcWalletImpl(bip47Wallet, cryptoUtil, bip47Util, this);
+    BIP47Account bip47Account = new BIP47Wallet(hdw).getAccount(0);
+    return new RpcWalletImpl(bip47Account, cryptoUtil, bip47Util, this);
   }
 
   protected RpcClient createRpcClient(String url) {

@@ -5,7 +5,6 @@ import com.samourai.soroban.client.SorobanPayloadable;
 import com.samourai.soroban.client.exception.SorobanException;
 import com.samourai.soroban.client.meeting.SorobanMessageWithSender;
 import com.samourai.soroban.client.rpc.RpcSession;
-import com.samourai.soroban.client.rpc.RpcSessionPartnerApi;
 import com.samourai.wallet.bip47.rpc.Bip47Partner;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import io.reactivex.Completable;
@@ -43,10 +42,9 @@ public class RpcDialog {
     this.exit = false;
   }
 
-  public Single<SorobanMessageWithSender> receiveWithSender(long timeoutMs) throws Exception {
+  public Single<SorobanMessageWithSender> receiveWithSender() {
     return rpcSession.directoryValueWait(
         nextDirectory,
-        timeoutMs,
         (sorobanClient, value) -> {
           // read paymentCode from sender
           SorobanMessageWithSender messageWithSender = SorobanMessageWithSender.parse(value);
@@ -69,8 +67,8 @@ public class RpcDialog {
       throws Exception {
     Bip47Partner bip47Partner =
         rpcSession.getRpcWallet().getBip47Partner(paymentCodePartner, false);
-    RpcSessionPartnerApi partnerApi =
-        new RpcSessionPartnerApi(rpcSession, bip47Partner, requestId -> nextDirectory);
+    // RpcSessionPartnerApi partnerApi =
+    //   new RpcSessionPartnerApi(rpcSession, bip47Partner, requestId -> nextDirectory);
     return null; // TODO zl
     /*return partnerApi
     .loopUntilReply("RpcDialog", LOOP_FREQUENCY_MS) // requestId is not used
@@ -90,7 +88,7 @@ public class RpcDialog {
           onEncryptedPayload.accept(encryptedPayload);
 
           // wrap with clear sender
-          PaymentCode paymentCodeMine = rpcSession.getRpcWallet().getBip47Wallet().getPaymentCode();
+          PaymentCode paymentCodeMine = rpcSession.getRpcWallet().getBip47Account().getPaymentCode();
           String payloadWithSender =
               SorobanMessageWithSender.toPayload(paymentCodeMine.toString(), encryptedPayload);
           return sorobanClient

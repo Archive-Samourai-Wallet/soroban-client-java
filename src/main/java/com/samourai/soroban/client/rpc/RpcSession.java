@@ -17,6 +17,7 @@ import io.reactivex.functions.BiFunction;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeoutException;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
@@ -25,9 +26,9 @@ import org.slf4j.LoggerFactory;
 
 public class RpcSession {
   private static final Logger log = LoggerFactory.getLogger(RpcSession.class.getName());
-  private static final int DOWN_DELAY_MS = 300000; // 5min
-  protected static final int RETRY_DELAY_MS = 1000;
-  private static final UpStatusPool upStatusPool = new UpStatusPool(DOWN_DELAY_MS);
+  private static final int DOWN_EXPIRATION_DELAY_MS = 300000; // 5min
+  protected static final int WAIT_RETRY_MS = 2000; // 2s
+  private static final UpStatusPool upStatusPool = new UpStatusPool(DOWN_EXPIRATION_DELAY_MS);
   private static final AsyncUtil asyncUtil = AsyncUtil.getInstance();
 
   private RpcClientService rpcClientService;
@@ -146,8 +147,25 @@ public class RpcSession {
         serverUrlForced);
   }
 
+  public <R extends Single> R withSorobanClientSingle(
+      CallbackWithArg<SorobanClient, R> callable, String serverUrlForced) {
+    try {
+      return withSorobanClient(callable, serverUrlForced);
+    } catch (Exception e) {
+      return (R) Single.error(e);
+    }
+  }
+
   public <R> R withSorobanClient(CallbackWithArg<SorobanClient, R> callable) throws Exception {
     return withSorobanClient(callable, null);
+  }
+
+  public <R extends Single> R withSorobanClientSingle(CallbackWithArg<SorobanClient, R> callable) {
+    try {
+      return withSorobanClient(callable, null);
+    } catch (Exception e) {
+      return (R) Single.error(e);
+    }
   }
 
   public RpcDialog createRpcDialog(String directory) throws Exception {
@@ -162,91 +180,40 @@ public class RpcSession {
     return upStatusPool;
   }
 
-  public <T> Single<T> loopUntil(BiFunction<SorobanClient, String, Single<T>> getMessage) {
-    CallbackWithArg<SorobanClient, Single<String>> getRequestId = sorobanClient -> null;
-    return loopUntil(getRequestId, getMessage);
-  }
-
-  public <T> Single<T> loopUntil(
-      CallbackWithArg<SorobanClient, Single<String>> getRequestId,
-      BiFunction<SorobanClient, String, Single<T>> getMessage) {
-    Single<T> loop =
-        Single.fromCallable(
-            () -> {
-              while (true) {
-                throwIfDone();
-                try {
-                  // use fresh soroban node
-                  return asyncUtil.blockingGet(
-                      withSorobanClient(
-                          sorobanClient -> {
-                            // do stuff
-                            String requestId =
-                                asyncUtil.blockingGet(getRequestId.apply(sorobanClient));
-
-                            // wait for response
-                            return getMessage.apply(sorobanClient, requestId);
-                          }));
-                } catch (NoValueRpcException e) {
-                  // no response received yet, continue looping
-                  synchronized (this) {
-                    try {
-                      wait(RETRY_DELAY_MS);
-                    } catch (InterruptedException ee) {
-                    }
-                  }
-                }
-              }
-            });
-    return loop;
-  }
-
   public <R> Single<R> directoryValueWait(
-      final String directory, final long timeoutMs, BiFunction<SorobanClient, String, R> onSuccess)
-      throws Exception {
-    long timeOut = System.currentTimeMillis() + timeoutMs;
-    while (System.currentTimeMillis() < timeOut && !done) {
-      try {
-        return Single.just(
-            asyncUtil.blockingGet(
+      final String directory, BiFunction<SorobanClient, String, R> mapValue) {
+
+    // fetch value
+    Callable<R> loop =
+        () -> {
+          try {
+            return asyncUtil.blockingGet(
                 withSorobanClient(
                     sorobanClient ->
                         sorobanClient
                             .getRpcClient()
                             .directoryValue(directory)
-                            .map(value -> onSuccess.apply(sorobanClient, value)))));
-      } catch (NoValueRpcException e) {
-        synchronized (this) {
-          try {
-            wait(RETRY_DELAY_MS);
-          } catch (InterruptedException ee) {
+                            .map(value -> mapValue.apply(sorobanClient, value))));
+          } catch (NoValueRpcException e) {
+            throw new TimeoutException("NoValueRpcException"); // continue to next loop
           }
-        }
-      }
-    }
-    throw new NoValueRpcException();
+        };
+
+    // run loop every 1s (until value found)
+    return asyncUtil.runAndRetry(loop, WAIT_RETRY_MS, () -> done);
   }
 
-  public Single<String> directoryValueWait(final String directory, final long timeoutMs)
-      throws Exception {
-    return directoryValueWait(directory, timeoutMs, (sorobanClient, value) -> value);
+  public Single<String> directoryValueWait(final String directory) {
+    return directoryValueWait(directory, (sorobanClient, value) -> value);
   }
 
-  public Single<String> directoryValueWaitAndRemove(final String directory, final long timeoutMs)
-      throws Exception {
+  public Single<String> directoryValueWaitAndRemove(final String directory) {
     return directoryValueWait(
         directory,
-        timeoutMs,
         (sorobanClient, value) -> {
-          sorobanClient.getRpcClient().directoryRemove(directory, value);
+          sorobanClient.getRpcClient().directoryRemove(directory, value).subscribe();
           return value;
         });
-  }
-
-  public void throwIfDone() throws Exception {
-    if (done) {
-      throw new Exception("Terminating");
-    }
   }
 
   public void exit() {

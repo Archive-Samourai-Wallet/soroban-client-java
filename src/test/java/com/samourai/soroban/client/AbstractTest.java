@@ -16,7 +16,7 @@ import com.samourai.soroban.client.wallet.counterparty.SorobanWalletCounterparty
 import com.samourai.soroban.client.wallet.sender.SorobanWalletInitiator;
 import com.samourai.soroban.utils.LogbackUtils;
 import com.samourai.wallet.api.backend.beans.WalletResponse;
-import com.samourai.wallet.bip47.rpc.BIP47Wallet;
+import com.samourai.wallet.bip47.rpc.BIP47Account;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.bip47.rpc.java.Bip47UtilJava;
 import com.samourai.wallet.bipFormat.BIP_FORMAT;
@@ -94,12 +94,12 @@ public abstract class AbstractTest {
   protected SorobanWalletInitiator sorobanWalletInitiator;
   protected SorobanWalletCounterparty sorobanWalletCounterparty;
 
-  protected BIP47Wallet bip47WalletInitiator;
+  protected BIP47Account bip47AccountInitiator;
   protected RpcWallet rpcWalletInitiator;
   protected RpcSession rpcSessionInitiator;
   protected SorobanClient sorobanClientInitiator;
 
-  protected BIP47Wallet bip47WalletCounterparty;
+  protected BIP47Account bip47AccountCounterparty;
   protected RpcWallet rpcWalletCounterparty;
   protected RpcSession rpcSessionCounterparty;
   protected SorobanClient sorobanClientCounterparty;
@@ -132,9 +132,7 @@ public abstract class AbstractTest {
             walletSupplierSender,
             chainSupplier,
             BIP_FORMAT.PROVIDER,
-            new SimpleCahootsUtxoProvider(utxoProviderInitiator),
-            cryptoUtil,
-            bip47Util);
+            new SimpleCahootsUtxoProvider(utxoProviderInitiator));
     sorobanWalletInitiator = sorobanWalletService.getSorobanWalletInitiator(cahootsWalletInitiator);
 
     final HD_Wallet bip84WalletCounterparty =
@@ -148,14 +146,12 @@ public abstract class AbstractTest {
             walletSupplierCounterparty,
             chainSupplier,
             BIP_FORMAT.PROVIDER,
-            new SimpleCahootsUtxoProvider(utxoProviderCounterparty),
-            cryptoUtil,
-            bip47Util);
+            new SimpleCahootsUtxoProvider(utxoProviderCounterparty));
     sorobanWalletCounterparty =
         sorobanWalletService.getSorobanWalletCounterparty(cahootsWalletCounterparty);
 
-    paymentCodeInitiator = cahootsWalletInitiator.getBip47Wallet().getPaymentCode();
-    paymentCodeCounterparty = cahootsWalletCounterparty.getBip47Wallet().getPaymentCode();
+    paymentCodeInitiator = cahootsWalletInitiator.getBip47Account().getPaymentCode();
+    paymentCodeCounterparty = cahootsWalletCounterparty.getBip47Account().getPaymentCode();
 
     httpClient.getJettyHttpClient().start();
 
@@ -167,13 +163,13 @@ public abstract class AbstractTest {
         .setSorobanServerDexTestnetClear(
             Arrays.asList(initialSorobanServerTestnetClearUrls.iterator().next()));
 
-    this.bip47WalletInitiator = cahootsWalletInitiator.getBip47Wallet();
-    this.rpcWalletInitiator = rpcClientService.getRpcWallet(bip47WalletInitiator);
+    this.bip47AccountInitiator = cahootsWalletInitiator.getBip47Account();
+    this.rpcWalletInitiator = rpcClientService.getRpcWallet(bip47AccountInitiator);
     this.rpcSessionInitiator = ((RpcWalletImpl) rpcWalletInitiator).createRpcSession();
     this.sorobanClientInitiator = rpcSessionInitiator.withSorobanClient(sc -> sc);
 
-    this.bip47WalletCounterparty = cahootsWalletCounterparty.getBip47Wallet();
-    this.rpcWalletCounterparty = rpcClientService.getRpcWallet(bip47WalletCounterparty);
+    this.bip47AccountCounterparty = cahootsWalletCounterparty.getBip47Account();
+    this.rpcWalletCounterparty = rpcClientService.getRpcWallet(bip47AccountCounterparty);
     this.rpcSessionCounterparty = ((RpcWalletImpl) rpcWalletCounterparty).createRpcSession();
     this.sorobanClientCounterparty = rpcSessionCounterparty.withSorobanClient(sc -> sc);
 
@@ -203,5 +199,24 @@ public abstract class AbstractTest {
     byte[] seed = hdWalletFactory.computeSeedFromWords(seedWords);
     HD_Wallet bip84w = hdWalletFactory.getBIP84(seed, passphrase, params);
     return bip84w;
+  }
+
+  protected void runDelayed(long delayMs, Runnable run) {
+    new Thread(
+            () -> {
+              try {
+                Thread.sleep(delayMs);
+              } catch (InterruptedException e) {
+              }
+              run.run();
+            })
+        .start();
+  }
+
+  protected synchronized void waitSorobanDelay() {
+    try {
+      wait(2000);
+    } catch (InterruptedException e) {
+    }
   }
 }

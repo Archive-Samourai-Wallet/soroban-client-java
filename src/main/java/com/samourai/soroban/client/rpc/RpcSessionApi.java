@@ -1,6 +1,6 @@
 package com.samourai.soroban.client.rpc;
 
-import com.samourai.wallet.util.Util;
+import com.samourai.wallet.bip47.rpc.PaymentCode;
 
 public class RpcSessionApi {
   protected final RpcSession rpcSession;
@@ -9,14 +9,13 @@ public class RpcSessionApi {
     this.rpcSession = rpcSession;
   }
 
-  // overridable
-  public String getRequestId(String requestPayload) {
-    return Util.sha256Hex(requestPayload);
-  }
-
   //
 
   public RpcSession getRpcSession() {
     return rpcSession;
+  }
+
+  public PaymentCode getPaymentCode() {
+    return rpcSession.getRpcWallet().getBip47Account().getPaymentCode();
   }
 }

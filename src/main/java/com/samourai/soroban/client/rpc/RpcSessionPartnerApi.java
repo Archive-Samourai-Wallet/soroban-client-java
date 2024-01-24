@@ -1,8 +1,6 @@
 package com.samourai.soroban.client.rpc;
 
-import com.samourai.soroban.client.*;
 import com.samourai.wallet.bip47.rpc.Bip47Partner;
-import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -10,17 +8,10 @@ public class RpcSessionPartnerApi extends RpcSessionApi {
   private static final Logger log = LoggerFactory.getLogger(RpcSessionPartnerApi.class);
 
   protected final Bip47Partner bip47Partner;
-  protected final Function<String, String> directoryReply;
 
-  public RpcSessionPartnerApi(
-      RpcSession rpcSession, Bip47Partner bip47Partner, Function<String, String> directoryReply) {
+  public RpcSessionPartnerApi(RpcSession rpcSession, Bip47Partner bip47Partner) {
     super(rpcSession);
     this.bip47Partner = bip47Partner;
-    this.directoryReply = directoryReply;
-  }
-
-  protected String getDirectoryReply(String requestId) {
-    return directoryReply.apply(requestId);
   }
 
   //
@@ -74,14 +65,15 @@ public class RpcSessionPartnerApi extends RpcSessionApi {
         .map(untypedPayload -> untypedPayload.read(AckResponse.class));
   }
 
-  public Single<AbstractSorobanPayloadable> loopUntilReply(
-      CallbackWithArg<SorobanClient, Single<String>> sendRequestOrNull, long loopFrequencyMs) {
+  public <T> Single<T> loopUntilReply(
+          CallbackWithArg<SorobanClient, Single<AbstractSorobanEndpoint<T>>> sendRequestOrNull, long loopFrequencyMs) {
     return rpcSession.loopUntil(
         // send request
         sendRequestOrNull,
         // wait for response
-        (sorobanClient, requestId) -> waitReply(loopFrequencyMs, requestId, sorobanClient));
+        (sorobanClient, endpoint) -> endpoint.waitNext(rpcSession, loopFrequencyMs));
   }
+
 
   public <T extends SorobanPayloadable> Single<T> loopUntilReplyTyped(
       CallbackWithArg<SorobanClient, Single<String>> sendRequestOrNull,
@@ -89,27 +81,5 @@ public class RpcSessionPartnerApi extends RpcSessionApi {
       Class<T> typeReply) {
     return loopUntilReply(sendRequestOrNull, loopFrequencyMs)
         .map(untypedPayload -> untypedPayload.read(typeReply));
-  }
-
-  protected Single<AbstractSorobanPayloadable> waitReply(
-      long timeoutMs, String requestId, SorobanClient sorobanClient) throws Exception {
-    // TODO iterate until good type + wrap dialog messages with message type
-    String directory = getDirectoryReply(requestId);
-    return rpcSession
-        .directoryValueWaitAndRemove(directory, timeoutMs)
-        .map(
-            payload -> {
-              // decrypt
-              AbstractSorobanPayloadable decryptedPayload =
-                  sorobanClient.readEncrypted(payload, bip47Partner.getPaymentCodePartner());
-              if (log.isDebugEnabled()) {
-                log.debug(
-                    " <- "
-                        + RpcClient.shortDirectory(directory)
-                        + ": "
-                        + decryptedPayload.getPayload());
-              }
-              return decryptedPayload;
-            });
   }*/
 }

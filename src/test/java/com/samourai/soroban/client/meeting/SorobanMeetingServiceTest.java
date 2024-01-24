@@ -48,8 +48,8 @@ public class SorobanMeetingServiceTest extends AbstractTest {
                 // listen for Soroban requests
                 SorobanRequestMessage requestMessage =
                     asyncUtil.blockingGet(
-                        sorobanMeetingService.receiveMeetingRequest(
-                            rpcSessionCounterparty, TIMEOUT_MS));
+                        sorobanMeetingService.receiveMeetingRequest(rpcSessionCounterparty),
+                        TIMEOUT_MS);
                 Assertions.assertEquals(CahootsType.STONEWALLX2, requestMessage.getType());
                 Assertions.assertEquals(
                     paymentCodeInitiator.toString(), requestMessage.getSender());

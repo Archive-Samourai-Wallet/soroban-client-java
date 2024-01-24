@@ -2,7 +2,7 @@ package com.samourai.soroban.client.protocol;
 
 import com.samourai.soroban.client.RpcWallet;
 import com.samourai.wallet.bip47.BIP47UtilGeneric;
-import com.samourai.wallet.bip47.rpc.BIP47Wallet;
+import com.samourai.wallet.bip47.rpc.BIP47Account;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.segwit.SegwitAddress;
 import org.bitcoinj.core.NetworkParameters;
@@ -17,9 +17,9 @@ public class SorobanProtocolMeeting {
       NetworkParameters params,
       BIP47UtilGeneric bip47Util)
       throws Exception {
-    BIP47Wallet bip47Wallet = rpcWallet.getBip47Wallet();
+    BIP47Account bip47Account = rpcWallet.getBip47Account();
     SegwitAddress receiveAddress =
-        bip47Util.getReceiveAddress(bip47Wallet, paymentCodeCounterparty, 0, params);
+        bip47Util.getReceiveAddress(bip47Account, paymentCodeCounterparty, 0, params);
     return receiveAddress.getBech32AsString();
   }
 
@@ -29,9 +29,9 @@ public class SorobanProtocolMeeting {
       NetworkParameters params,
       BIP47UtilGeneric bip47Util)
       throws Exception {
-    BIP47Wallet bip47Wallet = rpcWallet.getBip47Wallet();
+    BIP47Account bip47Account = rpcWallet.getBip47Account();
     SegwitAddress sendAddress =
-        bip47Util.getSendAddress(bip47Wallet, paymentCodeInitiator, 0, params);
+        bip47Util.getSendAddress(bip47Account, paymentCodeInitiator, 0, params);
     return sendAddress.getBech32AsString();
   }
 }

@@ -54,7 +54,8 @@ public class SorobanService {
             () -> {
               RpcDialog dialogOrNull = null;
               try {
-                RpcWallet rpcWallet = rpcClientService.getRpcWallet(cahootsWallet.getBip47Wallet());
+                RpcWallet rpcWallet =
+                    rpcClientService.getRpcWallet(cahootsWallet.getBip47Account());
                 String initialDirectory =
                     sorobanProtocol.getMeeetingAddressSend(
                         rpcWallet, paymentCodeCounterParty, params, bip47Util);
@@ -96,7 +97,8 @@ public class SorobanService {
             () -> {
               RpcDialog dialogOrNull = null;
               try {
-                RpcWallet rpcWallet = rpcClientService.getRpcWallet(cahootsWallet.getBip47Wallet());
+                RpcWallet rpcWallet =
+                    rpcClientService.getRpcWallet(cahootsWallet.getBip47Account());
                 String initialDirectory =
                     sorobanProtocol.getMeeetingAddressReceive(
                         rpcWallet, paymentCodeInitiator, params, bip47Util);

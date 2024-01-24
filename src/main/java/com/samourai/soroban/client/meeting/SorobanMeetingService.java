@@ -31,17 +31,17 @@ public class SorobanMeetingService {
     return dialog.sendWithSender(request, paymentCodePartner).toSingle(() -> request);
   }
 
-  public Single<SorobanRequestMessage> receiveMeetingRequest(RpcSession rpcSession, long timeoutMs)
+  public Single<SorobanRequestMessage> receiveMeetingRequest(RpcSession rpcSession)
       throws Exception {
     String info = "[counterparty]";
     PaymentCode paymentCodeCounterparty =
-        rpcSession.getRpcWallet().getBip47Wallet().getPaymentCode();
+        rpcSession.getRpcWallet().getBip47Account().getPaymentCode();
     RpcDialog dialog = rpcSession.createRpcDialog(paymentCodeCounterparty.toString());
     if (log.isDebugEnabled()) {
       log.debug(info + "listening for meeting request...");
     }
     return dialog
-        .receiveWithSender(timeoutMs)
+        .receiveWithSender()
         .map(
             message -> {
               String sender = message.getSender();
