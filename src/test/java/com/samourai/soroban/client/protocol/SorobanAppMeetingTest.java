@@ -7,8 +7,8 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class SorobanProtocolMeetingTest extends AbstractTest {
-  private static final Logger log = LoggerFactory.getLogger(SorobanProtocolMeetingTest.class);
+public class SorobanAppMeetingTest extends AbstractTest {
+  private static final Logger log = LoggerFactory.getLogger(SorobanAppMeetingTest.class);
 
   @BeforeEach
   @Override

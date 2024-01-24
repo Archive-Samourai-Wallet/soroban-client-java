@@ -1,22 +1,21 @@
-package com.samourai.soroban.client.protocol;
+package com.samourai.soroban.client.endpoint;
 
 import com.samourai.wallet.bip47.rpc.Bip47Partner;
 import com.samourai.whirlpool.client.wallet.beans.WhirlpoolNetwork;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class SorobanProtocol {
-  private static final Logger log = LoggerFactory.getLogger(SorobanProtocol.class);
+public class SorobanApp {
+  private static final Logger log = LoggerFactory.getLogger(SorobanApp.class);
 
   protected final WhirlpoolNetwork whirlpoolNetwork;
-  protected final String protocolId;
-  protected final String protocolVersion;
+  protected final String appId;
+  protected final String appVersion;
 
-  public SorobanProtocol(
-      WhirlpoolNetwork whirlpoolNetwork, String protocolId, String protocolVersion) {
+  public SorobanApp(WhirlpoolNetwork whirlpoolNetwork, String appId, String appVersion) {
     this.whirlpoolNetwork = whirlpoolNetwork;
-    this.protocolId = protocolId;
-    this.protocolVersion = protocolVersion;
+    this.appId = appId;
+    this.appVersion = appVersion;
   }
 
   protected String hashDir(String dir) {
@@ -28,7 +27,7 @@ public class SorobanProtocol {
   }
 
   protected String getDirClear(String id) {
-    return whirlpoolNetwork.name() + "/" + protocolId + "/" + protocolVersion + "/" + id;
+    return whirlpoolNetwork.name() + "/" + appId + "/" + appVersion + "/" + id;
   }
 
   protected String getDirShared(Bip47Partner bip47Partner, String id) {

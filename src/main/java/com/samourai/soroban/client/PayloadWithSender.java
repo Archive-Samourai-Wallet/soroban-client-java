@@ -4,7 +4,7 @@ import com.samourai.wallet.bip47.rpc.PaymentCode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class PayloadWithSender<T extends SorobanPayload> {
+public class PayloadWithSender<T extends SorobanPayloadable> {
   private static final Logger log = LoggerFactory.getLogger(PayloadWithSender.class);
   private T payload;
   private PaymentCode sender; // may be null

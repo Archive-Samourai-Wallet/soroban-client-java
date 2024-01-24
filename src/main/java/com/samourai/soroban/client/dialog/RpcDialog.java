@@ -1,10 +1,9 @@
 package com.samourai.soroban.client.dialog;
 
 import com.google.common.base.Charsets;
-import com.samourai.soroban.client.SorobanPayload;
+import com.samourai.soroban.client.SorobanPayloadable;
 import com.samourai.soroban.client.exception.SorobanException;
 import com.samourai.soroban.client.meeting.SorobanMessageWithSender;
-import com.samourai.soroban.client.rpc.RpcMode;
 import com.samourai.soroban.client.rpc.RpcSession;
 import com.samourai.soroban.client.rpc.RpcSessionPartnerApi;
 import com.samourai.wallet.bip47.rpc.Bip47Partner;
@@ -12,7 +11,6 @@ import com.samourai.wallet.bip47.rpc.PaymentCode;
 import io.reactivex.Completable;
 import io.reactivex.Single;
 import java.security.MessageDigest;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import org.bouncycastle.util.encoders.Hex;
 import org.slf4j.Logger;
@@ -58,7 +56,9 @@ public class RpcDialog {
 
           // decrypt
           onEncryptedPayload.accept(value);
-          String payload = sorobanClient.decrypt(encryptedPayload, paymentCodePartner);
+          if (true) throw new RuntimeException("TODO zl !!!");
+          String payload = "TODO zl !!!";
+          // TODO String payload = sorobanClient.decrypt(encryptedPayload, paymentCodePartner);
 
           // return clear object
           return new SorobanMessageWithSender(sender, payload);
@@ -71,14 +71,17 @@ public class RpcDialog {
         rpcSession.getRpcWallet().getBip47Partner(paymentCodePartner, false);
     RpcSessionPartnerApi partnerApi =
         new RpcSessionPartnerApi(rpcSession, bip47Partner, requestId -> nextDirectory);
-    return partnerApi
-        .loopUntilReply("RpcDialog", LOOP_FREQUENCY_MS) // requestId is not used
-        .map(untypedPayload -> untypedPayload.getPayload())
-        .timeout(timeoutMs, TimeUnit.MILLISECONDS);
+    return null; // TODO zl
+    /*return partnerApi
+    .loopUntilReply("RpcDialog", LOOP_FREQUENCY_MS) // requestId is not used
+    .map(untypedPayload -> untypedPayload.getPayload())
+    .timeout(timeoutMs, TimeUnit.MILLISECONDS);*/
   }
 
-  public Completable sendWithSender(SorobanPayload message, PaymentCode paymentCodePartner)
+  public Completable sendWithSender(SorobanPayloadable message, PaymentCode paymentCodePartner)
       throws Exception {
+    return null; // TODO zl
+    /*
     checkExit(paymentCodePartner);
     return rpcSession.withSorobanClient(
         sorobanClient -> {
@@ -93,15 +96,17 @@ public class RpcDialog {
           return sorobanClient
               .getRpcClient()
               .directoryAdd(nextDirectory, payloadWithSender, RpcMode.NORMAL);
-        });
+        });*/
   }
 
-  public Completable send(SorobanPayload message, PaymentCode paymentCodePartner) throws Exception {
+  public Completable send(SorobanPayloadable message, PaymentCode paymentCodePartner)
+      throws Exception {
     return send(message.toPayload(), paymentCodePartner);
   }
 
   private Completable send(String payload, PaymentCode paymentCodePartner) throws Exception {
-    checkExit(paymentCodePartner);
+    return null; // TODO zl
+    /*checkExit(paymentCodePartner);
     return rpcSession.withSorobanClient(
         sorobanClient -> {
           String encryptedPayload = sorobanClient.encrypt(payload, paymentCodePartner);
@@ -109,7 +114,7 @@ public class RpcDialog {
           return sorobanClient
               .getRpcClient()
               .directoryAdd(nextDirectory, encryptedPayload, RpcMode.NORMAL);
-        });
+        });*/
   }
 
   private void checkExit(PaymentCode paymentCodePartner) throws Exception {

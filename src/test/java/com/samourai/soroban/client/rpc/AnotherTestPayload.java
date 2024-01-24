@@ -1,8 +1,8 @@
 package com.samourai.soroban.client.rpc;
 
-import com.samourai.soroban.client.AbstractSorobanPayload;
+import com.samourai.soroban.client.AbstractSorobanPayloadable;
 
-public class AnotherTestPayload extends AbstractSorobanPayload {
+public class AnotherTestPayload extends AbstractSorobanPayloadable {
   private String info;
 
   public AnotherTestPayload() {}

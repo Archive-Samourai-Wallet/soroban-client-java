@@ -1,11 +1,12 @@
 package com.samourai.soroban.client.dialog;
 
-import com.samourai.soroban.client.AbstractSorobanPayload;
+import com.samourai.soroban.client.AbstractSorobanPayloadable;
 import com.samourai.soroban.client.SorobanMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class AbstractSorobanMessage extends AbstractSorobanPayload
+@Deprecated // TODO
+public abstract class AbstractSorobanMessage extends AbstractSorobanPayloadable
     implements SorobanMessage {
   private static final Logger log = LoggerFactory.getLogger(AbstractSorobanMessage.class);
 

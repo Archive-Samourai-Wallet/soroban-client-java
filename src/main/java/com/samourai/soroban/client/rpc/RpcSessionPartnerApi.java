@@ -1,14 +1,7 @@
 package com.samourai.soroban.client.rpc;
 
-import com.samourai.soroban.client.AckResponse;
-import com.samourai.soroban.client.SorobanClient;
-import com.samourai.soroban.client.SorobanPayload;
-import com.samourai.soroban.client.UntypedPayload;
+import com.samourai.soroban.client.*;
 import com.samourai.wallet.bip47.rpc.Bip47Partner;
-import com.samourai.wallet.bip47.rpc.PaymentCode;
-import com.samourai.wallet.util.CallbackWithArg;
-import com.samourai.wallet.util.Util;
-import io.reactivex.Single;
 import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,45 +25,10 @@ public class RpcSessionPartnerApi extends RpcSessionApi {
 
   //
 
-  public Single<String> sendEncryptedWithSender(SorobanPayload sorobanPayload, String directory)
-      throws Exception {
-    return rpcSession.withSorobanClient(
-        sorobanClient -> sendEncryptedWithSender(sorobanPayload, directory, sorobanClient));
-  }
-
-  public Single<String> sendEncryptedWithSender(
-      SorobanPayload sorobanPayload, String directory, SorobanClient sorobanClient)
-      throws Exception {
-    PaymentCode paymentCodePartner = bip47Partner.getPaymentCodePartner();
-    String sorobanPayloadStr = sorobanPayload.toPayload();
-    if (log.isDebugEnabled()) {
-      log.debug(
-          " -> "
-              + " ["
-              + sorobanPayload.getClass().getSimpleName()
-              + "] "
-              + RpcClient.shortDirectory(directory)
-              + " ("
-              + Util.maskString(paymentCodePartner.toString())
-              + ")"
-              + sorobanPayloadStr);
-    }
-    String encryptedPayload =
-        sorobanClient.encryptWithSender(sorobanPayloadStr, paymentCodePartner);
-    return sorobanClient
-        .getRpcClient()
-        .directoryAdd(directory, encryptedPayload, RpcMode.SHORT)
-        .toSingle(() -> getRequestId(sorobanPayloadStr));
-  }
-
-  public Single<String> sendReplyEncrypted(SorobanPayload sorobanPayload, String requestId)
-      throws Exception {
-    return rpcSession.withSorobanClient(
-        sorobanClient -> sendReplyEncrypted(sorobanPayload, requestId, sorobanClient));
-  }
-
+  /*
+  //TODO
   public Single<String> sendReplyEncrypted(
-      SorobanPayload sorobanPayload, String requestId, SorobanClient sorobanClient)
+      SorobanPayloadable sorobanPayload, String requestId, SorobanClient sorobanClient)
       throws Exception {
     PaymentCode paymentCodePartner = bip47Partner.getPaymentCodePartner();
     String sorobanPayloadStr = sorobanPayload.toPayload();
@@ -92,15 +50,15 @@ public class RpcSessionPartnerApi extends RpcSessionApi {
         .getRpcClient()
         .directoryAdd(directory, encryptedPayload, RpcMode.SHORT)
         .toSingle(() -> getRequestId(sorobanPayloadStr));
-  }
+  }*/
 
   //
 
-  public Single<UntypedPayload> loopUntilReply(String requestId, long loopFrequencyMs) {
+  /*public Single<SorobanPayloadTyped> loopUntilReply(String requestId, long loopFrequencyMs) {
     return loopUntilReply(sorobanClient -> Single.just(requestId), loopFrequencyMs);
   }
 
-  public <T extends SorobanPayload> Single<T> loopUntilReplyTyped(
+  public <T extends SorobanPayloadable> Single<T> loopUntilReplyTyped(
       String requestId, long loopFrequencyMs, Class<T> typeReply) {
     return loopUntilReply(requestId, loopFrequencyMs)
         .map(untypedPayload -> untypedPayload.read(typeReply));
@@ -116,7 +74,7 @@ public class RpcSessionPartnerApi extends RpcSessionApi {
         .map(untypedPayload -> untypedPayload.read(AckResponse.class));
   }
 
-  public Single<UntypedPayload> loopUntilReply(
+  public Single<AbstractSorobanPayloadable> loopUntilReply(
       CallbackWithArg<SorobanClient, Single<String>> sendRequestOrNull, long loopFrequencyMs) {
     return rpcSession.loopUntil(
         // send request
@@ -125,7 +83,7 @@ public class RpcSessionPartnerApi extends RpcSessionApi {
         (sorobanClient, requestId) -> waitReply(loopFrequencyMs, requestId, sorobanClient));
   }
 
-  public <T extends SorobanPayload> Single<T> loopUntilReplyTyped(
+  public <T extends SorobanPayloadable> Single<T> loopUntilReplyTyped(
       CallbackWithArg<SorobanClient, Single<String>> sendRequestOrNull,
       long loopFrequencyMs,
       Class<T> typeReply) {
@@ -133,7 +91,7 @@ public class RpcSessionPartnerApi extends RpcSessionApi {
         .map(untypedPayload -> untypedPayload.read(typeReply));
   }
 
-  protected Single<UntypedPayload> waitReply(
+  protected Single<AbstractSorobanPayloadable> waitReply(
       long timeoutMs, String requestId, SorobanClient sorobanClient) throws Exception {
     // TODO iterate until good type + wrap dialog messages with message type
     String directory = getDirectoryReply(requestId);
@@ -142,16 +100,16 @@ public class RpcSessionPartnerApi extends RpcSessionApi {
         .map(
             payload -> {
               // decrypt
-              UntypedPayload untypedPayload =
+              AbstractSorobanPayloadable decryptedPayload =
                   sorobanClient.readEncrypted(payload, bip47Partner.getPaymentCodePartner());
               if (log.isDebugEnabled()) {
                 log.debug(
                     " <- "
                         + RpcClient.shortDirectory(directory)
                         + ": "
-                        + untypedPayload.getPayload());
+                        + decryptedPayload.getPayload());
               }
-              return untypedPayload;
+              return decryptedPayload;
             });
-  }
+  }*/
 }

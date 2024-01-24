@@ -5,6 +5,7 @@ import com.samourai.http.client.HttpUsage;
 import com.samourai.http.client.IHttpClient;
 import com.samourai.http.client.IHttpClientService;
 import com.samourai.http.client.JavaHttpClient;
+import com.samourai.soroban.client.endpoint.SorobanApp;
 import com.samourai.soroban.client.meeting.SorobanMeetingService;
 import com.samourai.soroban.client.protocol.SorobanProtocolMeeting;
 import com.samourai.soroban.client.rpc.RpcClientService;
@@ -110,6 +111,8 @@ public abstract class AbstractTest {
   protected PaymentCode paymentCodeCounterparty;
 
   protected Collection<String> initialSorobanServerTestnetClearUrls;
+  protected String appVersion;
+  protected SorobanApp app;
 
   private static volatile Exception exception = null;
 
@@ -173,6 +176,10 @@ public abstract class AbstractTest {
     this.rpcWalletCounterparty = rpcClientService.getRpcWallet(bip47WalletCounterparty);
     this.rpcSessionCounterparty = ((RpcWalletImpl) rpcWalletCounterparty).createRpcSession();
     this.sorobanClientCounterparty = rpcSessionCounterparty.withSorobanClient(sc -> sc);
+
+    this.appVersion =
+        "" + System.currentTimeMillis(); // change version to avoid conflicts between test runs
+    this.app = new SorobanApp(whirlpoolNetwork, "APP_TEST", appVersion);
   }
 
   protected static void assertNoException() {

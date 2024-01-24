@@ -1,13 +1,13 @@
 package com.samourai.soroban.client.meeting;
 
-import com.samourai.soroban.client.SorobanPayload;
+import com.samourai.soroban.client.SorobanPayloadable;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Deprecated // TODO
-public class SorobanMessageWithSender implements SorobanPayload {
+public class SorobanMessageWithSender implements SorobanPayloadable {
   private static final Logger log = LoggerFactory.getLogger(SorobanMessageWithSender.class);
 
   private String sender;

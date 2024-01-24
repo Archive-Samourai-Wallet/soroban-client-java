@@ -6,27 +6,28 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ListUntypedPayload {
-  private static final Logger log = LoggerFactory.getLogger(ListUntypedPayload.class);
-  protected Collection<? extends UntypedPayload> list;
+public class ListPayloadTyped {
+  private static final Logger log = LoggerFactory.getLogger(ListPayloadTyped.class);
+  protected Collection<? extends SorobanPayloadTyped> list;
 
-  public ListUntypedPayload(Collection<? extends UntypedPayload> list) {
+  public ListPayloadTyped(Collection<? extends SorobanPayloadTyped> list) {
     this.list = list;
   }
 
-  public <T> List<T> readList(CallbackWithArg<UntypedPayload, T> adapt) {
+  public <T> List<T> readList(CallbackWithArg<SorobanPayloadTyped, T> adapt) {
     return adaptList(list, adapt, null);
   }
 
-  public <T extends SorobanPayload> List<T> readList(Class<T> type) {
+  public <T extends SorobanPayloadable> List<T> readList(Class<T> type) {
     return readList(type, null);
   }
 
-  public <T extends SorobanPayload> List<T> readList(Class<T> type, Predicate<T> filterOrNull) {
-    CallbackWithArg<UntypedPayload, T> adapt = untypedPayload -> untypedPayload.read(type);
+  public <T extends SorobanPayloadable> List<T> readList(Class<T> type, Predicate<T> filterOrNull) {
+    CallbackWithArg<SorobanPayloadTyped, T> adapt = untypedPayload -> untypedPayload.read(type);
     return adaptList(list, adapt, filterOrNull);
   }
 
@@ -53,6 +54,24 @@ public class ListUntypedPayload {
     return results;
   }
 
+  public ListPayloadTyped distinctBySender() {
+    // keep last payload for each sender
+    this.list =
+        list.stream()
+            .collect(
+                Collectors.toMap(
+                    p -> p.getSender().toString(),
+                    p -> p,
+                    (a, b) ->
+                        a.getTimePayload() >= b.getTimePayload() ? a : b)) // keep last payload
+            .values();
+    return this;
+  }
+
+  public Collection<? extends SorobanPayloadTyped> getList() {
+    return list;
+  }
+
   public int size() {
     return list.size();
   }
@@ -61,7 +80,7 @@ public class ListUntypedPayload {
     return list.isEmpty();
   }
 
-  public Optional<? extends UntypedPayload> getFirst() {
+  public Optional<? extends SorobanPayloadTyped> getFirst() {
     return isEmpty() ? Optional.empty() : Optional.of(list.iterator().next());
   }
 }

@@ -1,16 +1,16 @@
 package com.samourai.soroban.client.exception;
 
-import com.samourai.soroban.client.SorobanPayload;
+import com.samourai.soroban.client.SorobanPayloadable;
 
 public abstract class SorobanPayloadException extends SorobanException {
-  private SorobanPayload sorobanPayload;
+  private SorobanPayloadable sorobanPayload;
 
-  public SorobanPayloadException(String message, SorobanPayload sorobanPayload) {
+  public SorobanPayloadException(String message, SorobanPayloadable sorobanPayload) {
     super(message);
     this.sorobanPayload = sorobanPayload;
   }
 
-  public SorobanPayloadException(SorobanPayload sorobanPayload) {
+  public SorobanPayloadException(SorobanPayloadable sorobanPayload) {
     this("SorobanPayloadException: " + sorobanPayload.getClass().getName(), sorobanPayload);
   }
 
@@ -18,11 +18,11 @@ public abstract class SorobanPayloadException extends SorobanException {
     super(message);
   }
 
-  public SorobanPayload getSorobanPayload() {
+  public SorobanPayloadable getSorobanPayload() {
     return sorobanPayload;
   }
 
-  public void setSorobanPayload(SorobanPayload sorobanPayload) {
+  public void setSorobanPayload(SorobanPayloadable sorobanPayload) {
     this.sorobanPayload = sorobanPayload;
   }
 }

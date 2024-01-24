@@ -1,11 +1,12 @@
 package com.samourai.soroban.client.exception;
 
-import com.samourai.soroban.client.UntypedPayload;
+import com.samourai.soroban.client.SorobanPayloadTyped;
 
 public class UnexpectedTypePayloadSorobanException extends SorobanException {
-  private UntypedPayload payload;
+  private SorobanPayloadTyped payload;
 
-  public UnexpectedTypePayloadSorobanException(UntypedPayload untypedPayload, Class typeExpected) {
+  public UnexpectedTypePayloadSorobanException(
+      SorobanPayloadTyped untypedPayload, Class typeExpected) {
     super(
         "Unexpected typePayload: expected="
             + typeExpected.getName()
@@ -14,7 +15,7 @@ public class UnexpectedTypePayloadSorobanException extends SorobanException {
     this.payload = payload;
   }
 
-  public UntypedPayload getPayload() {
+  public SorobanPayloadTyped getPayload() {
     return payload;
   }
 }
