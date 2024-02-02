@@ -1,4 +1,4 @@
-package com.samourai.examples;
+package examples;
 
 import com.samourai.soroban.client.endpoint.SorobanApp;
 import com.samourai.soroban.client.endpoint.meta.typed.SorobanEndpointTyped;
