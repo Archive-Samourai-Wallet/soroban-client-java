@@ -1,5 +1,6 @@
 package com.samourai.soroban.client.endpoint;
 
+import com.samourai.soroban.client.AckResponse;
 import com.samourai.soroban.client.SorobanClient;
 import com.samourai.soroban.client.SorobanPayloadable;
 import com.samourai.soroban.client.endpoint.wrapper.SorobanWrapperString;
@@ -63,6 +64,11 @@ public abstract class AbstractSorobanEndpoint<I, L, E> implements SorobanEndpoin
   public Completable send(SorobanClient sorobanClient, SorobanPayloadable sorobanPayloadable)
       throws Exception {
     return Completable.fromSingle(sendSingle(sorobanClient, sorobanPayloadable));
+  }
+
+  @Override
+  public Completable sendAck(SorobanClient sorobanClient) throws Exception {
+    return send(sorobanClient, new AckResponse());
   }
 
   protected Single<I> sendSingle(SorobanClient sorobanClient, String payload) throws Exception {

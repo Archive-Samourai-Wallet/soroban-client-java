@@ -13,6 +13,8 @@ public interface SorobanEndpoint<I, L> {
   Completable send(SorobanClient sorobanClient, SorobanPayloadable sorobanPayloadable)
       throws Exception;
 
+  Completable sendAck(SorobanClient sorobanClient) throws Exception;
+
   Completable delete(SorobanClient sorobanClient, I entry) throws Exception;
 
   Single<Optional<I>> getNext(SorobanClient sorobanClient) throws Exception;
