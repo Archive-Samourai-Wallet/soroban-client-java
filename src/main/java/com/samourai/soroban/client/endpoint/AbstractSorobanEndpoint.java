@@ -1,13 +1,13 @@
 package com.samourai.soroban.client.endpoint;
 
-import com.samourai.soroban.client.AckResponse;
 import com.samourai.soroban.client.SorobanClient;
-import com.samourai.soroban.client.SorobanPayloadable;
 import com.samourai.soroban.client.endpoint.wrapper.SorobanWrapperString;
 import com.samourai.soroban.client.rpc.RpcClient;
 import com.samourai.soroban.client.rpc.RpcMode;
 import com.samourai.soroban.client.rpc.RpcSession;
 import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
+import com.samourai.wallet.util.AsyncUtil;
+import com.samourai.wallet.util.Pair;
 import io.reactivex.Completable;
 import io.reactivex.Single;
 import java.lang.invoke.MethodHandles;
@@ -15,16 +15,20 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class AbstractSorobanEndpoint<I, L, E> implements SorobanEndpoint<I, L> {
+public abstract class AbstractSorobanEndpoint<I, L extends List<I>, S, M>
+    implements SorobanEndpoint<I, L, S> {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+  protected static final AsyncUtil asyncUtil = AsyncUtil.getInstance();
 
   private SorobanApp app;
   private String path;
   private RpcMode rpcMode;
   private SorobanWrapperString[] wrappers;
+  private boolean autoRemove;
 
   public AbstractSorobanEndpoint(
       SorobanApp app, String path, RpcMode rpcMode, SorobanWrapperString[] wrappers) {
@@ -32,92 +36,106 @@ public abstract class AbstractSorobanEndpoint<I, L, E> implements SorobanEndpoin
     this.path = path;
     this.rpcMode = rpcMode;
     this.wrappers = wrappers;
+    this.autoRemove = true;
   }
 
-  protected abstract E newEntry(String payload) throws Exception;
+  protected abstract Pair<String, M> newEntry(S payload) throws Exception;
 
-  protected abstract String toPayload(E entry) throws Exception;
+  protected abstract String entryToRaw(Pair<String, M> entry) throws Exception;
 
-  protected abstract E readEntry(Bip47Encrypter encrypter, String entry) throws Exception;
+  protected abstract Pair<String, M> rawToEntry(String rawEntry) throws Exception;
 
   protected abstract L newList(List<I> items);
 
-  protected abstract I newEntry(E entry, String rawEntry);
+  protected abstract I newEntry(Pair<String, M> entry, String rawEntry);
 
   protected abstract String getRawEntry(I entry);
 
-  protected String applyWrappersForSend(
-      Bip47Encrypter encrypter, E entryObject, Object initialPayload) throws Exception {
-    String entry = toPayload(entryObject);
+  protected Pair<String, M> applyWrappersOnSend(
+      Bip47Encrypter encrypter, Pair<String, M> entry, Object initialPayload) throws Exception {
+    String payload = entry.getLeft();
     for (SorobanWrapperString wrapper : wrappers) {
-      entry = wrapper.onSend(encrypter, entry, initialPayload);
+      payload = wrapper.onSend(encrypter, payload, initialPayload);
     }
-    return entry;
+    return Pair.of(payload, entry.getRight());
+  }
+
+  protected Pair<String, M> applyWrappersOnReceive(Bip47Encrypter encrypter, Pair<String, M> entry)
+      throws Exception {
+    String payload = entry.getLeft();
+    for (SorobanWrapperString wrapper : wrappers) {
+      payload = wrapper.onReceive(encrypter, payload);
+    }
+    return Pair.of(payload, entry.getRight());
   }
 
   @Override
-  public Completable send(SorobanClient sorobanClient, String payload) throws Exception {
+  public Completable send(SorobanClient sorobanClient, S payload) throws Exception {
     return Completable.fromSingle(sendSingle(sorobanClient, payload));
   }
 
   @Override
-  public Completable send(SorobanClient sorobanClient, SorobanPayloadable sorobanPayloadable)
-      throws Exception {
-    return Completable.fromSingle(sendSingle(sorobanClient, sorobanPayloadable));
-  }
-
-  @Override
-  public Completable sendAck(SorobanClient sorobanClient) throws Exception {
-    return send(sorobanClient, new AckResponse());
-  }
-
-  protected Single<I> sendSingle(SorobanClient sorobanClient, String payload) throws Exception {
-    E entry = newEntry(payload);
+  public Single<I> sendSingle(SorobanClient sorobanClient, S payload) throws Exception {
+    Pair<String, M> entry = newEntry(payload);
     return sendSingle(sorobanClient, entry, payload);
   }
 
-  protected Single<I> sendSingle(SorobanClient sorobanClient, SorobanPayloadable sorobanPayloadable)
-      throws Exception {
-    E entry = newEntry(sorobanPayloadable.toPayload());
-    return sendSingle(sorobanClient, entry, sorobanPayloadable);
-  }
-
-  protected Single<I> sendSingle(SorobanClient sorobanClient, E entryObject, Object initialPayload)
-      throws Exception {
+  protected Single<I> sendSingle(
+      SorobanClient sorobanClient, Pair<String, M> entry, Object initialPayload) throws Exception {
     // apply wrappers
     Bip47Encrypter encrypter = sorobanClient.getEncrypter();
-    String clearLog = entryObject.toString();
-    String entry = applyWrappersForSend(encrypter, entryObject, initialPayload);
+    String clearLog = entry.toString();
+    Pair<String, M> entryWithMetadata = Pair.of(entry.getLeft(), entry.getRight());
+    entryWithMetadata = applyWrappersOnSend(encrypter, entryWithMetadata, initialPayload);
+    String rawEntry = entryToRaw(entryWithMetadata);
+
+    // result must include clear payload and full metadata, to use it with getEndpointReply()
+    I result = newEntry(Pair.of(entry.getLeft(), entryWithMetadata.getRight()), rawEntry);
 
     // send String
     String dir = getDir();
     if (log.isDebugEnabled()) {
-      log.debug(" -> " + RpcClient.shortDirectory(dir) + " " + entry + "\n(was: " + clearLog + ")");
+      log.debug(
+          " -> " + RpcClient.shortDirectory(dir) + " " + rawEntry + "\n(was: " + clearLog + ")");
     }
-    return sorobanClient
-        .getRpcClient()
-        .directoryAdd(dir, entry, rpcMode)
-        .toSingle(() -> newEntry(entryObject, entry));
+    return sorobanClient.getRpcClient().directoryAdd(dir, rawEntry, rpcMode).toSingle(() -> result);
   }
 
   @Override
-  public Completable delete(SorobanClient sorobanClient, I entry) throws Exception {
+  public Completable remove(SorobanClient sorobanClient, I entry) throws Exception {
     String rawEntry = getRawEntry(entry);
+    return removeRaw(sorobanClient, rawEntry);
+  }
+
+  @Override
+  public Completable removeRaw(SorobanClient sorobanClient, String rawEntry) throws Exception {
     return sorobanClient.getRpcClient().directoryRemove(getDir(), rawEntry);
   }
 
   @Override
-  public Single<Optional<I>> getNext(SorobanClient sorobanClient) throws Exception {
+  public Single<Optional<I>> getFirst(SorobanClient sorobanClient) throws Exception {
+    return getFirst(sorobanClient, false);
+  }
+
+  @Override
+  public Single<Optional<I>> getLast(SorobanClient sorobanClient) throws Exception {
+    return getFirst(sorobanClient, true);
+  }
+
+  private Single<Optional<I>> getFirst(SorobanClient sorobanClient, boolean desc) throws Exception {
     Bip47Encrypter encrypter = sorobanClient.getEncrypter();
     return sorobanClient
         .getRpcClient()
         .directoryValues(getDir())
         .map(
             entries -> {
-              for (String entry : entries) {
+              if (desc) {
+                ArrayUtils.reverse(entries);
+              }
+              for (String rawEntry : entries) {
                 // loop until valid entry
                 try {
-                  return Optional.of(readItem(encrypter, entry));
+                  return Optional.of(readItem(encrypter, rawEntry, sorobanClient));
                 } catch (Exception e) {
                   log.warn("Skipping invalid payload: " + e.getMessage(), e);
                 }
@@ -131,7 +149,7 @@ public abstract class AbstractSorobanEndpoint<I, L, E> implements SorobanEndpoin
     Bip47Encrypter encrypter = rpcSession.getRpcWallet().getBip47Encrypter();
     return rpcSession
         .directoryValueWaitAndRemove(getDir())
-        .map(entry -> readItem(encrypter, entry));
+        .map(entry -> readItem(encrypter, entry, rpcSession.withSorobanClient(o -> o)));
   }
 
   protected long getLoopFrequencyMs() {
@@ -150,23 +168,24 @@ public abstract class AbstractSorobanEndpoint<I, L, E> implements SorobanEndpoin
     return sorobanClient
         .getRpcClient()
         .directoryValues(getDir())
-        .map(entries -> readList(encrypter, entries));
+        .map(entries -> readList(encrypter, entries, sorobanClient));
   }
 
-  protected L readList(Bip47Encrypter encrypter, String[] entries) {
-    List<I> items = readItems(encrypter, entries);
+  protected L readList(Bip47Encrypter encrypter, String[] entries, SorobanClient sorobanClient) {
+    List<I> items = readItems(encrypter, entries, sorobanClient);
     if (log.isDebugEnabled()) {
       log.debug(" <- " + getDir() + ": " + items.size() + " entries");
     }
     return newList(items);
   }
 
-  protected List<I> readItems(Bip47Encrypter encrypter, String[] entries) {
+  protected List<I> readItems(
+      Bip47Encrypter encrypter, String[] entries, SorobanClient sorobanClient) {
     return Arrays.stream(entries)
         .map(
             entry -> {
               try {
-                return readItem(encrypter, entry);
+                return readItem(encrypter, entry, sorobanClient);
               } catch (Exception e) {
                 log.warn("Skipping invalid SorobanPayload", e);
                 return null;
@@ -176,28 +195,26 @@ public abstract class AbstractSorobanEndpoint<I, L, E> implements SorobanEndpoin
         .collect(Collectors.toList());
   }
 
-  protected I readItem(Bip47Encrypter encrypter, String entry) throws Exception {
+  protected I readItem(Bip47Encrypter encrypter, String rawEntry, SorobanClient sorobanClient)
+      throws Exception {
     try {
-      String rawEntry = entry;
-
       // apply wrappers
-      for (SorobanWrapperString wrapper : wrappers) {
-        entry = wrapper.onReceive(encrypter, entry);
-      }
-
-      E readEntry = readEntry(encrypter, entry);
+      Pair<String, M> entry = rawToEntry(rawEntry);
+      Pair<String, M> readEntry = applyWrappersOnReceive(encrypter, entry);
       I item = newEntry(readEntry, rawEntry);
       if (log.isDebugEnabled()) {
         log.debug(" <- " + getDir() + ": " + entry);
       }
+      if (autoRemove) {
+        // delete in background
+        removeRaw(sorobanClient, rawEntry).subscribe();
+      }
       return item;
     } catch (Exception e) {
-      log.warn(" <- " + getDir() + ": " + entry + ": INVALID: " + e.getMessage());
+      log.warn(" <- " + getDir() + ": " + rawEntry + ": INVALID: " + e.getMessage());
       throw e;
     }
   }
-
-  // REPLY
 
   public abstract String computeUniqueId(I entry);
 
@@ -221,5 +238,10 @@ public abstract class AbstractSorobanEndpoint<I, L, E> implements SorobanEndpoin
 
   protected String getDir() {
     return app.getDir(path);
+  }
+
+  @Override
+  public void setAutoRemove(boolean autoRemove) {
+    this.autoRemove = autoRemove;
   }
 }

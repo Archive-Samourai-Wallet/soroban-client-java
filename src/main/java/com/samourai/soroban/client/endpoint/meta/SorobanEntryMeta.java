@@ -9,12 +9,16 @@ public class SorobanEntryMeta {
   private String payload;
   private SorobanMetadata metadata;
 
-  public SorobanEntryMeta(String payload) {
+  public SorobanEntryMeta(String payload, SorobanMetadata metadata) {
     this.payload = payload;
-    this.metadata = new SorobanMetadataImpl();
+    this.metadata = metadata;
   }
 
-  public SorobanEntryMeta(JSONObject jsonObject) throws Exception {
+  public SorobanEntryMeta(String payload) {
+    this(payload, new SorobanMetadataImpl());
+  }
+
+  public SorobanEntryMeta(JSONObject jsonObject) {
     this.payload = jsonObject.getString(KEY_PAYLOAD);
     JSONObject jsonObjectMeta = jsonObject.getJSONObject(KEY_METADATA);
     this.metadata = new SorobanMetadataImpl(jsonObjectMeta);

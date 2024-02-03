@@ -23,28 +23,6 @@ public class SorobanAppTest extends AbstractTest {
     Assertions.assertEquals("TESTNET/APP_TEST/" + appVersion + "/FOO", endpoint.getDir());
   }
 
-  /*
-  @Test
-  public void send_get_object() throws Exception {
-    TestPayload payload = new TestPayload("HELLO WORLD");
-
-    // send payload
-    rpcSessionInitiator.withSorobanClient(
-            sorobanClient -> {
-              asyncUtil.blockingAwait(app.getEndpointHello().send(sorobanClient, payload));
-              return null;
-            });
-
-    // get payload
-    TestPayload resultPayload =
-            rpcSessionCounterparty.withSorobanClient(
-                    sorobanClient -> {
-                      return asyncUtil.blockingGet(app.getEndpointHello().getNext(sorobanClient))
-                              .read(TestPayload.class);
-                    });
-    Assertions.assertEquals(payload.getMessage(), resultPayload.getMessage());
-  }*/
-
   @Test
   public void getSharedDir() throws Exception {
     Bip47PartnerImpl bip47PartnerInitiator =

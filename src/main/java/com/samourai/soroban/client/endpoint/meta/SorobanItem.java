@@ -5,17 +5,17 @@ import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaSende
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 
 public class SorobanItem {
-  private String entry;
+  private String payload;
   private SorobanMetadata metadata;
   private String rawEntry;
   private AbstractSorobanEndpointMeta endpoint;
 
   public SorobanItem(
-      String entry,
+      String payload,
       SorobanMetadata metadata,
       String rawEntry,
       AbstractSorobanEndpointMeta endpoint) {
-    this.entry = entry;
+    this.payload = payload;
     this.metadata = metadata;
     this.rawEntry = rawEntry;
     this.endpoint = endpoint;
@@ -23,14 +23,14 @@ public class SorobanItem {
 
   public SorobanItem(SorobanItem sorobanItem) {
     this(
-        sorobanItem.getEntry(),
+        sorobanItem.getPayload(),
         sorobanItem.getMetadata(),
         sorobanItem.getRawEntry(),
         sorobanItem.getEndpoint());
   }
 
-  public String getEntry() {
-    return entry;
+  public String getPayload() {
+    return payload;
   }
 
   public SorobanMetadata getMetadata() {

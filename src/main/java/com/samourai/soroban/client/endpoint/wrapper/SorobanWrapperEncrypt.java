@@ -30,4 +30,9 @@ public class SorobanWrapperEncrypt implements SorobanWrapperString {
       throw new SorobanException("Payload decryption failed");
     }
   }
+
+  // for tests
+  public void setPaymentCodePartner(PaymentCode paymentCodePartner) {
+    this.paymentCodePartner = paymentCodePartner;
+  }
 }

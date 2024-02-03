@@ -1,6 +1,5 @@
 package com.samourai.soroban.client.endpoint.controller;
 
-import com.samourai.soroban.client.SorobanPayloadable;
 import com.samourai.soroban.client.endpoint.SorobanEndpoint;
 import com.samourai.soroban.client.rpc.RpcSession;
 import com.samourai.wallet.util.AbstractOrchestrator;
@@ -14,7 +13,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class SorobanController<T, E extends SorobanEndpoint<T, ?>>
+public abstract class SorobanController<T, E extends SorobanEndpoint<T, ?, ?>>
     extends AbstractOrchestrator {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
   protected static final int LOOP_DELAY_SLOW = 15000; // 15s
@@ -106,7 +105,7 @@ public abstract class SorobanController<T, E extends SorobanEndpoint<T, ?>>
       nbExistings++;
       try {
         onExisting(message, uniqueId);
-        delete(message);
+        remove(message);
       } catch (Exception e) {
         log.error("[" + logId + "] Error on existing message:", e);
       }
@@ -116,7 +115,7 @@ public abstract class SorobanController<T, E extends SorobanEndpoint<T, ?>>
       try {
         logDebug("Processing: " + uniqueId);
         process(message, uniqueId);
-        delete(message);
+        remove(message);
       } catch (Exception e) {
         log.error("[" + logId + "] Error processing a message:", e);
       }
@@ -157,18 +156,10 @@ public abstract class SorobanController<T, E extends SorobanEndpoint<T, ?>>
     processedById.clear();
   }
 
-  protected void sendReply(T request, SorobanPayloadable response) throws Exception {
-    // reply to request
-    rpcSession
-        .withSorobanClient(
-            sorobanClient -> endpoint.getEndpointReply(request).send(sorobanClient, response))
-        .subscribe();
-  }
-
-  protected void delete(T request) throws Exception {
+  protected void remove(T request) throws Exception {
     // delete request
     rpcSession
-        .withSorobanClient(sorobanClient -> endpoint.delete(sorobanClient, request))
+        .withSorobanClient(sorobanClient -> endpoint.remove(sorobanClient, request))
         .subscribe();
   }
 

@@ -6,6 +6,7 @@ import com.samourai.http.client.IHttpClient;
 import com.samourai.http.client.IHttpClientService;
 import com.samourai.http.client.JavaHttpClient;
 import com.samourai.soroban.client.endpoint.SorobanApp;
+import com.samourai.soroban.client.endpoint.SorobanEndpoint;
 import com.samourai.soroban.client.meeting.SorobanMeetingService;
 import com.samourai.soroban.client.protocol.SorobanProtocolMeeting;
 import com.samourai.soroban.client.rpc.RpcClientService;
@@ -36,6 +37,8 @@ import com.samourai.whirlpool.client.wallet.beans.WhirlpoolNetwork;
 import java.security.Provider;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
+import java.util.function.BiPredicate;
 import org.bitcoinj.core.NetworkParameters;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.junit.jupiter.api.Assertions;
@@ -218,5 +221,153 @@ public abstract class AbstractTest {
       wait(2000);
     } catch (InterruptedException e) {
     }
+  }
+
+  protected <I, S> void doTestEndpoint2Ways(
+      SorobanEndpoint<I, ? extends List<I>, S> endpointInitiator,
+      SorobanEndpoint<I, ? extends List<I>, S> endpointCounterparty,
+      S payload,
+      S responsePayload,
+      BiPredicate<S, I> equals)
+      throws Exception {
+    // send payload
+    I request =
+        asyncUtil.blockingGet(
+            rpcSessionInitiator.withSorobanClient(
+                sorobanClient -> endpointInitiator.sendSingle(sorobanClient, payload)));
+    waitSorobanDelay();
+
+    // get payload
+    rpcSessionCounterparty.withSorobanClient(
+        sorobanClient -> {
+          // get payload
+          I result = asyncUtil.blockingGet(endpointCounterparty.getLast(sorobanClient)).get();
+          Assertions.assertTrue(equals.test(payload, result));
+
+          // send reply
+          SorobanEndpoint<I, ?, S> endpointReply = endpointCounterparty.getEndpointReply(result);
+          asyncUtil.blockingAwait(endpointReply.send(sorobanClient, responsePayload));
+          return result;
+        });
+    waitSorobanDelay();
+    waitSorobanDelay();
+
+    // get reply
+    rpcSessionInitiator.withSorobanClient(
+        sorobanClient -> {
+          // get reply
+          SorobanEndpoint<I, ?, S> endpointReply = endpointInitiator.getEndpointReply(request);
+          I result = asyncUtil.blockingGet(endpointReply.getLast(sorobanClient)).get();
+          Assertions.assertTrue(equals.test(responsePayload, result));
+          return result;
+        });
+
+    // payloads cleared
+    waitSorobanDelay();
+    waitSorobanDelay();
+    Assertions.assertEquals(
+        0,
+        asyncUtil
+            .blockingGet(
+                rpcSessionInitiator.withSorobanClient(
+                    sorobanClient -> endpointInitiator.getList(sorobanClient)))
+            .size());
+  }
+
+  protected <I, S> void doTestEndpointSkippedPayload(
+      SorobanEndpoint<I, ? extends List<I>, S> endpointInitiator,
+      SorobanEndpoint<I, ? extends List<I>, S> endpointCounterparty,
+      S payload)
+      throws Exception {
+    // send payload
+    asyncUtil.blockingAwait(
+        rpcSessionInitiator.withSorobanClient(
+            sorobanClient -> endpointInitiator.send(sorobanClient, payload)));
+    waitSorobanDelay();
+
+    // get payload - nothing received
+    Assertions.assertFalse(
+        asyncUtil
+            .blockingGet(
+                rpcSessionCounterparty.withSorobanClient(
+                    sorobanClient -> endpointCounterparty.getFirst(sorobanClient)))
+            .isPresent());
+  }
+
+  protected <I, S> void doTestEndpoint2WaysList(
+      SorobanEndpoint<I, ? extends List<I>, S> endpointInitiator,
+      SorobanEndpoint<I, ? extends List<I>, S> endpointCounterparty,
+      S[] payloads)
+      throws Exception {
+
+    // send payloads
+    rpcSessionInitiator.withSorobanClient(
+        sorobanClient -> {
+          for (S payload : payloads) {
+            asyncUtil.blockingAwait(endpointInitiator.send(sorobanClient, payload));
+          }
+          return null;
+        });
+
+    // get all payloads
+    waitSorobanDelay();
+    Assertions.assertEquals(
+        payloads.length,
+        asyncUtil
+            .blockingGet(
+                rpcSessionCounterparty.withSorobanClient(
+                    sorobanClient -> endpointCounterparty.getList(sorobanClient)))
+            .size());
+
+    // payloads cleared
+    waitSorobanDelay();
+    Assertions.assertEquals(
+        0,
+        asyncUtil
+            .blockingGet(
+                rpcSessionInitiator.withSorobanClient(
+                    sorobanClient -> endpointInitiator.getList(sorobanClient)))
+            .size());
+  }
+
+  protected <I, S> void doTestEndpointDelete(
+      SorobanEndpoint<I, ? extends List<I>, S> endpointInitiator,
+      SorobanEndpoint<I, ? extends List<I>, S> endpointCounterparty,
+      S payload1,
+      S payload2)
+      throws Exception {
+    // disable autoremove
+    endpointInitiator.setAutoRemove(false);
+    endpointCounterparty.setAutoRemove(false);
+
+    // send payloads
+    asyncUtil.blockingAwait(
+        rpcSessionInitiator.withSorobanClient(
+            sorobanClient -> endpointInitiator.send(sorobanClient, payload1)));
+    asyncUtil.blockingAwait(
+        rpcSessionInitiator.withSorobanClient(
+            sorobanClient -> endpointInitiator.send(sorobanClient, payload2)));
+
+    waitSorobanDelay();
+
+    // list
+    List<I> result =
+        asyncUtil.blockingGet(
+            rpcSessionCounterparty.withSorobanClient(
+                sorobanClient -> endpointCounterparty.getList(sorobanClient)));
+    Assertions.assertEquals(2, result.size());
+
+    // delete 1
+    asyncUtil.blockingAwait(
+        rpcSessionCounterparty.withSorobanClient(
+            sorobanClient -> endpointCounterparty.remove(sorobanClient, result.iterator().next())));
+    waitSorobanDelay();
+
+    // list
+    List<I> resultNew =
+        asyncUtil.blockingGet(
+            rpcSessionCounterparty.withSorobanClient(
+                sorobanClient -> endpointCounterparty.getList(sorobanClient)));
+    Assertions.assertEquals(1, resultNew.size());
   }
 }

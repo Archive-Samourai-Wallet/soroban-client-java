@@ -13,6 +13,10 @@ public class SorobanMetadataImpl implements SorobanMetadata {
     this.jsonObject = jsonObject;
   }
 
+  public SorobanMetadataImpl(SorobanMetadataImpl copy) {
+    this.jsonObject = new JSONObject(copy.jsonObject.toString());
+  }
+
   @Override
   public String getMetaString(String key) {
     if (!jsonObject.has(key)) {

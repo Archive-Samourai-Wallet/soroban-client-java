@@ -60,6 +60,7 @@ public class SorobanListTypedTest extends AbstractTest {
           asyncUtil.blockingAwait(endpoint.send(sorobanClient, payloadCounterparty4));
           return null;
         });
+    waitSorobanDelay();
 
     // get all payloads
     list =
@@ -75,7 +76,7 @@ public class SorobanListTypedTest extends AbstractTest {
     Predicate<SorobanItemTyped> filterCounterparty =
         p -> p.getMetaSender().equals(paymentCodeCounterparty);
 
-    List<SorobanItemTyped> results = list.getList(filterCounterparty);
+    List<SorobanItemTyped> results = list.filter(filterCounterparty);
     Assertions.assertEquals(4, results.size());
     Assertions.assertEquals("counterparty_1", results.get(0).read(TestPayload.class).getMessage());
     Assertions.assertEquals("counterparty_2", results.get(1).read(TestPayload.class).getMessage());
@@ -95,7 +96,7 @@ public class SorobanListTypedTest extends AbstractTest {
 
   @Test
   public void filterLatestBySender() throws Exception {
-    List<SorobanItemTyped> results = list.distinctLatestBySender().getList();
+    List<SorobanItemTyped> results = list.distinctLatestBySender();
     Assertions.assertEquals(2, results.size());
 
     Assertions.assertEquals(
@@ -108,7 +109,7 @@ public class SorobanListTypedTest extends AbstractTest {
 
   @Test
   public void filterLatestBySenderAndType() throws Exception {
-    List<SorobanItemTyped> results = list.filterLatestBySenderAndType(TestPayload.class).getList();
+    List<SorobanItemTyped> results = list.filterLatestBySenderAndType(TestPayload.class);
     Assertions.assertEquals(2, results.size());
 
     Assertions.assertEquals("initiator_2", results.get(0).read(TestPayload.class).getMessage());
@@ -117,7 +118,7 @@ public class SorobanListTypedTest extends AbstractTest {
 
   @Test
   public void filterByType() throws Exception {
-    List<SorobanItemTyped> results = list.filterByType(TestPayload.class).getList();
+    List<SorobanItemTyped> results = list.filterByType(TestPayload.class);
     Assertions.assertEquals(4, results.size());
 
     Assertions.assertEquals("initiator_1", results.get(0).read(TestPayload.class).getMessage());

@@ -1,10 +1,10 @@
 package com.samourai.soroban.client.endpoint.meta.wrapper;
 
-import com.samourai.soroban.client.endpoint.meta.SorobanEntryMeta;
 import com.samourai.soroban.client.endpoint.meta.SorobanItem;
 import com.samourai.soroban.client.endpoint.meta.SorobanMetadata;
 import com.samourai.soroban.client.exception.SorobanException;
 import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
+import com.samourai.wallet.util.Pair;
 import java.util.Comparator;
 import java.util.function.BinaryOperator;
 
@@ -17,23 +17,23 @@ public class SorobanWrapperMetaNonce implements SorobanWrapperMeta {
       (a, b) -> comparatorByNonce.compare(a, b) > 0 ? a : b;
 
   @Override
-  public SorobanEntryMeta onSend(
-      Bip47Encrypter encrypter, SorobanEntryMeta sorobanEntry, Object initialPayload)
+  public Pair<String, SorobanMetadata> onSend(
+      Bip47Encrypter encrypter, Pair<String, SorobanMetadata> entry, Object initialPayload)
       throws Exception {
     // set nonce
-    sorobanEntry.getMetadata().setMeta(KEY_NONCE, System.currentTimeMillis());
-    return sorobanEntry;
+    entry.getRight().setMeta(KEY_NONCE, System.currentTimeMillis());
+    return entry;
   }
 
   @Override
-  public SorobanEntryMeta onReceive(Bip47Encrypter encrypter, SorobanEntryMeta sorobanEntry)
-      throws Exception {
+  public Pair<String, SorobanMetadata> onReceive(
+      Bip47Encrypter encrypter, Pair<String, SorobanMetadata> entry) throws Exception {
     // require nonce
-    Long nonce = getNonce(sorobanEntry.getMetadata());
+    Long nonce = getNonce(entry.getRight());
     if (nonce == null) {
-      throw new SorobanException("Invalid metadata.nonce: " + sorobanEntry.getMetadata());
+      throw new SorobanException("Invalid metadata.nonce: " + entry.getRight());
     }
-    return sorobanEntry;
+    return entry;
   }
 
   public static Long getNonce(SorobanMetadata metadata) {

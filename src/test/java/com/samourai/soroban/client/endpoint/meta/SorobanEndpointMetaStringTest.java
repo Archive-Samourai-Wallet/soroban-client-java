@@ -2,12 +2,13 @@ package com.samourai.soroban.client.endpoint.meta;
 
 import com.samourai.soroban.client.AbstractTest;
 import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaEncryptWithSender;
+import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaSender;
 import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaSignWithSender;
 import com.samourai.soroban.client.endpoint.wrapper.SorobanWrapper;
 import com.samourai.soroban.client.endpoint.wrapper.SorobanWrapperString;
 import com.samourai.soroban.client.rpc.RpcMode;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
-import org.junit.jupiter.api.Assertions;
+import java.util.function.BiPredicate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -21,28 +22,23 @@ public class SorobanEndpointMetaStringTest extends AbstractTest {
 
   @Test
   public void clear() throws Exception {
-    String payload = "HELLO WORLD";
+    String payload = "REQUEST";
+    String responsePayload = "RESPONSE";
+    BiPredicate<String, SorobanItem> equals = (s, i) -> i.getPayload().equals(s);
+
     SorobanEndpointMetaString endpoint =
-        new SorobanEndpointMetaString(app, "CLEAR", RpcMode.SHORT, new SorobanWrapperString[] {});
+        new SorobanEndpointMetaString(
+            app, "CLEAR", RpcMode.SHORT, new SorobanWrapper[] {new SorobanWrapperMetaSender()});
 
-    // send payload
-    asyncUtil.blockingAwait(
-        rpcSessionInitiator.withSorobanClient(
-            sorobanClient -> endpoint.send(sorobanClient, payload)));
-
-    // get payload
-    SorobanItem result =
-        asyncUtil
-            .blockingGet(
-                rpcSessionCounterparty.withSorobanClient(
-                    sorobanClient -> endpoint.getNext(sorobanClient)))
-            .get();
-    Assertions.assertEquals(payload, result.getEntry());
+    doTestEndpoint2Ways(endpoint, endpoint, payload, responsePayload, equals);
   }
 
   @Test
   public void signed() throws Exception {
-    String payload = "HELLO WORLD";
+    String payload = "REQUEST";
+    String responsePayload = "RESPONSE";
+    BiPredicate<String, SorobanItem> equals = (s, i) -> i.getPayload().equals(s);
+
     SorobanEndpointMetaString endpoint =
         new SorobanEndpointMetaString(
             app,
@@ -50,25 +46,16 @@ public class SorobanEndpointMetaStringTest extends AbstractTest {
             RpcMode.SHORT,
             new SorobanWrapper[] {new SorobanWrapperMetaSignWithSender()});
 
-    // send payload
-    asyncUtil.blockingAwait(
-        rpcSessionInitiator.withSorobanClient(
-            sorobanClient -> endpoint.send(sorobanClient, payload)));
-
-    // get payload
-    SorobanItem result =
-        asyncUtil
-            .blockingGet(
-                rpcSessionCounterparty.withSorobanClient(
-                    sorobanClient -> endpoint.getNext(sorobanClient)))
-            .get();
-    Assertions.assertEquals(payload, result.getEntry());
+    doTestEndpoint2Ways(endpoint, endpoint, payload, responsePayload, equals);
   }
 
   @Test
   public void encrypted() throws Exception {
-    String payload = "HELLO WORLD";
-    SorobanEndpointMetaString endpoint =
+    String payload = "REQUEST";
+    String responsePayload = "RESPONSE";
+    BiPredicate<String, SorobanItem> equals = (s, i) -> i.getPayload().equals(s);
+
+    SorobanEndpointMetaString endpointInitiator =
         new SorobanEndpointMetaString(
             app,
             "ENCRYPTED",
@@ -76,78 +63,82 @@ public class SorobanEndpointMetaStringTest extends AbstractTest {
             new SorobanWrapper[] {
               new SorobanWrapperMetaEncryptWithSender(paymentCodeCounterparty)
             });
+    SorobanEndpointMetaString endpointCounterparty =
+        new SorobanEndpointMetaString(
+            app,
+            "ENCRYPTED",
+            RpcMode.SHORT,
+            new SorobanWrapper[] {new SorobanWrapperMetaEncryptWithSender(paymentCodeInitiator)});
 
-    // send payload
-    asyncUtil.blockingAwait(
-        rpcSessionInitiator.withSorobanClient(
-            sorobanClient -> endpoint.send(sorobanClient, payload)));
-
-    // get payload
-    SorobanItem result =
-        asyncUtil
-            .blockingGet(
-                rpcSessionCounterparty.withSorobanClient(
-                    sorobanClient -> endpoint.getNext(sorobanClient)))
-            .get();
-    Assertions.assertEquals(payload, result.getEntry());
+    doTestEndpoint2Ways(endpointInitiator, endpointCounterparty, payload, responsePayload, equals);
   }
 
   @Test
   public void encrypted_invalid() throws Exception {
-    String payload = "HELLO WORLD";
+    String payload = "REQUEST";
 
     // encrypt for another paymentCode
     PaymentCode paymentCodeTemp =
         rpcClientService.generateRpcWallet().getBip47Account().getPaymentCode();
-    SorobanEndpointMetaString endpoint =
+    SorobanEndpointMetaString endpointInitiator =
         new SorobanEndpointMetaString(
             app,
             "ENCRYPTED",
             RpcMode.SHORT,
             new SorobanWrapper[] {new SorobanWrapperMetaEncryptWithSender(paymentCodeTemp)});
+    SorobanEndpointMetaString endpointCounterparty =
+        new SorobanEndpointMetaString(
+            app,
+            "ENCRYPTED",
+            RpcMode.SHORT,
+            new SorobanWrapper[] {new SorobanWrapperMetaEncryptWithSender(paymentCodeInitiator)});
 
-    // send payload
-    asyncUtil.blockingAwait(
-        rpcSessionInitiator.withSorobanClient(
-            sorobanClient -> endpoint.send(sorobanClient, payload)));
-
-    // get payload
-    Assertions.assertFalse(
-        asyncUtil
-            .blockingGet(
-                rpcSessionCounterparty.withSorobanClient(
-                    sorobanClient -> endpoint.getNext(sorobanClient)))
-            .isPresent());
+    doTestEndpointSkippedPayload(endpointInitiator, endpointCounterparty, payload);
   }
 
   @Test
   public void list() throws Exception {
-    String payloadInitiator1 = "payloadInitiator1";
-    String payloadInitiator2 = "payloadInitiator2";
-    String payloadCounterparty1 = "payloadCounterparty1";
-    String payloadCounterparty2 = "payloadCounterparty2";
+    String payload1 = "payloadInitiator1";
+    String payload2 = "payloadInitiator2";
+    String payload3 = "payloadCounterparty1";
+    String payload4 = "payloadCounterparty2";
     SorobanEndpointMetaString endpoint =
-        new SorobanEndpointMetaString(app, "CLEAR", RpcMode.SHORT, new SorobanWrapperString[] {});
+        new SorobanEndpointMetaString(app, "CLEAR", RpcMode.SHORT, new SorobanWrapper[] {});
 
-    // send payloads
-    rpcSessionInitiator.withSorobanClient(
-        sorobanClient -> {
-          asyncUtil.blockingAwait(endpoint.send(sorobanClient, payloadInitiator1));
-          asyncUtil.blockingAwait(endpoint.send(sorobanClient, payloadInitiator2));
-          return null;
-        });
-    rpcSessionCounterparty.withSorobanClient(
-        sorobanClient -> {
-          asyncUtil.blockingAwait(endpoint.send(sorobanClient, payloadCounterparty1));
-          asyncUtil.blockingAwait(endpoint.send(sorobanClient, payloadCounterparty2));
-          return null;
-        });
+    doTestEndpoint2WaysList(
+        endpoint, endpoint, new String[] {payload1, payload2, payload3, payload4});
+  }
 
-    // get all payloads
-    SorobanList<SorobanItem> allResults =
-        asyncUtil.blockingGet(
-            rpcSessionCounterparty.withSorobanClient(
-                sorobanClient -> endpoint.getList(sorobanClient)));
-    Assertions.assertEquals(4, allResults.size());
+  @Test
+  public void remove_clear() throws Exception {
+    String payload1 = "payloadInitiator1";
+    String payload2 = "payloadInitiator2";
+    SorobanEndpointMetaString endpoint =
+        new SorobanEndpointMetaString(app, "CLEAR", RpcMode.SHORT, new SorobanWrapper[] {});
+
+    doTestEndpointDelete(endpoint, endpoint, payload1, payload2);
+  }
+
+  @Test
+  public void remove_encrypted() throws Exception {
+    String payload1 = "payloadInitiator1";
+    String payload2 = "payloadInitiator2";
+
+    SorobanEndpointMetaString endpointInitiator =
+        new SorobanEndpointMetaString(
+            app,
+            "ENCRYPTED",
+            RpcMode.SHORT,
+            new SorobanWrapper[] {
+              new SorobanWrapperMetaEncryptWithSender(paymentCodeCounterparty)
+            });
+    SorobanEndpointMetaString endpointCounterparty =
+        new SorobanEndpointMetaString(
+            app,
+            "ENCRYPTED",
+            RpcMode.SHORT,
+            new SorobanWrapper[] {new SorobanWrapperMetaEncryptWithSender(paymentCodeInitiator)});
+
+    doTestEndpointDelete(endpointInitiator, endpointCounterparty, payload1, payload2);
   }
 }

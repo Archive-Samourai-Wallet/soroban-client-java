@@ -69,13 +69,13 @@ public class SorobanListTest extends AbstractTest {
     Predicate<SorobanItemTyped> filterCounterparty =
         p -> p.getMetaSender().equals(paymentCodeCounterparty);
 
-    List<SorobanItemTyped> resultsCounterparty = list.getList(filterCounterparty);
+    List<SorobanItemTyped> resultsCounterparty = list.filter(filterCounterparty);
     Assertions.assertEquals(2, resultsCounterparty.size());
   }
 
   @Test
   public void filterLatestBySender() throws Exception {
-    List<SorobanItemTyped> results = list.distinctLatestBySender().getList();
+    SorobanList<SorobanItemTyped> results = list.distinctLatestBySender();
     Assertions.assertEquals(2, results.size());
 
     Assertions.assertEquals("initiator_2", results.get(0).read(TestPayload.class).getMessage());
@@ -90,7 +90,7 @@ public class SorobanListTest extends AbstractTest {
 
   @Test
   public void sortByNonceAsc() throws Exception {
-    List<SorobanItemTyped> results = list.sortByNonce(false).getList();
+    List<SorobanItemTyped> results = list.sortByNonce(false);
     Assertions.assertEquals(4, results.size());
 
     Assertions.assertEquals("initiator_1", results.get(0).read(TestPayload.class).getMessage());
@@ -101,7 +101,7 @@ public class SorobanListTest extends AbstractTest {
 
   @Test
   public void sortByNonceDesc() throws Exception {
-    List<SorobanItemTyped> results = list.sortByNonce(true).getList();
+    SorobanList<SorobanItemTyped> results = list.sortByNonce(true);
     Assertions.assertEquals(4, results.size());
 
     Assertions.assertEquals("counterparty_2", results.get(0).read(TestPayload.class).getMessage());

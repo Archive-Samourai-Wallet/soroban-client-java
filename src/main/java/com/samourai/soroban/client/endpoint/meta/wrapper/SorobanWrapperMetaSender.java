@@ -1,11 +1,11 @@
 package com.samourai.soroban.client.endpoint.meta.wrapper;
 
-import com.samourai.soroban.client.endpoint.meta.SorobanEntryMeta;
 import com.samourai.soroban.client.endpoint.meta.SorobanItem;
 import com.samourai.soroban.client.endpoint.meta.SorobanMetadata;
 import com.samourai.soroban.client.exception.SorobanException;
 import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
+import com.samourai.wallet.util.Pair;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.function.BinaryOperator;
@@ -18,24 +18,24 @@ public class SorobanWrapperMetaSender implements SorobanWrapperMeta {
   private static final String KEY_SENDER = "sender";
 
   @Override
-  public SorobanEntryMeta onSend(
-      Bip47Encrypter encrypter, SorobanEntryMeta sorobanEntry, Object initialPayload)
+  public Pair<String, SorobanMetadata> onSend(
+      Bip47Encrypter encrypter, Pair<String, SorobanMetadata> entry, Object initialPayload)
       throws Exception {
     // set sender
     String sender = encrypter.getPaymentCode().toString();
-    sorobanEntry.getMetadata().setMeta(KEY_SENDER, sender);
-    return sorobanEntry;
+    entry.getRight().setMeta(KEY_SENDER, sender);
+    return entry;
   }
 
   @Override
-  public SorobanEntryMeta onReceive(Bip47Encrypter encrypter, SorobanEntryMeta sorobanEntry)
-      throws Exception {
+  public Pair<String, SorobanMetadata> onReceive(
+      Bip47Encrypter encrypter, Pair<String, SorobanMetadata> entry) throws Exception {
     // require sender
-    PaymentCode sender = getSender(sorobanEntry.getMetadata());
+    PaymentCode sender = getSender(entry.getRight());
     if (sender == null) {
-      throw new SorobanException("Invalid metadata.sender: " + sorobanEntry.getMetadata());
+      throw new SorobanException("Invalid metadata.sender: " + entry.getRight());
     }
-    return sorobanEntry;
+    return entry;
   }
 
   public static PaymentCode getSender(SorobanMetadata metadata) {

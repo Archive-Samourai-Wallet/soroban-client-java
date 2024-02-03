@@ -147,10 +147,8 @@ public class RpcClient {
   }
 
   public Completable directoryRemove(String name, String entry) throws IOException {
-    if (log.isTraceEnabled()) {
-      log.trace("=> remove " + shortDirectory(name) + ": " + entry + ", url=" + url);
-    } else if (log.isDebugEnabled()) {
-      log.debug("=> remove " + shortDirectory(name) + ", url=" + url);
+    if (log.isDebugEnabled()) {
+      log.debug("=> remove " + shortDirectory(name) + ": " + entry + ", url=" + url);
     }
     Map<String, Object> params = computeParams(name, entry);
     return Completable.fromSingle(call("directory.Remove", params));

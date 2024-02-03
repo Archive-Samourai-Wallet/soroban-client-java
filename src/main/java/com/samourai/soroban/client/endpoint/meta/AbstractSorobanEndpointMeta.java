@@ -8,15 +8,17 @@ import com.samourai.soroban.client.endpoint.wrapper.SorobanWrapperString;
 import com.samourai.soroban.client.rpc.RpcMode;
 import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
+import com.samourai.wallet.util.Pair;
 import com.samourai.wallet.util.Util;
 import java.lang.invoke.MethodHandles;
 import java.util.Arrays;
+import java.util.List;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class AbstractSorobanEndpointMeta<I extends SorobanItem, L>
-    extends AbstractSorobanEndpoint<I, L, SorobanEntryMeta> {
+public abstract class AbstractSorobanEndpointMeta<I extends SorobanItem, L extends List<I>, S>
+    extends AbstractSorobanEndpoint<I, L, S, SorobanMetadata> {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private SorobanWrapperMeta[] wrappersMeta;
@@ -50,55 +52,56 @@ public abstract class AbstractSorobanEndpointMeta<I extends SorobanItem, L>
   }
 
   @Override
-  protected SorobanEntryMeta newEntry(String payload) throws Exception {
-    return new SorobanEntryMeta(payload);
-  }
-
-  @Override
   protected String getRawEntry(SorobanItem entry) {
     return entry.getRawEntry();
   }
 
   @Override
-  protected String toPayload(SorobanEntryMeta entry) throws Exception {
-    return entry.toPayload();
+  protected String entryToRaw(Pair<String, SorobanMetadata> entry) throws Exception {
+    return new SorobanEntryMeta(entry.getLeft(), entry.getRight()).toPayload();
   }
 
   @Override
-  protected String applyWrappersForSend(
-      Bip47Encrypter encrypter, SorobanEntryMeta entryObject, Object initialPayload)
+  protected Pair<String, SorobanMetadata> rawToEntry(String rawEntry) throws Exception {
+    JSONObject jsonObject = new JSONObject(rawEntry);
+    SorobanEntryMeta entryMeta = new SorobanEntryMeta(jsonObject);
+    return Pair.of(entryMeta.getPayload(), entryMeta.getMetadata());
+  }
+
+  @Override
+  protected Pair<String, SorobanMetadata> applyWrappersOnSend(
+      Bip47Encrypter encrypter, Pair<String, SorobanMetadata> entry, Object initialPayload)
       throws Exception {
     // apply meta wrappers
     for (SorobanWrapperMeta wrapperMeta : wrappersMeta) {
-      wrapperMeta.onSend(encrypter, entryObject, initialPayload);
+      entry = wrapperMeta.onSend(encrypter, entry, initialPayload);
     }
-    return super.applyWrappersForSend(encrypter, entryObject, initialPayload);
+
+    // apply string wrappers
+    return super.applyWrappersOnSend(encrypter, entry, initialPayload);
   }
 
   @Override
-  protected final SorobanEntryMeta readEntry(Bip47Encrypter encrypter, String entry)
-      throws Exception {
-    try {
-      JSONObject jsonObject = new JSONObject(entry);
-      SorobanEntryMeta entryMeta = new SorobanEntryMeta(jsonObject);
+  protected Pair<String, SorobanMetadata> applyWrappersOnReceive(
+      Bip47Encrypter encrypter, Pair<String, SorobanMetadata> entry) throws Exception {
+    // apply string wrappers
+    entry = super.applyWrappersOnReceive(encrypter, entry);
 
-      // apply wrappers
+    // apply meta wrappers
+    try {
       for (SorobanWrapperMeta wrapperMeta : wrappersMeta) {
-        entryMeta = wrapperMeta.onReceive(encrypter, entryMeta);
+        entry = wrapperMeta.onReceive(encrypter, entry);
       }
-      if (log.isDebugEnabled()) {
-        log.debug(" <- " + getDir() + ": " + entryMeta.toPayload());
-      }
-      return entryMeta;
     } catch (Exception e) {
       log.warn(" <- " + getDir() + ": " + entry + ": INVALID: " + e.getMessage());
       throw e;
     }
+    return entry;
   }
 
   @Override
   public String computeUniqueId(I entry) {
-    String uniqueId = entry.getEntry();
+    String uniqueId = entry.getPayload();
     PaymentCode sender = entry.getMetaSender();
     if (sender != null) {
       uniqueId += sender.toString();

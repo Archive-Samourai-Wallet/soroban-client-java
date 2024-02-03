@@ -35,7 +35,8 @@ public class SorobanListTyped extends SorobanList<SorobanItemTyped> {
   }
 
   public <T> List<T> getListObjects(Class<T> type, BiPredicate<SorobanItemTyped, T> filterOrNull) {
-    return filterByType(type).getList().stream()
+    filterByType(type);
+    return listPayloads.stream()
         .map(
             i -> {
               try {

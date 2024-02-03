@@ -1,10 +1,10 @@
 package com.samourai.soroban.client.endpoint.meta.wrapper;
 
-import com.samourai.soroban.client.endpoint.meta.SorobanEntryMeta;
 import com.samourai.soroban.client.endpoint.meta.SorobanItem;
 import com.samourai.soroban.client.endpoint.meta.SorobanMetadata;
 import com.samourai.soroban.client.exception.SorobanException;
 import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
+import com.samourai.wallet.util.Pair;
 import java.util.function.Predicate;
 import org.apache.commons.lang3.StringUtils;
 
@@ -13,24 +13,24 @@ public class SorobanWrapperMetaType implements SorobanWrapperMeta {
   private static final String KEY_TYPE = "type";
 
   @Override
-  public SorobanEntryMeta onSend(
-      Bip47Encrypter encrypter, SorobanEntryMeta sorobanEntry, Object initialPayload)
+  public Pair<String, SorobanMetadata> onSend(
+      Bip47Encrypter encrypter, Pair<String, SorobanMetadata> entry, Object initialPayload)
       throws Exception {
     // set type
     String type = initialPayload.getClass().getName();
-    sorobanEntry.getMetadata().setMeta(KEY_TYPE, type);
-    return sorobanEntry;
+    entry.getRight().setMeta(KEY_TYPE, type);
+    return entry;
   }
 
   @Override
-  public SorobanEntryMeta onReceive(Bip47Encrypter encrypter, SorobanEntryMeta sorobanEntry)
-      throws Exception {
+  public Pair<String, SorobanMetadata> onReceive(
+      Bip47Encrypter encrypter, Pair<String, SorobanMetadata> entry) throws Exception {
     // require type
-    String type = getType(sorobanEntry.getMetadata());
+    String type = getType(entry.getRight());
     if (StringUtils.isEmpty(type)) {
-      throw new SorobanException("Missing metadata.type: " + sorobanEntry.getMetadata());
+      throw new SorobanException("Missing metadata.type: " + entry.getRight());
     }
-    return sorobanEntry;
+    return entry;
   }
 
   public static String getType(SorobanMetadata metadata) {

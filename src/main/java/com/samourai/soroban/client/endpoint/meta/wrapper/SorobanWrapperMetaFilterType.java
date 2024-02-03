@@ -1,8 +1,9 @@
 package com.samourai.soroban.client.endpoint.meta.wrapper;
 
-import com.samourai.soroban.client.endpoint.meta.SorobanEntryMeta;
+import com.samourai.soroban.client.endpoint.meta.SorobanMetadata;
 import com.samourai.soroban.client.exception.FilterDeclinedSorobanException;
 import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
+import com.samourai.wallet.util.Pair;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -21,8 +22,8 @@ public class SorobanWrapperMetaFilterType extends SorobanWrapperMetaType {
   }
 
   @Override
-  public SorobanEntryMeta onSend(
-      Bip47Encrypter encrypter, SorobanEntryMeta sorobanEntry, Object initialPayload)
+  public Pair<String, SorobanMetadata> onSend(
+      Bip47Encrypter encrypter, Pair<String, SorobanMetadata> entry, Object initialPayload)
       throws Exception {
     // check type
     String type = initialPayload.getClass().getName();
@@ -31,21 +32,21 @@ public class SorobanWrapperMetaFilterType extends SorobanWrapperMetaType {
     }
 
     // set type
-    return super.onSend(encrypter, sorobanEntry, initialPayload);
+    return super.onSend(encrypter, entry, initialPayload);
   }
 
   @Override
-  public SorobanEntryMeta onReceive(Bip47Encrypter encrypter, SorobanEntryMeta sorobanEntry)
-      throws Exception {
+  public Pair<String, SorobanMetadata> onReceive(
+      Bip47Encrypter encrypter, Pair<String, SorobanMetadata> entry) throws Exception {
     // require type
-    sorobanEntry = super.onReceive(encrypter, sorobanEntry);
+    entry = super.onReceive(encrypter, entry);
 
     // check type
-    String type = getType(sorobanEntry.getMetadata());
+    String type = getType(entry.getRight());
     if (!isTypeAllowed(type)) {
       throw newException(type);
     }
-    return sorobanEntry;
+    return entry;
   }
 
   protected FilterDeclinedSorobanException newException(String type) {

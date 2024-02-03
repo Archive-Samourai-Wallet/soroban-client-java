@@ -1,10 +1,12 @@
 package com.samourai.soroban.client.endpoint.meta.typed;
 
 import com.samourai.soroban.client.AckResponse;
+import com.samourai.soroban.client.SorobanClient;
 import com.samourai.soroban.client.SorobanPayloadable;
 import com.samourai.soroban.client.endpoint.SorobanApp;
 import com.samourai.soroban.client.endpoint.meta.AbstractSorobanEndpointMeta;
-import com.samourai.soroban.client.endpoint.meta.SorobanEntryMeta;
+import com.samourai.soroban.client.endpoint.meta.SorobanMetadata;
+import com.samourai.soroban.client.endpoint.meta.SorobanMetadataImpl;
 import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaEncryptWithSender;
 import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaFilterType;
 import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaType;
@@ -13,6 +15,7 @@ import com.samourai.soroban.client.rpc.RpcMode;
 import com.samourai.soroban.client.rpc.RpcSession;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.util.AsyncUtil;
+import com.samourai.wallet.util.Pair;
 import io.reactivex.Completable;
 import io.reactivex.Single;
 import java.util.List;
@@ -20,8 +23,12 @@ import java.util.concurrent.Callable;
 import java.util.function.Supplier;
 import org.apache.commons.lang3.ArrayUtils;
 
+/**
+ * This endpoint sends & receives typed SorobanPayloadables objects, with full Soroban features
+ * support. Payloads are wrapped with metadatas.
+ */
 public class SorobanEndpointTyped
-    extends AbstractSorobanEndpointMeta<SorobanItemTyped, SorobanListTyped> {
+    extends AbstractSorobanEndpointMeta<SorobanItemTyped, SorobanListTyped, SorobanPayloadable> {
   private static final AsyncUtil asyncUtil = AsyncUtil.getInstance();
 
   public SorobanEndpointTyped(
@@ -49,9 +56,22 @@ public class SorobanEndpointTyped
     return ArrayUtils.add(wrappers, wrapperType);
   }
 
+  public Single<SorobanItemTyped> sendSingleAck(SorobanClient sorobanClient) throws Exception {
+    return sendSingle(sorobanClient, new AckResponse());
+  }
+
+  public Completable sendAck(SorobanClient sorobanClient) throws Exception {
+    return send(sorobanClient, new AckResponse());
+  }
+
   @Override
-  protected SorobanItemTyped newEntry(SorobanEntryMeta entryMeta, String rawEntry) {
-    return new SorobanItemTyped(entryMeta.getPayload(), entryMeta.getMetadata(), rawEntry, this);
+  protected SorobanItemTyped newEntry(Pair<String, SorobanMetadata> entry, String rawEntry) {
+    return new SorobanItemTyped(entry.getLeft(), entry.getRight(), rawEntry, this);
+  }
+
+  @Override
+  protected Pair<String, SorobanMetadata> newEntry(SorobanPayloadable payload) throws Exception {
+    return Pair.of(payload.toPayload(), new SorobanMetadataImpl());
   }
 
   @Override

@@ -16,11 +16,11 @@ import org.slf4j.LoggerFactory;
 public class SorobanItemTyped extends SorobanItem {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
   private static final JSONUtils jsonUtil = JSONUtils.getInstance();
-  private Object payload;
+  private Object payloadObject;
 
   public SorobanItemTyped(
-      String entry, SorobanMetadata metadata, String rawEntry, SorobanEndpointTyped endpoint) {
-    super(entry, metadata, rawEntry, endpoint);
+      String payload, SorobanMetadata metadata, String rawEntry, SorobanEndpointTyped endpoint) {
+    super(payload, metadata, rawEntry, endpoint);
   }
 
   public SorobanItemTyped(SorobanItem sorobanItem) {
@@ -36,11 +36,11 @@ public class SorobanItemTyped extends SorobanItem {
   }
 
   protected Object read() throws Exception {
-    if (payload == null) {
+    if (payloadObject == null) {
       Class typeClass = Class.forName(getType());
-      payload = jsonUtil.getObjectMapper().readValue(getEntry(), typeClass);
+      payloadObject = jsonUtil.getObjectMapper().readValue(getPayload(), typeClass);
     }
-    return payload;
+    return payloadObject;
   }
 
   public <P> P readOn(Class<P> type) throws Exception {
