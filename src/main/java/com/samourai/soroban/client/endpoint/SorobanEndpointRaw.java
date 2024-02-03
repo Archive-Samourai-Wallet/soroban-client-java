@@ -10,8 +10,8 @@ import java.util.List;
  * This endpoint uses raw String as payload.
  *
  * <p>This endpoint has limited features:<br>
- * - only support SorobanWrapperString[] - .remove() is NOT supported when using
- * SorobanWrapperEncrypt, use .removeRaw() instead
+ * - only support SorobanWrapperString[]<br>
+ * - .remove() is NOT supported when using SorobanWrapperEncrypt, use .removeRaw() instead
  */
 public class SorobanEndpointRaw
     extends AbstractSorobanEndpoint<String, List<String>, String, Void> {

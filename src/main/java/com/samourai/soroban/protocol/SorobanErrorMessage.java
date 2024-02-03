@@ -1,4 +1,4 @@
-package com.samourai.soroban.client.dialog;
+package com.samourai.soroban.protocol;
 
 import com.samourai.soroban.client.AbstractSorobanPayloadable;
 import org.slf4j.Logger;
@@ -14,5 +14,10 @@ public class SorobanErrorMessage extends AbstractSorobanPayloadable {
   public SorobanErrorMessage(int errorCode, String message) {
     this.errorCode = errorCode;
     this.message = message;
+  }
+
+  @Override
+  public String toString() {
+    return "{" + "errorCode=" + errorCode + ", message='" + message + '\'' + '}';
   }
 }

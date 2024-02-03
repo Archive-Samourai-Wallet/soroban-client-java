@@ -84,7 +84,7 @@ public class SorobanListTest extends AbstractTest {
 
   @Test
   public void getLastBySender() throws Exception {
-    SorobanItemTyped last = list.getLastBySender(paymentCodeInitiator).get();
+    SorobanItemTyped last = list.getLastNonceBySender(paymentCodeInitiator).get();
     Assertions.assertEquals("initiator_2", last.read(TestPayload.class).getMessage());
   }
 

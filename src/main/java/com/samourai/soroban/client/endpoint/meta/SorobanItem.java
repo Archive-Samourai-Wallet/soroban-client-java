@@ -56,4 +56,17 @@ public class SorobanItem {
   public Long getMetaNonce() {
     return SorobanWrapperMetaNonce.getNonce(metadata);
   }
+
+  @Override
+  public String toString() {
+    return "{"
+        + "payload='"
+        + payload
+        + '\''
+        + ", metadata="
+        + metadata
+        + ", endpoint="
+        + endpoint.toString()
+        + "}";
+  }
 }

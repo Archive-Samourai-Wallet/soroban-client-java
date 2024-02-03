@@ -126,4 +126,30 @@ public class SorobanListTypedTest extends AbstractTest {
     Assertions.assertEquals("counterparty_1", results.get(2).read(TestPayload.class).getMessage());
     Assertions.assertEquals("counterparty_2", results.get(3).read(TestPayload.class).getMessage());
   }
+
+  @Test
+  public void filterBySender() throws Exception {
+    List<SorobanItemTyped> results = list.filterBySender(paymentCodeInitiator);
+    Assertions.assertEquals(4, results.size());
+
+    Assertions.assertEquals("initiator_1", results.get(0).read(TestPayload.class).getMessage());
+    Assertions.assertEquals("initiator_2", results.get(1).read(TestPayload.class).getMessage());
+    Assertions.assertEquals(
+        "initiator_3_response",
+        results.get(2).read(TestResponsePayload.class).getResponseMessage());
+    Assertions.assertEquals(
+        "initiator_4_response",
+        results.get(3).read(TestResponsePayload.class).getResponseMessage());
+  }
+
+  @Test
+  public void filterByObject() throws Exception {
+    List<SorobanItemTyped> results =
+        list.filterByObject(
+            TestPayload.class,
+            (i, o) ->
+                i.getMetaSender().equals(paymentCodeInitiator) && o.getMessage().endsWith("_2"));
+    Assertions.assertEquals(1, results.size());
+    Assertions.assertEquals("initiator_2", results.get(0).read(TestPayload.class).getMessage());
+  }
 }

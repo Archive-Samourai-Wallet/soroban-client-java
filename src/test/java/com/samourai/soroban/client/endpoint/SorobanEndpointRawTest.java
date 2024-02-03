@@ -26,7 +26,7 @@ public class SorobanEndpointRawTest extends AbstractTest {
     SorobanEndpointRaw endpoint =
         new SorobanEndpointRaw(app, "CLEAR", RpcMode.SHORT, new SorobanWrapperString[] {});
 
-    doTestEndpoint2Ways(endpoint, endpoint, payload, responsePayload, equals);
+    doTestEndpointReply(endpoint, endpoint, payload, responsePayload, equals);
   }
 
   @Test
@@ -48,7 +48,7 @@ public class SorobanEndpointRawTest extends AbstractTest {
             RpcMode.SHORT,
             new SorobanWrapperString[] {new SorobanWrapperEncrypt(paymentCodeInitiator)});
 
-    doTestEndpoint2Ways(endpointInitiator, endpointCounterparty, payload, responsePayload, equals);
+    doTestEndpointReply(endpointInitiator, endpointCounterparty, payload, responsePayload, equals);
   }
 
   @Test

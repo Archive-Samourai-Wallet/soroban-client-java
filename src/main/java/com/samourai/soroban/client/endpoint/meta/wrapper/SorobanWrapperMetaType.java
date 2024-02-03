@@ -5,7 +5,10 @@ import com.samourai.soroban.client.endpoint.meta.SorobanMetadata;
 import com.samourai.soroban.client.exception.SorobanException;
 import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
 import com.samourai.wallet.util.Pair;
+import java.util.Arrays;
+import java.util.List;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 
 /** Metadata: type */
@@ -37,7 +40,9 @@ public class SorobanWrapperMetaType implements SorobanWrapperMeta {
     return metadata.getMetaString(KEY_TYPE);
   }
 
-  public static <I extends SorobanItem> Predicate<I> filterByType(Class type) {
-    return item -> getType(item.getMetadata()).equals(type.getName());
+  public static <I extends SorobanItem> Predicate<I> filterByType(Class... types) {
+    List<String> typesList =
+        Arrays.stream(types).map(type -> type.getName()).collect(Collectors.toList());
+    return item -> typesList.contains(getType(item.getMetadata()));
   }
 }

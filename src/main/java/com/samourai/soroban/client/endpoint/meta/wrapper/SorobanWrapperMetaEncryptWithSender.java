@@ -26,7 +26,8 @@ public class SorobanWrapperMetaEncryptWithSender extends SorobanWrapperMetaSende
       Bip47Encrypter encrypter, Pair<String, SorobanMetadata> entry, Object initialPayload)
       throws Exception {
     if (paymentCodeReceiver == null) {
-      throw new SorobanException("SorobanWrapperEncrypt.paymentCodeReceiver not configured");
+      throw new SorobanException(
+          "SorobanWrapperEncrypt failed: paymentCodeReceiver not configured");
     }
 
     // set sender

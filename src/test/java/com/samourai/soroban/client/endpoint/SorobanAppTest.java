@@ -45,7 +45,7 @@ public class SorobanAppTest extends AbstractTest {
         "TESTNET/APP_TEST/"
             + appVersion
             + "/SESSION/tb1qlsyqjg0uzrs2thcpmlrfavd037z8xx8uynjq69/test",
-        app.getDirSharedClear(bip47PartnerInitiator, id));
+        app.getDirShared(bip47PartnerInitiator, id));
 
     id = "foo";
     Assertions.assertEquals(
@@ -60,6 +60,6 @@ public class SorobanAppTest extends AbstractTest {
         "TESTNET/APP_TEST/"
             + appVersion
             + "/SESSION/tb1qlsyqjg0uzrs2thcpmlrfavd037z8xx8uynjq69/foo",
-        app.getDirSharedClear(bip47PartnerInitiator, id));
+        app.getDirShared(bip47PartnerInitiator, id));
   }
 }

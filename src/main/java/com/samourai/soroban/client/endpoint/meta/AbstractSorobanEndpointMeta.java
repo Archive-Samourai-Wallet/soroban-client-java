@@ -20,6 +20,8 @@ import org.slf4j.LoggerFactory;
 public abstract class AbstractSorobanEndpointMeta<I extends SorobanItem, L extends List<I>, S>
     extends AbstractSorobanEndpoint<I, L, S, SorobanMetadata> {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+  private static final String KEY_PAYLOAD = "payload";
+  private static final String KEY_METADATA = "metadata";
 
   private SorobanWrapperMeta[] wrappersMeta;
 
@@ -58,14 +60,19 @@ public abstract class AbstractSorobanEndpointMeta<I extends SorobanItem, L exten
 
   @Override
   protected String entryToRaw(Pair<String, SorobanMetadata> entry) throws Exception {
-    return new SorobanEntryMeta(entry.getLeft(), entry.getRight()).toPayload();
+    JSONObject jsonObject = new JSONObject();
+    jsonObject.put(KEY_PAYLOAD, entry.getLeft());
+    jsonObject.put(KEY_METADATA, entry.getRight().toJsonObject());
+    return jsonObject.toString();
   }
 
   @Override
   protected Pair<String, SorobanMetadata> rawToEntry(String rawEntry) throws Exception {
     JSONObject jsonObject = new JSONObject(rawEntry);
-    SorobanEntryMeta entryMeta = new SorobanEntryMeta(jsonObject);
-    return Pair.of(entryMeta.getPayload(), entryMeta.getMetadata());
+    String payload = jsonObject.getString(KEY_PAYLOAD);
+    JSONObject jsonObjectMeta = jsonObject.getJSONObject(KEY_METADATA);
+    SorobanMetadata metadata = new SorobanMetadataImpl(jsonObjectMeta);
+    return Pair.of(payload, metadata);
   }
 
   @Override

@@ -223,13 +223,16 @@ public abstract class AbstractTest {
     }
   }
 
-  protected <I, S> void doTestEndpoint2Ways(
+  protected <I, S> void doTestEndpointReply(
       SorobanEndpoint<I, ? extends List<I>, S> endpointInitiator,
       SorobanEndpoint<I, ? extends List<I>, S> endpointCounterparty,
       S payload,
       S responsePayload,
       BiPredicate<S, I> equals)
       throws Exception {
+    endpointInitiator.setAutoRemove(true);
+    endpointCounterparty.setAutoRemove(true);
+
     // send payload
     I request =
         asyncUtil.blockingGet(
@@ -259,6 +262,42 @@ public abstract class AbstractTest {
           SorobanEndpoint<I, ?, S> endpointReply = endpointInitiator.getEndpointReply(request);
           I result = asyncUtil.blockingGet(endpointReply.getLast(sorobanClient)).get();
           Assertions.assertTrue(equals.test(responsePayload, result));
+          return result;
+        });
+
+    // payloads cleared
+    waitSorobanDelay();
+    waitSorobanDelay();
+    Assertions.assertEquals(
+        0,
+        asyncUtil
+            .blockingGet(
+                rpcSessionInitiator.withSorobanClient(
+                    sorobanClient -> endpointInitiator.getList(sorobanClient)))
+            .size());
+  }
+
+  protected <I, S> void doTestEndpoint(
+      SorobanEndpoint<I, ? extends List<I>, S> endpointInitiator,
+      SorobanEndpoint<I, ? extends List<I>, S> endpointCounterparty,
+      S payload,
+      BiPredicate<S, I> equals)
+      throws Exception {
+    endpointInitiator.setAutoRemove(true);
+    endpointCounterparty.setAutoRemove(true);
+
+    // send payload
+    asyncUtil.blockingGet(
+        rpcSessionInitiator.withSorobanClient(
+            sorobanClient -> endpointInitiator.sendSingle(sorobanClient, payload)));
+    waitSorobanDelay();
+
+    // get payload
+    rpcSessionCounterparty.withSorobanClient(
+        sorobanClient -> {
+          // get payload
+          I result = asyncUtil.blockingGet(endpointCounterparty.getLast(sorobanClient)).get();
+          Assertions.assertTrue(equals.test(payload, result));
           return result;
         });
 
@@ -336,9 +375,6 @@ public abstract class AbstractTest {
       S payload1,
       S payload2)
       throws Exception {
-    // disable autoremove
-    endpointInitiator.setAutoRemove(false);
-    endpointCounterparty.setAutoRemove(false);
 
     // send payloads
     asyncUtil.blockingAwait(

@@ -31,18 +31,31 @@ public class SorobanEndpointTyped
     extends AbstractSorobanEndpointMeta<SorobanItemTyped, SorobanListTyped, SorobanPayloadable> {
   private static final AsyncUtil asyncUtil = AsyncUtil.getInstance();
 
+  private Class[] replyTypesAllowedOrNull;
+
+  public SorobanEndpointTyped(
+      SorobanApp app,
+      String path,
+      RpcMode rpcMode,
+      SorobanWrapper[] wrappers,
+      Class[] typesAllowedOrNull,
+      Class[] replyTypesAllowedOrNull) {
+    super(app, path, rpcMode, computeWrappers(wrappers, typesAllowedOrNull));
+    this.replyTypesAllowedOrNull = replyTypesAllowedOrNull;
+  }
+
   public SorobanEndpointTyped(
       SorobanApp app,
       String path,
       RpcMode rpcMode,
       SorobanWrapper[] wrappers,
       Class[] typesAllowedOrNull) {
-    super(app, path, rpcMode, computeWrappers(wrappers, typesAllowedOrNull));
+    this(app, path, rpcMode, wrappers, typesAllowedOrNull, null);
   }
 
   public SorobanEndpointTyped(
       SorobanApp app, String path, RpcMode rpcMode, SorobanWrapper[] wrappers) {
-    this(app, path, rpcMode, wrappers, null);
+    this(app, path, rpcMode, wrappers, null, null);
   }
 
   private static SorobanWrapper[] computeWrappers(
@@ -84,14 +97,23 @@ public class SorobanEndpointTyped
   }
 
   public Single<SorobanItemTyped> loopSendUntilReply(
-      RpcSession rpcSession, SorobanPayloadable request, long waitReplyTimeoutMs) {
+      RpcSession rpcSession, SorobanPayloadable request) {
+    return loopSendUntilReply(rpcSession, request, null);
+  }
+
+  public Single<SorobanItemTyped> loopSendUntilReply(
+      RpcSession rpcSession, SorobanPayloadable request, Long waitReplyTimeoutMs) {
     Supplier<SorobanPayloadable> getRequest = () -> request;
     return loopSendUntilReply(rpcSession, getRequest, waitReplyTimeoutMs);
   }
 
   protected Single<SorobanItemTyped> loopSendUntilReply(
-      RpcSession rpcSession, Supplier<SorobanPayloadable> getRequest, long waitReplyTimeoutMs) {
+      RpcSession rpcSession, Supplier<SorobanPayloadable> getRequest) {
+    return loopSendUntilReply(rpcSession, getRequest, null);
+  }
 
+  protected Single<SorobanItemTyped> loopSendUntilReply(
+      RpcSession rpcSession, Supplier<SorobanPayloadable> getRequest, Long waitReplyTimeoutMs) {
     Callable<SorobanItemTyped> loop =
         () -> {
           // send request and wait reply with timeout
@@ -102,7 +124,21 @@ public class SorobanEndpointTyped
   }
 
   public Single<SorobanItemTyped> sendAndWaitReply(
-      RpcSession rpcSession, SorobanPayloadable request, long waitReplyTimeoutMs) {
+      RpcSession rpcSession, SorobanPayloadable request) {
+    return sendAndWaitReply(rpcSession, request, null);
+  }
+
+  public Single<SorobanItemTyped> sendAndWaitReply(
+      RpcSession rpcSession, SorobanPayloadable request, Long waitReplyTimeoutMs) {
+    // waitingTime <= expirationMs
+    long expirationMs = getRpcMode().getExpirationMs();
+    long waitTimeoutMs;
+    if (waitReplyTimeoutMs == null) {
+      waitTimeoutMs = expirationMs;
+    } else {
+      waitTimeoutMs = Math.min(waitReplyTimeoutMs, expirationMs);
+    }
+
     // send request
     try {
       return rpcSession
@@ -111,7 +147,7 @@ public class SorobanEndpointTyped
           .map(
               sorobanItem ->
                   asyncUtil.blockingGet(
-                      sorobanItem.getEndpointReply().waitNext(rpcSession), waitReplyTimeoutMs));
+                      getEndpointReply(sorobanItem).waitNext(rpcSession), waitTimeoutMs));
     } catch (Exception e) {
       return Single.error(e);
     }
@@ -143,6 +179,7 @@ public class SorobanEndpointTyped
         getApp(),
         pathReply,
         RpcMode.SHORT,
-        new SorobanWrapper[] {new SorobanWrapperMetaEncryptWithSender(sender)});
+        new SorobanWrapper[] {new SorobanWrapperMetaEncryptWithSender(sender)},
+        replyTypesAllowedOrNull);
   }
 }

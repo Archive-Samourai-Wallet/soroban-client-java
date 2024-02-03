@@ -3,12 +3,13 @@ package com.samourai.soroban.client.endpoint.meta;
 import com.samourai.soroban.client.AbstractTest;
 import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaEncryptWithSender;
 import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaSender;
+import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaSign;
 import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaSignWithSender;
 import com.samourai.soroban.client.endpoint.wrapper.SorobanWrapper;
-import com.samourai.soroban.client.endpoint.wrapper.SorobanWrapperString;
 import com.samourai.soroban.client.rpc.RpcMode;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import java.util.function.BiPredicate;
+import org.bitcoinj.core.ECKey;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -30,11 +31,11 @@ public class SorobanEndpointMetaStringTest extends AbstractTest {
         new SorobanEndpointMetaString(
             app, "CLEAR", RpcMode.SHORT, new SorobanWrapper[] {new SorobanWrapperMetaSender()});
 
-    doTestEndpoint2Ways(endpoint, endpoint, payload, responsePayload, equals);
+    doTestEndpointReply(endpoint, endpoint, payload, responsePayload, equals);
   }
 
   @Test
-  public void signed() throws Exception {
+  public void signWithSender() throws Exception {
     String payload = "REQUEST";
     String responsePayload = "RESPONSE";
     BiPredicate<String, SorobanItem> equals = (s, i) -> i.getPayload().equals(s);
@@ -46,7 +47,32 @@ public class SorobanEndpointMetaStringTest extends AbstractTest {
             RpcMode.SHORT,
             new SorobanWrapper[] {new SorobanWrapperMetaSignWithSender()});
 
-    doTestEndpoint2Ways(endpoint, endpoint, payload, responsePayload, equals);
+    doTestEndpointReply(endpoint, endpoint, payload, responsePayload, equals);
+  }
+
+  @Test
+  public void sign() throws Exception {
+    String payload = "REQUEST";
+    BiPredicate<String, SorobanItem> equals = (s, i) -> i.getPayload().equals(s);
+
+    ECKey signingKey = new ECKey();
+    String signingAddress = signingKey.toAddress(params).toString();
+
+    SorobanEndpointMetaString endpointInitiator =
+        new SorobanEndpointMetaString(
+            app,
+            "SIGNED",
+            RpcMode.SHORT,
+            new SorobanWrapper[] {new SorobanWrapperMetaSign(signingKey, params)});
+
+    SorobanEndpointMetaString endpointCounterparty =
+        new SorobanEndpointMetaString(
+            app,
+            "SIGNED",
+            RpcMode.SHORT,
+            new SorobanWrapper[] {new SorobanWrapperMetaSign(signingAddress)});
+
+    doTestEndpoint(endpointInitiator, endpointCounterparty, payload, equals);
   }
 
   @Test
@@ -70,7 +96,7 @@ public class SorobanEndpointMetaStringTest extends AbstractTest {
             RpcMode.SHORT,
             new SorobanWrapper[] {new SorobanWrapperMetaEncryptWithSender(paymentCodeInitiator)});
 
-    doTestEndpoint2Ways(endpointInitiator, endpointCounterparty, payload, responsePayload, equals);
+    doTestEndpointReply(endpointInitiator, endpointCounterparty, payload, responsePayload, equals);
   }
 
   @Test

@@ -48,7 +48,7 @@ public class SorobanEndpointTypedTest extends AbstractTest {
           }
         };
 
-    doTestEndpoint2Ways(endpoint, endpoint, payload, responsePayload, equals);
+    doTestEndpointReply(endpoint, endpoint, payload, responsePayload, equals);
   }
 
   @Test
@@ -72,7 +72,7 @@ public class SorobanEndpointTypedTest extends AbstractTest {
           }
         };
 
-    doTestEndpoint2Ways(endpoint, endpoint, payload, responsePayload, equals);
+    doTestEndpointReply(endpoint, endpoint, payload, responsePayload, equals);
   }
 
   @Test
@@ -103,7 +103,7 @@ public class SorobanEndpointTypedTest extends AbstractTest {
           }
         };
 
-    doTestEndpoint2Ways(endpointInitiator, endpointCounterparty, payload, responsePayload, equals);
+    doTestEndpointReply(endpointInitiator, endpointCounterparty, payload, responsePayload, equals);
   }
 
   @Test
@@ -320,7 +320,8 @@ public class SorobanEndpointTypedTest extends AbstractTest {
     TestPayload payload = new TestPayload("HELLO WORLD");
     Assertions.assertThrows(
         TimeoutException.class,
-        () -> asyncUtil.blockingGet(endpoint.sendAndWaitReply(rpcSessionInitiator, payload, 1000)));
+        () ->
+            asyncUtil.blockingGet(endpoint.sendAndWaitReply(rpcSessionInitiator, payload, 1000L)));
   }
 
   @Test
@@ -353,7 +354,7 @@ public class SorobanEndpointTypedTest extends AbstractTest {
     TestPayload payload = new TestPayload("HELLO WORLD");
     TestResponsePayload response =
         asyncUtil
-            .blockingGet(endpoint.sendAndWaitReply(rpcSessionInitiator, payload, 5000))
+            .blockingGet(endpoint.sendAndWaitReply(rpcSessionInitiator, payload, 5000L))
             .read(TestResponsePayload.class);
     Assertions.assertEquals("HELLO WORLD RESPONSE", response.getResponseMessage());
   }

@@ -10,7 +10,7 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class SorobanList<I extends SorobanItem> extends LinkedList<I> {
+public class SorobanList<I extends SorobanItem> implements List<I> {
   private static final Logger log = LoggerFactory.getLogger(SorobanList.class);
   protected List<I> listPayloads;
 
@@ -57,14 +57,22 @@ public class SorobanList<I extends SorobanItem> extends LinkedList<I> {
     return this;
   }
 
-  public Optional<I> getLastBySender(PaymentCode sender) {
+  public SorobanList<I> filterBySender(PaymentCode... senders) {
+    return filter(SorobanWrapperMetaSender.filterBySender(senders));
+  }
+
+  public Optional<I> getLastNonceBySender(PaymentCode sender) {
     sortByNonce(true);
     return this.listPayloads.stream().filter(i -> sender.equals(i.getMetaSender())).findFirst();
   }
 
-  /*public Optional<? extends SorobanPayloadTyped> getFirst() {
+  public Optional<I> findFirst() {
     return isEmpty() ? Optional.empty() : Optional.of(listPayloads.iterator().next());
-  }*/
+  }
+
+  public Optional<I> findLast() {
+    return isEmpty() ? Optional.empty() : Optional.of(listPayloads.get(listPayloads.size() - 1));
+  }
 
   // LIST
 

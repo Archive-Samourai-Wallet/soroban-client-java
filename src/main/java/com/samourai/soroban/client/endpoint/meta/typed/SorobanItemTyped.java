@@ -1,11 +1,11 @@
 package com.samourai.soroban.client.endpoint.meta.typed;
 
-import com.samourai.soroban.client.dialog.SorobanErrorMessage;
 import com.samourai.soroban.client.endpoint.meta.SorobanItem;
 import com.samourai.soroban.client.endpoint.meta.SorobanMetadata;
 import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaType;
 import com.samourai.soroban.client.exception.SorobanErrorMessageException;
 import com.samourai.soroban.client.exception.UnexpectedSorobanPayloadTypedException;
+import com.samourai.soroban.protocol.SorobanErrorMessage;
 import com.samourai.wallet.util.JSONUtils;
 import io.reactivex.functions.Consumer;
 import java.lang.invoke.MethodHandles;
@@ -68,6 +68,7 @@ public class SorobanItemTyped extends SorobanItem {
     // check for SorobanErrorMessage
     SorobanErrorMessage sorobanErrorMessage = readOn(SorobanErrorMessage.class);
     if (sorobanErrorMessage != null) {
+      log.warn("SorobanError: " + sorobanErrorMessage);
       throw new SorobanErrorMessageException(sorobanErrorMessage);
     }
 

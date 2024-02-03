@@ -68,7 +68,7 @@ public class SorobanAppExample {
 
     // send payload and wait reply
     SorobanItemTyped reply =
-        asyncUtil.blockingGet(endpoint.loopSendUntilReply(rpcSession, request, 2000));
+        asyncUtil.blockingGet(endpoint.loopSendUntilReply(rpcSession, request, 2000L));
 
     // send payload and wait specific reply
     TestResponsePayload replyObject =

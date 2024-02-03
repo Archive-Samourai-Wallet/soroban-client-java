@@ -36,7 +36,7 @@ public abstract class AbstractSorobanEndpoint<I, L extends List<I>, S, M>
     this.path = path;
     this.rpcMode = rpcMode;
     this.wrappers = wrappers;
-    this.autoRemove = true;
+    this.autoRemove = false;
   }
 
   protected abstract Pair<String, M> newEntry(S payload) throws Exception;
@@ -84,19 +84,27 @@ public abstract class AbstractSorobanEndpoint<I, L extends List<I>, S, M>
       SorobanClient sorobanClient, Pair<String, M> entry, Object initialPayload) throws Exception {
     // apply wrappers
     Bip47Encrypter encrypter = sorobanClient.getEncrypter();
-    String clearLog = entry.toString();
+    String clearPayload = entry.getLeft();
     Pair<String, M> entryWithMetadata = Pair.of(entry.getLeft(), entry.getRight());
     entryWithMetadata = applyWrappersOnSend(encrypter, entryWithMetadata, initialPayload);
     String rawEntry = entryToRaw(entryWithMetadata);
 
     // result must include clear payload and full metadata, to use it with getEndpointReply()
-    I result = newEntry(Pair.of(entry.getLeft(), entryWithMetadata.getRight()), rawEntry);
+    Pair<String, M> entryClearPayloadWithMetadata =
+        Pair.of(clearPayload, entryWithMetadata.getRight());
+    I result = newEntry(entryClearPayloadWithMetadata, rawEntry);
 
     // send String
     String dir = getDir();
     if (log.isDebugEnabled()) {
       log.debug(
-          " -> " + RpcClient.shortDirectory(dir) + " " + rawEntry + "\n(was: " + clearLog + ")");
+          "=> ADD "
+              + RpcClient.shortDirectory(dir)
+              + " "
+              + rawEntry
+              + "\n(was: "
+              + toString(entryClearPayloadWithMetadata)
+              + ")");
     }
     return sorobanClient.getRpcClient().directoryAdd(dir, rawEntry, rpcMode).toSingle(() -> result);
   }
@@ -174,7 +182,7 @@ public abstract class AbstractSorobanEndpoint<I, L extends List<I>, S, M>
   protected L readList(Bip47Encrypter encrypter, String[] entries, SorobanClient sorobanClient) {
     List<I> items = readItems(encrypter, entries, sorobanClient);
     if (log.isDebugEnabled()) {
-      log.debug(" <- " + getDir() + ": " + items.size() + " entries");
+      log.debug("<= LIST " + getDir() + ": " + items.size() + " entries");
     }
     return newList(items);
   }
@@ -203,7 +211,7 @@ public abstract class AbstractSorobanEndpoint<I, L extends List<I>, S, M>
       Pair<String, M> readEntry = applyWrappersOnReceive(encrypter, entry);
       I item = newEntry(readEntry, rawEntry);
       if (log.isDebugEnabled()) {
-        log.debug(" <- " + getDir() + ": " + entry);
+        log.debug("<= READ " + getDir() + ": " + toString(entry));
       }
       if (autoRemove) {
         // delete in background
@@ -211,9 +219,13 @@ public abstract class AbstractSorobanEndpoint<I, L extends List<I>, S, M>
       }
       return item;
     } catch (Exception e) {
-      log.warn(" <- " + getDir() + ": " + rawEntry + ": INVALID: " + e.getMessage());
+      log.warn("<= READ " + getDir() + ": " + rawEntry + ": INVALID: " + e.getMessage());
       throw e;
     }
+  }
+
+  protected String toString(Pair<String, M> entry) {
+    return "{payload:" + entry.getLeft() + ", metadata:" + entry.getRight() + "}";
   }
 
   public abstract String computeUniqueId(I entry);
@@ -243,5 +255,10 @@ public abstract class AbstractSorobanEndpoint<I, L extends List<I>, S, M>
   @Override
   public void setAutoRemove(boolean autoRemove) {
     this.autoRemove = autoRemove;
+  }
+
+  @Override
+  public String toString() {
+    return "{" + "path='" + path + '\'' + '}';
   }
 }
