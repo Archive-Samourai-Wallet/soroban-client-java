@@ -1,7 +1,9 @@
 package com.samourai.soroban.client.endpoint.meta;
 
+import com.samourai.soroban.client.endpoint.SorobanEndpoint;
 import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaNonce;
 import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaSender;
+import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 
 public class SorobanItem {
@@ -55,6 +57,10 @@ public class SorobanItem {
 
   public Long getMetaNonce() {
     return SorobanWrapperMetaNonce.getNonce(metadata);
+  }
+
+  public SorobanEndpoint getEndpointReply(Bip47Encrypter encrypter) {
+    return getEndpoint().getEndpointReply(this, encrypter);
   }
 
   @Override

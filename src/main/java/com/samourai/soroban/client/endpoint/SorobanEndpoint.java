@@ -1,36 +1,54 @@
 package com.samourai.soroban.client.endpoint;
 
 import com.samourai.soroban.client.SorobanClient;
+import com.samourai.soroban.client.endpoint.meta.SorobanFilter;
 import com.samourai.soroban.client.rpc.RpcSession;
+import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
 import io.reactivex.Completable;
 import io.reactivex.Single;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 
-public interface SorobanEndpoint<I, L extends List<I>, S> {
-  Completable send(SorobanClient sorobanClient, S payload) throws Exception;
+public interface SorobanEndpoint<I, S, F extends SorobanFilter<I>> {
+  Completable send(SorobanClient sorobanClient, S payload);
 
-  Single<I> sendSingle(SorobanClient sorobanClient, S payload) throws Exception;
+  Single<I> sendSingle(SorobanClient sorobanClient, S payload);
 
-  Completable remove(SorobanClient sorobanClient, I entry) throws Exception;
+  Completable remove(SorobanClient sorobanClient, I entry);
 
-  Completable removeRaw(SorobanClient sorobanClient, String rawEntry) throws Exception;
+  Completable removeRaw(SorobanClient sorobanClient, String rawEntry);
 
-  Single<Optional<I>> getFirst(SorobanClient sorobanClient) throws Exception;
+  Single<Optional<I>> findAny(SorobanClient sorobanClient);
 
-  Single<Optional<I>> getLast(SorobanClient sorobanClient) throws Exception;
+  Single<Optional<I>> findAny(SorobanClient sorobanClient, Consumer<F> filterBuilder);
 
-  Single<I> waitNext(RpcSession rpcSession);
+  // loop until value found, at endpoint.polling frequency
+  I loopWaitAny(RpcSession rpcSession, long timeoutMs) throws Exception;
 
-  Single<L> getList(SorobanClient sorobanClient) throws Exception;
+  I loopWaitAny(RpcSession rpcSession, long timeoutMs, Consumer<F> filterBuilder) throws Exception;
+
+  Single<List<I>> getList(SorobanClient sorobanClient);
+
+  Single<List<I>> getList(SorobanClient sorobanClient, Consumer<F> filterBuilder);
 
   String getPathReply(I entry);
 
-  SorobanEndpoint getEndpointReply(I request);
+  SorobanEndpoint getEndpointReply(I request, Bip47Encrypter encrypter);
 
   SorobanApp getApp();
 
   String computeUniqueId(I entry);
 
   void setAutoRemove(boolean autoRemove);
+
+  int getExpirationMs();
+
+  int getPollingFrequencyMs();
+
+  void setPollingFrequencyMs(int pollingFrequencyMs);
+
+  int getResendFrequencyWhenNoReplyMs();
+
+  void setResendFrequencyWhenNoReplyMs(int resendFrequencyWhenNoReplyMs);
 }

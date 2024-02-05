@@ -4,12 +4,13 @@ import com.samourai.soroban.client.endpoint.meta.SorobanItem;
 import com.samourai.soroban.client.endpoint.meta.SorobanMetadata;
 import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaType;
 import com.samourai.soroban.client.exception.SorobanErrorMessageException;
-import com.samourai.soroban.client.exception.UnexpectedSorobanPayloadTypedException;
-import com.samourai.soroban.protocol.SorobanErrorMessage;
+import com.samourai.soroban.client.exception.UnexpectedSorobanItemTypeException;
+import com.samourai.soroban.protocol.payload.SorobanErrorMessage;
+import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
 import com.samourai.wallet.util.JSONUtils;
 import io.reactivex.functions.Consumer;
 import java.lang.invoke.MethodHandles;
-import java.util.Arrays;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,47 +44,59 @@ public class SorobanItemTyped extends SorobanItem {
     return payloadObject;
   }
 
-  public <P> P readOn(Class<P> type) throws Exception {
+  public <P> Optional<P> readOn(Class<P> type) throws Exception {
     return readOn(type, null);
   }
 
-  public <P> P readOn(Class<P> type, Consumer<P> consumerOrNull) throws Exception {
+  public <P> Optional<P> readOn(Class<P> type, Consumer<P> consumerOrNull) throws Exception {
     if (isTyped(type)) {
       // type matches
       P payloadTyped = (P) read();
       if (consumerOrNull != null) {
         consumerOrNull.accept(payloadTyped);
       }
-      return payloadTyped;
+      return Optional.of(payloadTyped);
     }
-    return null;
+    return Optional.empty();
   }
 
   public <R> R read(Class<R> type) throws Exception {
-    R value = readOn(type);
-    if (value != null) {
-      return value;
+    // read from type when it matches
+    Optional<R> opt = readOn(type);
+    if (opt.isPresent()) {
+      return opt.get();
     }
 
-    // check for SorobanErrorMessage
-    SorobanErrorMessage sorobanErrorMessage = readOn(SorobanErrorMessage.class);
-    if (sorobanErrorMessage != null) {
-      log.warn("SorobanError: " + sorobanErrorMessage);
-      throw new SorobanErrorMessageException(sorobanErrorMessage);
-    }
+    // check for error
+    throwOnSorobanErrorMessage();
 
+    // unexpected type
     log.warn(
         "read("
             + type.getName()
             + ") failed: UnexpectedSorobanPayloadTypedException (actual="
             + getType()
             + ")");
-
-    // unexpected type
-    throw new UnexpectedSorobanPayloadTypedException(this, Arrays.asList(type.getName()));
+    throw new UnexpectedSorobanItemTypeException(this, new Class[] {type});
   }
 
-  public SorobanEndpointTyped getEndpointReply() {
-    return ((SorobanEndpointTyped) getEndpoint()).getEndpointReply(this);
+  public Optional<SorobanErrorMessage> readOnError() throws Exception {
+    Optional<SorobanErrorMessage> optError = readOn(SorobanErrorMessage.class);
+    if (optError.isPresent()) {
+      log.warn("SorobanError: " + optError.get());
+      return Optional.of(optError.get());
+    }
+    return Optional.empty();
+  }
+
+  public void throwOnSorobanErrorMessage() throws Exception {
+    Optional<SorobanErrorMessage> errorMessage = readOnError();
+    if (errorMessage.isPresent()) {
+      throw new SorobanErrorMessageException(errorMessage.get());
+    }
+  }
+
+  public SorobanEndpointTyped getEndpointReply(Bip47Encrypter encrypter) {
+    return (SorobanEndpointTyped) super.getEndpointReply(encrypter);
   }
 }

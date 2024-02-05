@@ -7,7 +7,6 @@ import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.util.Pair;
 import java.util.Arrays;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.function.BinaryOperator;
 import java.util.function.Predicate;
@@ -48,24 +47,24 @@ public class SorobanWrapperMetaSender implements SorobanWrapperMeta {
     return new PaymentCode(sender);
   }
 
-  public static <I extends SorobanItem> List<I> distinctLatestBySender(Stream<I> payloads) {
+  public static <I extends SorobanItem> Stream<I> distinctBySenderWithLastNonce(
+      Stream<I> payloads) {
     BinaryOperator<I> mergeLastByNonce =
         (BinaryOperator<I>) SorobanWrapperMetaNonce.mergeLastByNonce();
-    return new LinkedList<>(
-        payloads
-            .collect(
-                Collectors.toMap(
-                    // distinct by sender
-                    p -> p.getMetaSender().toString(),
-                    p -> p,
-                    // keep last payload with highest nonce
-                    mergeLastByNonce))
-            .values());
+    return payloads
+        .collect(
+            Collectors.toMap(
+                // distinct by sender
+                p -> p.getMetaSender().toString(),
+                p -> p,
+                // keep last payload with highest nonce
+                mergeLastByNonce))
+        .values().stream();
   }
 
-  public static <I extends SorobanItem> Predicate<I> filterBySender(PaymentCode[] senders) {
+  public static <I extends SorobanItem> Predicate<I> filterBySender(PaymentCode... senders) {
     List<String> sendersList =
         Arrays.stream(senders).map(sender -> sender.toString()).collect(Collectors.toList());
-    return item -> sendersList.contains(getSender(item.getMetadata()));
+    return item -> sendersList.contains(getSender(item.getMetadata()).toString());
   }
 }

@@ -2,7 +2,6 @@ package com.samourai.soroban.client.endpoint.meta.typed;
 
 import com.samourai.soroban.client.AbstractTest;
 import com.samourai.soroban.client.SorobanPayloadable;
-import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaEncryptWithSender;
 import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaFilterSender;
 import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaSender;
 import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaSignWithSender;
@@ -11,7 +10,9 @@ import com.samourai.soroban.client.exception.FilterDeclinedSorobanException;
 import com.samourai.soroban.client.rpc.RpcMode;
 import com.samourai.soroban.client.rpc.TestPayload;
 import com.samourai.soroban.client.rpc.TestResponsePayload;
+import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
+import java.util.List;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiPredicate;
 import org.junit.jupiter.api.Assertions;
@@ -79,18 +80,21 @@ public class SorobanEndpointTypedTest extends AbstractTest {
   public void encrypted() throws Exception {
     SorobanEndpointTyped endpointInitiator =
         new SorobanEndpointTyped(
-            app,
-            "ENCRYPTED",
-            RpcMode.SHORT,
-            new SorobanWrapper[] {new SorobanWrapperMetaEncryptWithSender(paymentCodeCounterparty)},
-            new Class[] {TestPayload.class});
+                app,
+                "ENCRYPTED",
+                RpcMode.SHORT,
+                new SorobanWrapper[] {},
+                new Class[] {TestPayload.class})
+            .setEncryptTo(paymentCodeCounterparty);
+
     SorobanEndpointTyped endpointCounterparty =
         new SorobanEndpointTyped(
-            app,
-            "ENCRYPTED",
-            RpcMode.SHORT,
-            new SorobanWrapper[] {new SorobanWrapperMetaEncryptWithSender(paymentCodeInitiator)},
-            new Class[] {TestPayload.class});
+                app,
+                "ENCRYPTED",
+                RpcMode.SHORT,
+                new SorobanWrapper[] {},
+                new Class[] {TestPayload.class})
+            .setDecryptFrom(paymentCodeInitiator);
 
     TestPayload payload = new TestPayload("REQUEST");
     TestPayload responsePayload = new TestPayload("RESPONSE");
@@ -115,18 +119,95 @@ public class SorobanEndpointTypedTest extends AbstractTest {
         rpcClientService.generateRpcWallet().getBip47Account().getPaymentCode();
     SorobanEndpointTyped endpointInitiator =
         new SorobanEndpointTyped(
-            app,
-            "ENCRYPTED",
-            RpcMode.SHORT,
-            new SorobanWrapper[] {new SorobanWrapperMetaEncryptWithSender(paymentCodeTemp)},
-            new Class[] {TestPayload.class});
+                app,
+                "ENCRYPTED",
+                RpcMode.SHORT,
+                new SorobanWrapper[] {},
+                new Class[] {TestPayload.class})
+            .setEncryptTo(paymentCodeTemp);
+
     SorobanEndpointTyped endpointCounterparty =
         new SorobanEndpointTyped(
-            app,
-            "ENCRYPTED",
-            RpcMode.SHORT,
-            new SorobanWrapper[] {new SorobanWrapperMetaEncryptWithSender(paymentCodeInitiator)},
-            new Class[] {TestPayload.class});
+                app,
+                "ENCRYPTED",
+                RpcMode.SHORT,
+                new SorobanWrapper[] {},
+                new Class[] {TestPayload.class})
+            .setDecryptFrom(paymentCodeInitiator);
+
+    doTestEndpointSkippedPayload(endpointInitiator, endpointCounterparty, payload);
+  }
+
+  @Test
+  public void encryptWithSender() throws Exception {
+    // encrypt to partner with sender
+    SorobanEndpointTyped endpointInitiator =
+        new SorobanEndpointTyped(
+                app,
+                "ENCRYPTED",
+                RpcMode.SHORT,
+                new SorobanWrapper[] {},
+                new Class[] {TestPayload.class})
+            .setEncryptToWithSender(paymentCodeCounterparty);
+
+    // counterparty decrypts from sender
+    SorobanEndpointTyped endpointCounterparty =
+        new SorobanEndpointTyped(
+                app,
+                "ENCRYPTED",
+                RpcMode.SHORT,
+                new SorobanWrapper[] {},
+                new Class[] {TestPayload.class})
+            .setDecryptFromSender();
+
+    TestPayload payload = new TestPayload("REQUEST");
+    TestPayload responsePayload = new TestPayload("RESPONSE");
+    BiPredicate<SorobanPayloadable, SorobanItemTyped> equals =
+        (s, i) -> {
+          try {
+            return s.toPayload().equals(i.getPayload());
+          } catch (Exception e) {
+            return false;
+          }
+        };
+
+    doTestEndpointReply(endpointInitiator, endpointCounterparty, payload, responsePayload, equals);
+  }
+
+  @Test
+  public void encryptWithSender_invalid() throws Exception {
+    // encrypt for another paymentCode
+    PaymentCode paymentCodeTemp =
+        rpcClientService.generateRpcWallet().getBip47Account().getPaymentCode();
+    SorobanEndpointTyped endpointInitiator =
+        new SorobanEndpointTyped(
+                app,
+                "ENCRYPTED",
+                RpcMode.SHORT,
+                new SorobanWrapper[] {},
+                new Class[] {TestPayload.class})
+            .setEncryptToWithSender(paymentCodeTemp);
+
+    // counterparty decrypts from sender
+    SorobanEndpointTyped endpointCounterparty =
+        new SorobanEndpointTyped(
+                app,
+                "ENCRYPTED",
+                RpcMode.SHORT,
+                new SorobanWrapper[] {},
+                new Class[] {TestPayload.class})
+            .setDecryptFromSender();
+
+    TestPayload payload = new TestPayload("REQUEST");
+    TestPayload responsePayload = new TestPayload("RESPONSE");
+    BiPredicate<SorobanPayloadable, SorobanItemTyped> equals =
+        (s, i) -> {
+          try {
+            return s.toPayload().equals(i.getPayload());
+          } catch (Exception e) {
+            return false;
+          }
+        };
 
     doTestEndpointSkippedPayload(endpointInitiator, endpointCounterparty, payload);
   }
@@ -160,19 +241,30 @@ public class SorobanEndpointTypedTest extends AbstractTest {
   public void remove_encrypted() throws Exception {
     TestPayload payload1 = new TestPayload("payload1");
     TestPayload payload2 = new TestPayload("payload2");
-    SorobanEndpointTyped endpoint =
+    SorobanEndpointTyped endpointInitiator =
         new SorobanEndpointTyped(
-            app,
-            "ENCRYPTED",
-            RpcMode.SHORT,
-            new SorobanWrapper[] {new SorobanWrapperMetaEncryptWithSender(paymentCodeCounterparty)},
-            new Class[] {TestPayload.class});
+                app,
+                "ENCRYPTED",
+                RpcMode.SHORT,
+                new SorobanWrapper[] {},
+                new Class[] {TestPayload.class})
+            .setEncryptTo(paymentCodeCounterparty);
 
-    doTestEndpointDelete(endpoint, endpoint, payload1, payload2);
+    SorobanEndpointTyped endpointCounterparty =
+        new SorobanEndpointTyped(
+                app,
+                "ENCRYPTED",
+                RpcMode.SHORT,
+                new SorobanWrapper[] {},
+                new Class[] {TestPayload.class})
+            .setDecryptFrom(paymentCodeInitiator);
+
+    doTestEndpointDelete(endpointInitiator, endpointCounterparty, payload1, payload2);
   }
 
   @Test
   public void waitNext() throws Exception {
+    endpoint.setAutoRemove(true);
     TestPayload payload = new TestPayload("HELLO WORLD");
 
     // send request
@@ -182,21 +274,19 @@ public class SorobanEndpointTypedTest extends AbstractTest {
     waitSorobanDelay();
 
     // wait request
-    SorobanItemTyped request =
-        asyncUtil.blockingGet(endpoint.waitNext(rpcSessionCounterparty), 10000);
+    SorobanItemTyped request = endpoint.loopWaitAny(rpcSessionCounterparty, 10000);
     Assertions.assertEquals(payload.getMessage(), request.read(TestPayload.class).getMessage());
-    Assertions.assertEquals(payload.getMessage(), request.readOn(TestPayload.class).getMessage());
+    Assertions.assertEquals(
+        payload.getMessage(), request.readOn(TestPayload.class).get().getMessage());
+    waitSorobanDelay();
 
     // entry should be removed
     Assertions.assertThrows(
-        TimeoutException.class,
-        () -> {
-          asyncUtil.blockingGet(endpoint.waitNext(rpcSessionCounterparty), 1000);
-        });
+        TimeoutException.class, () -> endpoint.loopWaitAny(rpcSessionCounterparty, 1000));
   }
 
   @Test
-  public void waitNext_typed() throws Exception {
+  public void waitAnyObject() throws Exception {
     SorobanEndpointTyped endpointMulti =
         new SorobanEndpointTyped(
             app,
@@ -220,8 +310,7 @@ public class SorobanEndpointTypedTest extends AbstractTest {
 
     // wait request of specific type
     TestPayload request =
-        asyncUtil.blockingGet(
-            endpointMulti.waitNext(rpcSessionCounterparty, TestPayload.class), 10000);
+        endpointMulti.waitAnyObject(rpcSessionCounterparty, TestPayload.class, 10000);
     Assertions.assertEquals(payload.getMessage(), request.getMessage());
   }
 
@@ -236,15 +325,16 @@ public class SorobanEndpointTypedTest extends AbstractTest {
             () -> {
               try {
                 // wait request
-                SorobanItemTyped request =
-                    asyncUtil.blockingGet(endpoint.waitNext(rpcSessionCounterparty), 10000);
+                SorobanItemTyped request = endpoint.loopWaitAny(rpcSessionCounterparty, 10000);
 
                 // send response
+                Bip47Encrypter encrypter =
+                    rpcSessionCounterparty.getRpcWallet().getBip47Encrypter();
                 asyncUtil.blockingAwait(
                     rpcSessionInitiator.withSorobanClient(
                         sorobanClient ->
                             request
-                                .getEndpointReply()
+                                .getEndpointReply(encrypter)
                                 .send(
                                     sorobanClient,
                                     new TestPayload(
@@ -258,10 +348,11 @@ public class SorobanEndpointTypedTest extends AbstractTest {
 
     // send request & wait response
     TestPayload response =
-        asyncUtil.blockingGet(
-            endpoint.loopSendUntilReplyObject(
-                rpcSessionInitiator, payload, 3000, TestPayload.class),
-            5000);
+        endpoint.loopSendUntil(
+            rpcSessionInitiator,
+            payload,
+            10000,
+            request -> endpoint.waitReplyObject(rpcSessionInitiator, request, TestPayload.class));
     Assertions.assertEquals("HELLO WORLD RESPONSE", response.getMessage());
   }
 
@@ -274,15 +365,16 @@ public class SorobanEndpointTypedTest extends AbstractTest {
             () -> {
               try {
                 // wait request
-                SorobanItemTyped request =
-                    asyncUtil.blockingGet(endpoint.waitNext(rpcSessionCounterparty), 10000);
+                SorobanItemTyped request = endpoint.loopWaitAny(rpcSessionCounterparty, 10000);
 
                 // send response
+                Bip47Encrypter encrypter =
+                    rpcSessionCounterparty.getRpcWallet().getBip47Encrypter();
                 asyncUtil.blockingAwait(
                     rpcSessionInitiator.withSorobanClient(
                         sorobanClient ->
                             request
-                                .getEndpointReply()
+                                .getEndpointReply(encrypter)
                                 .send(
                                     sorobanClient,
                                     new TestResponsePayload(
@@ -296,23 +388,28 @@ public class SorobanEndpointTypedTest extends AbstractTest {
 
     // send request & wait response
     TestResponsePayload response =
-        asyncUtil.blockingGet(
-            endpoint.loopSendUntilReplyObject(
-                rpcSessionInitiator, payload, 3000, TestResponsePayload.class),
-            5000);
+        endpoint.loopSendUntil(
+            rpcSessionInitiator,
+            payload,
+            15000,
+            request ->
+                endpoint.waitReplyObject(rpcSessionInitiator, request, TestResponsePayload.class));
     Assertions.assertEquals("HELLO WORLD RESPONSE", response.getResponseMessage());
   }
 
   @Test
-  public void loopSendUntilReply_timeout() throws Exception {
+  public void loopSendUntilReply_externalTimeout() throws Exception {
     TestPayload payload = new TestPayload("HELLO WORLD");
     Assertions.assertThrows(
         TimeoutException.class,
         () ->
-            asyncUtil.blockingGet(
-                endpoint.loopSendUntilReplyObject(
-                    rpcSessionInitiator, payload, 1000, TestPayload.class),
-                2000));
+            endpoint.loopSendUntil(
+                rpcSessionInitiator,
+                payload,
+                2000,
+                request ->
+                    endpoint.waitReplyObject(
+                        rpcSessionInitiator, request, TestPayload.class, 5000)));
   }
 
   @Test
@@ -321,7 +418,12 @@ public class SorobanEndpointTypedTest extends AbstractTest {
     Assertions.assertThrows(
         TimeoutException.class,
         () ->
-            asyncUtil.blockingGet(endpoint.sendAndWaitReply(rpcSessionInitiator, payload, 1000L)));
+            endpoint.loopSendUntil(
+                rpcSessionInitiator,
+                payload,
+                1000,
+                request ->
+                    endpoint.waitReplyObject(rpcSessionInitiator, request, TestPayload.class)));
   }
 
   @Test
@@ -331,15 +433,16 @@ public class SorobanEndpointTypedTest extends AbstractTest {
             () -> {
               try {
                 // wait request
-                SorobanItemTyped request =
-                    asyncUtil.blockingGet(endpoint.waitNext(rpcSessionCounterparty), 10000);
+                SorobanItemTyped request = endpoint.loopWaitAny(rpcSessionCounterparty, 10000);
 
                 // send response
+                Bip47Encrypter encrypter =
+                    rpcSessionCounterparty.getRpcWallet().getBip47Encrypter();
                 asyncUtil.blockingAwait(
                     rpcSessionInitiator.withSorobanClient(
                         sorobanClient ->
                             request
-                                .getEndpointReply()
+                                .getEndpointReply(encrypter)
                                 .send(
                                     sorobanClient,
                                     new TestResponsePayload(
@@ -353,9 +456,108 @@ public class SorobanEndpointTypedTest extends AbstractTest {
 
     TestPayload payload = new TestPayload("HELLO WORLD");
     TestResponsePayload response =
-        asyncUtil
-            .blockingGet(endpoint.sendAndWaitReply(rpcSessionInitiator, payload, 5000L))
-            .read(TestResponsePayload.class);
+        endpoint.loopSendUntil(
+            rpcSessionInitiator,
+            payload,
+            10000,
+            request ->
+                endpoint.waitReplyObject(rpcSessionInitiator, request, TestResponsePayload.class));
+    Assertions.assertEquals("HELLO WORLD RESPONSE", response.getResponseMessage());
+  }
+
+  @Test
+  public void loopSendAndWaitReply_success() throws Exception {
+    // wait request & send response
+    new Thread(
+            () -> {
+              try {
+                // wait request
+                SorobanItemTyped request = endpoint.loopWaitAny(rpcSessionCounterparty, 20000);
+
+                waitSorobanDelay();
+                waitSorobanDelay();
+
+                // send response
+                Bip47Encrypter encrypter =
+                    rpcSessionCounterparty.getRpcWallet().getBip47Encrypter();
+                asyncUtil.blockingAwait(
+                    rpcSessionInitiator.withSorobanClient(
+                        sorobanClient ->
+                            request
+                                .getEndpointReply(encrypter)
+                                .send(
+                                    sorobanClient,
+                                    new TestResponsePayload(
+                                        request.read(TestPayload.class).getMessage()
+                                            + " RESPONSE"))));
+              } catch (Exception e) {
+                Assertions.fail(e);
+              }
+            })
+        .start();
+
+    SorobanEndpointTyped endpointInitiator = new SorobanEndpointTyped(endpoint);
+    endpointInitiator.setPollingFrequencyMs(30000); // TODO
+    endpointInitiator.setResendFrequencyWhenNoReplyMs(30000); // TODO
+    TestPayload payload = new TestPayload("HELLO WORLD");
+    TestResponsePayload response =
+        endpointInitiator.loopSendAndWaitReplyObject(
+            rpcSessionInitiator, payload, TestResponsePayload.class, 60000);
+    Assertions.assertEquals("HELLO WORLD RESPONSE", response.getResponseMessage());
+  }
+
+  @Test
+  public void loopSendAndWaitReply_timeout() throws Exception {
+    // no reply sent
+
+    // should timeout after 10s
+    endpoint.setPollingFrequencyMs(20000); // TODO
+    endpoint.setResendFrequencyWhenNoReplyMs(20000); // TODO
+    TestPayload payload = new TestPayload("HELLO WORLD");
+    Assertions.assertThrows(
+        TimeoutException.class,
+        () -> endpoint.loopSendAndWaitReply(rpcSessionInitiator, payload, 600000));
+  }
+
+  @Test
+  public void waitReplyObject_success() throws Exception {
+    // wait request & send response
+    new Thread(
+            () -> {
+              try {
+                // wait request
+                SorobanItemTyped request = endpoint.loopWaitAny(rpcSessionCounterparty, 10000);
+
+                // send response
+                Bip47Encrypter encrypter =
+                    rpcSessionCounterparty.getRpcWallet().getBip47Encrypter();
+                asyncUtil.blockingAwait(
+                    rpcSessionInitiator.withSorobanClient(
+                        sorobanClient ->
+                            request
+                                .getEndpointReply(encrypter)
+                                .send(
+                                    sorobanClient,
+                                    new TestResponsePayload(
+                                        request.read(TestPayload.class).getMessage()
+                                            + " RESPONSE"))));
+              } catch (Exception e) {
+                Assertions.fail(e);
+              }
+            })
+        .start();
+
+    TestPayload payload = new TestPayload("HELLO WORLD");
+    TestResponsePayload response =
+        asyncUtil.blockingGet(
+            rpcSessionInitiator.withSorobanClient(
+                sorobanClient ->
+                    endpoint
+                        .sendSingle(sorobanClient, payload)
+                        .map(
+                            request ->
+                                endpoint.waitReplyObject(
+                                    rpcSessionInitiator, request, TestResponsePayload.class))));
     Assertions.assertEquals("HELLO WORLD RESPONSE", response.getResponseMessage());
   }
 
@@ -399,7 +601,7 @@ public class SorobanEndpointTypedTest extends AbstractTest {
     waitSorobanDelay();
 
     // get payload: invalid sender ignored
-    SorobanListTyped result =
+    List<SorobanItemTyped> result =
         asyncUtil.blockingGet(
             rpcSessionCounterparty.withSorobanClient(
                 sorobanClient -> endpoint.getList(sorobanClient)));

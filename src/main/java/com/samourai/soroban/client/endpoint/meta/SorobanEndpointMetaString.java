@@ -1,22 +1,21 @@
 package com.samourai.soroban.client.endpoint.meta;
 
 import com.samourai.soroban.client.endpoint.SorobanApp;
-import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaEncryptWithSender;
 import com.samourai.soroban.client.endpoint.wrapper.SorobanWrapper;
 import com.samourai.soroban.client.rpc.RpcMode;
+import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
+import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.util.Pair;
-import java.util.List;
 
 /**
  * This endpoint sends & receives String payloads, with full Soroban features support. Payloads are
  * wrapped with metadatas.
  */
-public class SorobanEndpointMetaString
-    extends AbstractSorobanEndpointMeta<SorobanItem, SorobanList<SorobanItem>, String> {
+public class SorobanEndpointMetaString extends AbstractSorobanEndpointMeta<SorobanItem, String> {
 
   public SorobanEndpointMetaString(
-      SorobanApp app, String path, RpcMode rpcMode, SorobanWrapper[] wrappers) {
-    super(app, path, rpcMode, wrappers);
+      SorobanApp app, String path, RpcMode rpcMode, SorobanWrapper[] wrappersAll) {
+    super(app, path, rpcMode, wrappersAll);
   }
 
   @Override
@@ -30,20 +29,30 @@ public class SorobanEndpointMetaString
   }
 
   @Override
-  protected SorobanList<SorobanItem> newList(List items) {
-    return new SorobanList(items);
+  public SorobanEndpointMetaString newEndpointReply(SorobanItem request, Bip47Encrypter encrypter) {
+    SorobanEndpointMetaString endpoint =
+        new SorobanEndpointMetaString(
+            getApp(), getPathReply(request), RpcMode.SHORT, new SorobanWrapper[] {});
+    return endpoint;
   }
 
   @Override
-  public SorobanEndpointMetaString getEndpointReply(SorobanItem request) {
-    if (request.getMetaSender() == null) {
-      throw new RuntimeException(
-          "getEndpointReply() failed: missing metadata.sender, please enable SorobanWrapperMetaSender");
-    }
-    return new SorobanEndpointMetaString(
-        getApp(),
-        getPathReply(request),
-        RpcMode.SHORT,
-        new SorobanWrapper[] {new SorobanWrapperMetaEncryptWithSender(request.getMetaSender())});
+  public SorobanEndpointMetaString setEncryptTo(PaymentCode encryptTo) {
+    return (SorobanEndpointMetaString) super.setEncryptTo(encryptTo);
+  }
+
+  @Override
+  public SorobanEndpointMetaString setEncryptToWithSender(PaymentCode encryptTo) {
+    return (SorobanEndpointMetaString) super.setEncryptToWithSender(encryptTo);
+  }
+
+  @Override
+  public SorobanEndpointMetaString setDecryptFrom(PaymentCode decryptFrom) {
+    return (SorobanEndpointMetaString) super.setDecryptFrom(decryptFrom);
+  }
+
+  @Override
+  public SorobanEndpointMetaString setDecryptFromSender() {
+    return (SorobanEndpointMetaString) super.setDecryptFromSender();
   }
 }

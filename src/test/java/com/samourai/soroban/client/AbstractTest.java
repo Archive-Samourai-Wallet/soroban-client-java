@@ -18,6 +18,7 @@ import com.samourai.soroban.client.wallet.sender.SorobanWalletInitiator;
 import com.samourai.soroban.utils.LogbackUtils;
 import com.samourai.wallet.api.backend.beans.WalletResponse;
 import com.samourai.wallet.bip47.rpc.BIP47Account;
+import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.bip47.rpc.java.Bip47UtilJava;
 import com.samourai.wallet.bipFormat.BIP_FORMAT;
@@ -33,12 +34,14 @@ import com.samourai.wallet.hd.HD_WalletFactoryGeneric;
 import com.samourai.wallet.send.provider.MockUtxoProvider;
 import com.samourai.wallet.send.provider.SimpleCahootsUtxoProvider;
 import com.samourai.wallet.util.AsyncUtil;
+import com.samourai.wallet.util.MessageSignUtilGeneric;
 import com.samourai.whirlpool.client.wallet.beans.WhirlpoolNetwork;
 import java.security.Provider;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.BiPredicate;
+import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.junit.jupiter.api.Assertions;
@@ -54,6 +57,8 @@ public abstract class AbstractTest {
 
   protected static final int TIMEOUT_MS = 10000;
   protected static final Provider PROVIDER_JAVA = new BouncyCastleProvider();
+  protected static final MessageSignUtilGeneric messageSignUtil =
+      MessageSignUtilGeneric.getInstance();
 
   protected static final WhirlpoolNetwork whirlpoolNetwork = WhirlpoolNetwork.TESTNET;
   protected static final NetworkParameters params = whirlpoolNetwork.getParams();
@@ -116,6 +121,8 @@ public abstract class AbstractTest {
   protected Collection<String> initialSorobanServerTestnetClearUrls;
   protected String appVersion;
   protected SorobanApp app;
+  protected ECKey samouraiSigningKey;
+  protected String samouraiSigningAddress;
 
   private static volatile Exception exception = null;
 
@@ -125,6 +132,12 @@ public abstract class AbstractTest {
   }
 
   public void setUp() throws Exception {
+    if (app != null) {
+      // exit previous sessions
+      rpcSessionInitiator.exit();
+      rpcSessionCounterparty.exit();
+    }
+
     final HD_Wallet bip84WalletSender = computeBip84wallet(SEED_WORDS, SEED_PASSPHRASE_INITIATOR);
     WalletSupplier walletSupplierSender =
         new WalletSupplierImpl(
@@ -179,6 +192,10 @@ public abstract class AbstractTest {
     this.appVersion =
         "" + System.currentTimeMillis(); // change version to avoid conflicts between test runs
     this.app = new SorobanApp(whirlpoolNetwork, "APP_TEST", appVersion);
+
+    samouraiSigningKey = new ECKey();
+    samouraiSigningAddress = samouraiSigningKey.toAddress(params).toString();
+    whirlpoolNetwork._setSigningAddress(samouraiSigningAddress);
   }
 
   protected static void assertNoException() {
@@ -224,8 +241,8 @@ public abstract class AbstractTest {
   }
 
   protected <I, S> void doTestEndpointReply(
-      SorobanEndpoint<I, ? extends List<I>, S> endpointInitiator,
-      SorobanEndpoint<I, ? extends List<I>, S> endpointCounterparty,
+      SorobanEndpoint<I, S, ?> endpointInitiator,
+      SorobanEndpoint<I, S, ?> endpointCounterparty,
       S payload,
       S responsePayload,
       BiPredicate<S, I> equals)
@@ -244,11 +261,13 @@ public abstract class AbstractTest {
     rpcSessionCounterparty.withSorobanClient(
         sorobanClient -> {
           // get payload
-          I result = asyncUtil.blockingGet(endpointCounterparty.getLast(sorobanClient)).get();
+          I result = asyncUtil.blockingGet(endpointCounterparty.findAny(sorobanClient)).get();
           Assertions.assertTrue(equals.test(payload, result));
 
           // send reply
-          SorobanEndpoint<I, ?, S> endpointReply = endpointCounterparty.getEndpointReply(result);
+          Bip47Encrypter encrypter = rpcSessionCounterparty.getRpcWallet().getBip47Encrypter();
+          SorobanEndpoint<I, S, ?> endpointReply =
+              endpointCounterparty.getEndpointReply(result, encrypter);
           asyncUtil.blockingAwait(endpointReply.send(sorobanClient, responsePayload));
           return result;
         });
@@ -259,8 +278,10 @@ public abstract class AbstractTest {
     rpcSessionInitiator.withSorobanClient(
         sorobanClient -> {
           // get reply
-          SorobanEndpoint<I, ?, S> endpointReply = endpointInitiator.getEndpointReply(request);
-          I result = asyncUtil.blockingGet(endpointReply.getLast(sorobanClient)).get();
+          Bip47Encrypter encrypter = rpcSessionInitiator.getRpcWallet().getBip47Encrypter();
+          SorobanEndpoint<I, S, ?> endpointReply =
+              endpointInitiator.getEndpointReply(request, encrypter);
+          I result = asyncUtil.blockingGet(endpointReply.findAny(sorobanClient)).get();
           Assertions.assertTrue(equals.test(responsePayload, result));
           return result;
         });
@@ -278,8 +299,8 @@ public abstract class AbstractTest {
   }
 
   protected <I, S> void doTestEndpoint(
-      SorobanEndpoint<I, ? extends List<I>, S> endpointInitiator,
-      SorobanEndpoint<I, ? extends List<I>, S> endpointCounterparty,
+      SorobanEndpoint<I, S, ?> endpointInitiator,
+      SorobanEndpoint<I, S, ?> endpointCounterparty,
       S payload,
       BiPredicate<S, I> equals)
       throws Exception {
@@ -296,7 +317,7 @@ public abstract class AbstractTest {
     rpcSessionCounterparty.withSorobanClient(
         sorobanClient -> {
           // get payload
-          I result = asyncUtil.blockingGet(endpointCounterparty.getLast(sorobanClient)).get();
+          I result = asyncUtil.blockingGet(endpointCounterparty.findAny(sorobanClient)).get();
           Assertions.assertTrue(equals.test(payload, result));
           return result;
         });
@@ -314,8 +335,8 @@ public abstract class AbstractTest {
   }
 
   protected <I, S> void doTestEndpointSkippedPayload(
-      SorobanEndpoint<I, ? extends List<I>, S> endpointInitiator,
-      SorobanEndpoint<I, ? extends List<I>, S> endpointCounterparty,
+      SorobanEndpoint<I, S, ?> endpointInitiator,
+      SorobanEndpoint<I, S, ?> endpointCounterparty,
       S payload)
       throws Exception {
     // send payload
@@ -329,15 +350,17 @@ public abstract class AbstractTest {
         asyncUtil
             .blockingGet(
                 rpcSessionCounterparty.withSorobanClient(
-                    sorobanClient -> endpointCounterparty.getFirst(sorobanClient)))
+                    sorobanClient -> endpointCounterparty.findAny(sorobanClient)))
             .isPresent());
   }
 
   protected <I, S> void doTestEndpoint2WaysList(
-      SorobanEndpoint<I, ? extends List<I>, S> endpointInitiator,
-      SorobanEndpoint<I, ? extends List<I>, S> endpointCounterparty,
+      SorobanEndpoint<I, S, ?> endpointInitiator,
+      SorobanEndpoint<I, S, ?> endpointCounterparty,
       S[] payloads)
       throws Exception {
+    endpointInitiator.setAutoRemove(true);
+    endpointCounterparty.setAutoRemove(true);
 
     // send payloads
     rpcSessionInitiator.withSorobanClient(
@@ -370,8 +393,8 @@ public abstract class AbstractTest {
   }
 
   protected <I, S> void doTestEndpointDelete(
-      SorobanEndpoint<I, ? extends List<I>, S> endpointInitiator,
-      SorobanEndpoint<I, ? extends List<I>, S> endpointCounterparty,
+      SorobanEndpoint<I, S, ?> endpointInitiator,
+      SorobanEndpoint<I, S, ?> endpointCounterparty,
       S payload1,
       S payload2)
       throws Exception {

@@ -1,35 +1,40 @@
 package com.samourai.soroban.client.endpoint.meta.typed;
 
-import com.samourai.soroban.client.AckResponse;
 import com.samourai.soroban.client.SorobanClient;
 import com.samourai.soroban.client.SorobanPayloadable;
 import com.samourai.soroban.client.endpoint.SorobanApp;
 import com.samourai.soroban.client.endpoint.meta.AbstractSorobanEndpointMeta;
+import com.samourai.soroban.client.endpoint.meta.SorobanItemFilter;
 import com.samourai.soroban.client.endpoint.meta.SorobanMetadata;
 import com.samourai.soroban.client.endpoint.meta.SorobanMetadataImpl;
-import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaEncryptWithSender;
+import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMeta;
 import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaFilterType;
 import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaType;
 import com.samourai.soroban.client.endpoint.wrapper.SorobanWrapper;
+import com.samourai.soroban.client.endpoint.wrapper.SorobanWrapperString;
 import com.samourai.soroban.client.rpc.RpcMode;
 import com.samourai.soroban.client.rpc.RpcSession;
+import com.samourai.soroban.protocol.payload.AckResponse;
+import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
-import com.samourai.wallet.util.AsyncUtil;
+import com.samourai.wallet.util.CallbackWithArg;
 import com.samourai.wallet.util.Pair;
 import io.reactivex.Completable;
 import io.reactivex.Single;
+import java.lang.invoke.MethodHandles;
 import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.function.Supplier;
-import org.apache.commons.lang3.ArrayUtils;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This endpoint sends & receives typed SorobanPayloadables objects, with full Soroban features
  * support. Payloads are wrapped with metadatas.
  */
 public class SorobanEndpointTyped
-    extends AbstractSorobanEndpointMeta<SorobanItemTyped, SorobanListTyped, SorobanPayloadable> {
-  private static final AsyncUtil asyncUtil = AsyncUtil.getInstance();
+    extends AbstractSorobanEndpointMeta<SorobanItemTyped, SorobanPayloadable> {
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private Class[] replyTypesAllowedOrNull;
 
@@ -37,36 +42,64 @@ public class SorobanEndpointTyped
       SorobanApp app,
       String path,
       RpcMode rpcMode,
-      SorobanWrapper[] wrappers,
+      SorobanWrapper[] wrappersAll,
       Class[] typesAllowedOrNull,
       Class[] replyTypesAllowedOrNull) {
-    super(app, path, rpcMode, computeWrappers(wrappers, typesAllowedOrNull));
-    this.replyTypesAllowedOrNull = replyTypesAllowedOrNull;
+    this(
+        app,
+        path,
+        rpcMode,
+        findWrappersString(wrappersAll),
+        findWrappersMeta(wrappersAll, typesAllowedOrNull),
+        replyTypesAllowedOrNull);
   }
 
   public SorobanEndpointTyped(
       SorobanApp app,
       String path,
       RpcMode rpcMode,
-      SorobanWrapper[] wrappers,
+      SorobanWrapper[] wrappersAll,
       Class[] typesAllowedOrNull) {
-    this(app, path, rpcMode, wrappers, typesAllowedOrNull, null);
+    this(app, path, rpcMode, wrappersAll, typesAllowedOrNull, null);
   }
 
   public SorobanEndpointTyped(
-      SorobanApp app, String path, RpcMode rpcMode, SorobanWrapper[] wrappers) {
-    this(app, path, rpcMode, wrappers, null, null);
+      SorobanApp app, String path, RpcMode rpcMode, SorobanWrapper[] wrappersAll) {
+    this(app, path, rpcMode, wrappersAll, null);
   }
 
-  private static SorobanWrapper[] computeWrappers(
+  protected SorobanEndpointTyped(
+      SorobanApp app,
+      String path,
+      RpcMode rpcMode,
+      SorobanWrapperString[] wrappers,
+      List<SorobanWrapperMeta> wrapperMetas,
+      Class[] replyTypesAllowedOrNull) {
+    super(app, path, rpcMode, wrappers, wrapperMetas);
+    this.replyTypesAllowedOrNull = replyTypesAllowedOrNull;
+  }
+
+  public SorobanEndpointTyped(SorobanEndpointTyped copy) {
+    this(
+        copy.getApp(),
+        copy.getPath(),
+        copy.getRpcMode(),
+        copy.getWrappers().toArray(new SorobanWrapperString[] {}),
+        copy.getWrappersMeta(),
+        copy.replyTypesAllowedOrNull);
+  }
+
+  private static List<SorobanWrapperMeta> findWrappersMeta(
       SorobanWrapper[] wrappers, Class[] typesAllowedOrNull) {
-    SorobanWrapper wrapperType;
+    SorobanWrapperMeta wrapperType;
     if (typesAllowedOrNull != null) {
       wrapperType = new SorobanWrapperMetaFilterType(typesAllowedOrNull);
     } else {
       wrapperType = new SorobanWrapperMetaType();
     }
-    return ArrayUtils.add(wrappers, wrapperType);
+    List<SorobanWrapperMeta> wrapperMetas = AbstractSorobanEndpointMeta.findWrappersMeta(wrappers);
+    wrapperMetas.add(wrapperType);
+    return wrapperMetas;
   }
 
   public Single<SorobanItemTyped> sendSingleAck(SorobanClient sorobanClient) throws Exception {
@@ -88,98 +121,297 @@ public class SorobanEndpointTyped
   }
 
   @Override
-  protected SorobanListTyped newList(List<SorobanItemTyped> items) {
-    return new SorobanListTyped(items);
+  public SorobanEndpointTyped newEndpointReply(SorobanItemTyped request, Bip47Encrypter encrypter) {
+    String pathReply = getPathReply(request);
+    SorobanEndpointTyped endpoint =
+        new SorobanEndpointTyped(
+            getApp(), pathReply, RpcMode.SHORT, new SorobanWrapper[] {}, replyTypesAllowedOrNull);
+    endpoint.setEncryptReply(this, request, encrypter);
+    return endpoint;
   }
 
-  public <T> Single<T> waitNext(RpcSession rpcSession, Class<T> type) throws Exception {
-    return super.waitNext(rpcSession).map(item -> item.read(type));
+  private <R> Single<List<R>> doGetListObjects(
+      SorobanClient sorobanClient,
+      Class<?> type,
+      Consumer<SorobanItemFilter<SorobanItemTyped>> filterBuilder,
+      CallbackWithArg<SorobanItemTyped, R> mapResult) {
+    return getList(
+            sorobanClient,
+            filter -> {
+              // filter by type
+              filter.filterByType(type);
+              // apply custom filter
+              if (filterBuilder != null) {
+                filterBuilder.accept(filter);
+              }
+            })
+        .map(
+            list ->
+                // map to objects
+                list.stream()
+                    .map(
+                        i -> {
+                          try {
+                            return mapResult.apply(i);
+                          } catch (Exception e) {
+                            log.error(
+                                "getListObjects(): item ignored due to error on " + toString(), e);
+                            return null;
+                          }
+                        })
+                    .filter(i -> i != null)
+                    .collect(Collectors.toList()));
   }
 
-  public Single<SorobanItemTyped> loopSendUntilReply(
-      RpcSession rpcSession, SorobanPayloadable request) {
-    return loopSendUntilReply(rpcSession, request, null);
+  public <T> Single<List<T>> getListObjects(SorobanClient sorobanClient, Class<T> type) {
+    return getListObjects(sorobanClient, type, null);
   }
 
-  public Single<SorobanItemTyped> loopSendUntilReply(
-      RpcSession rpcSession, SorobanPayloadable request, Long waitReplyTimeoutMs) {
-    Supplier<SorobanPayloadable> getRequest = () -> request;
-    return loopSendUntilReply(rpcSession, getRequest, waitReplyTimeoutMs);
+  public <T> Single<List<T>> getListObjects(
+      SorobanClient sorobanClient,
+      Class<T> type,
+      Consumer<SorobanItemFilter<SorobanItemTyped>> filterBuilder) {
+    return doGetListObjects(sorobanClient, type, filterBuilder, i -> i.read(type));
   }
 
-  protected Single<SorobanItemTyped> loopSendUntilReply(
-      RpcSession rpcSession, Supplier<SorobanPayloadable> getRequest) {
-    return loopSendUntilReply(rpcSession, getRequest, null);
+  public <T> Single<List<Pair<T, SorobanMetadata>>> getListObjectsWithMetadata(
+      SorobanClient sorobanClient, Class<T> type) {
+    return getListObjectsWithMetadata(sorobanClient, type, null);
   }
 
-  protected Single<SorobanItemTyped> loopSendUntilReply(
-      RpcSession rpcSession, Supplier<SorobanPayloadable> getRequest, Long waitReplyTimeoutMs) {
-    Callable<SorobanItemTyped> loop =
-        () -> {
-          // send request and wait reply with timeout
-          SorobanPayloadable request = getRequest.get();
-          return asyncUtil.blockingGet(sendAndWaitReply(rpcSession, request, waitReplyTimeoutMs));
+  public <T> Single<List<Pair<T, SorobanMetadata>>> getListObjectsWithMetadata(
+      SorobanClient sorobanClient,
+      Class<T> type,
+      Consumer<SorobanItemFilter<SorobanItemTyped>> filterBuilder) {
+    return doGetListObjects(
+        sorobanClient, type, filterBuilder, i -> Pair.of(i.read(type), i.getMetadata()));
+  }
+
+  // WAIT FIRST
+
+  public <T> T waitAnyObject(RpcSession rpcSession, Class<T> type, long timeoutMs)
+      throws Exception {
+    return waitAnyObject(rpcSession, type, timeoutMs, null);
+  }
+
+  public <T> T waitAnyObject(
+      RpcSession rpcSession,
+      Class<T> type,
+      long timeoutMs,
+      Consumer<SorobanItemFilter<SorobanItemTyped>> filterBuilderOrNull)
+      throws Exception {
+    return (T) waitAnyObjects(rpcSession, new Class[] {type}, timeoutMs, filterBuilderOrNull);
+  }
+
+  public <T> T waitAnyObjects(RpcSession rpcSession, Class<T>[] types, long timeoutMs)
+      throws Exception {
+    return waitAnyObjects(rpcSession, types, timeoutMs, null);
+  }
+
+  // loop until value found for such types, at endpoint.polling frequency
+  public <T> T waitAnyObjects(
+      RpcSession rpcSession,
+      Class<T>[] types,
+      long timeoutMs,
+      Consumer<SorobanItemFilter<SorobanItemTyped>> filterBuilderOrNull)
+      throws Exception {
+    Consumer<SorobanItemFilter<SorobanItemTyped>> filter =
+        f -> {
+          // extend filter
+          if (filterBuilderOrNull != null) {
+            filterBuilderOrNull.accept(f);
+          }
+          // filter by type
+          f.filterByType(types);
         };
-    return asyncUtil.runAndRetry(loop, waitReplyTimeoutMs);
+    SorobanItemTyped item = loopWaitAny(rpcSession, timeoutMs, filter);
+    return (T) item.read();
   }
 
-  public Single<SorobanItemTyped> sendAndWaitReply(
-      RpcSession rpcSession, SorobanPayloadable request) {
-    return sendAndWaitReply(rpcSession, request, null);
+  // WAIT REPLY
+
+  public <T> T waitReplyObject(RpcSession rpcSession, SorobanItemTyped request, Class<T> type)
+      throws Exception {
+    return waitReplyObject(rpcSession, request, type, null, null);
   }
 
-  public Single<SorobanItemTyped> sendAndWaitReply(
-      RpcSession rpcSession, SorobanPayloadable request, Long waitReplyTimeoutMs) {
-    // waitingTime <= expirationMs
-    long expirationMs = getRpcMode().getExpirationMs();
-    long waitTimeoutMs;
-    if (waitReplyTimeoutMs == null) {
-      waitTimeoutMs = expirationMs;
-    } else {
-      waitTimeoutMs = Math.min(waitReplyTimeoutMs, expirationMs);
-    }
-
-    // send request
-    try {
-      return rpcSession
-          .withSorobanClient(sorobanClient -> sendSingle(sorobanClient, request))
-          // get reply with timeout
-          .map(
-              sorobanItem ->
-                  asyncUtil.blockingGet(
-                      getEndpointReply(sorobanItem).waitNext(rpcSession), waitTimeoutMs));
-    } catch (Exception e) {
-      return Single.error(e);
-    }
+  public <T> T waitReplyObject(
+      RpcSession rpcSession, SorobanItemTyped request, Class<T> type, Integer replyTimeoutMs)
+      throws Exception {
+    return waitReplyObject(rpcSession, request, type, replyTimeoutMs, null);
   }
 
-  public <R> Single<R> loopSendUntilReplyObject(
+  /*public <T> T waitReplyObject(
+      RpcSession rpcSession,
+      SorobanItemTyped request,
+      Class<T> type,
+      Consumer<SorobanItemFilter<SorobanItemTyped>> filterBuilderOrNull)
+      throws Exception {
+    return waitReplyObject(rpcSession, request, type, null, filterBuilderOrNull);
+  }*/
+
+  // wait during replyTimeoutMs (default=endpoint.expirationMs) at endpoint.polling frequency
+  private <T> T waitReplyObject(
+      RpcSession rpcSession,
+      SorobanItemTyped request,
+      Class<T> type,
+      Integer replyTimeoutMs,
+      Consumer<SorobanItemFilter<SorobanItemTyped>> filterBuilderOrNull)
+      throws Exception {
+    Consumer<SorobanItemFilter<SorobanItemTyped>> filter =
+        f -> {
+          // extend filter
+          if (filterBuilderOrNull != null) {
+            filterBuilderOrNull.accept(f);
+          }
+          // filter by type
+          f.filterByType(type);
+        };
+    SorobanItemTyped item = super.loopWaitReply(rpcSession, request, replyTimeoutMs, filter);
+    return item.read(type);
+  }
+
+  public AckResponse waitReplyAck(RpcSession rpcSession, SorobanItemTyped request)
+      throws Exception {
+    return waitReplyAck(rpcSession, request, null);
+  }
+
+  public AckResponse waitReplyAck(
+      RpcSession rpcSession, SorobanItemTyped request, Integer replyTimeoutMs) throws Exception {
+    return waitReplyObject(rpcSession, request, AckResponse.class, replyTimeoutMs, null);
+  }
+
+  // SEND AND WAIT REPLY
+
+  public <T> Single<T> sendAndWaitReplyObject(
+      RpcSession rpcSession, SorobanPayloadable request, Class<T> type) {
+    return sendAndWaitReplyObject(rpcSession, request, type, null, null);
+  }
+
+  public <T> Single<T> sendAndWaitReplyObject(
+      RpcSession rpcSession, SorobanPayloadable request, Class<T> type, Integer replyTimeoutMs) {
+    return sendAndWaitReplyObject(rpcSession, request, type, replyTimeoutMs, null);
+  }
+
+  /*public <T> Single<T> sendAndWaitReplyObject(RpcSession rpcSession, SorobanPayloadable request, Class<T> type, SorobanItemFilter<SorobanItemTyped> filter) {
+    return sendAndWaitReplyObject(rpcSession, request, type, null, filter);
+  }*/
+
+  // send request, then wait during replyTimeoutMs (default=endpoint.expirationMs) at
+  // endpoint.polling frequency
+  private <T> Single<T> sendAndWaitReplyObject(
       RpcSession rpcSession,
       SorobanPayloadable request,
-      long waitReplyTimeoutMs,
-      Class<R> responseType) {
-    Supplier<SorobanPayloadable> getRequest = () -> request;
-    Single<SorobanItemTyped> result =
-        loopSendUntilReply(rpcSession, getRequest, waitReplyTimeoutMs);
-    return result.map(sorobanItem -> sorobanItem.read(responseType));
+      Class<T> type,
+      Integer replyTimeoutMs,
+      Consumer<SorobanItemFilter<SorobanItemTyped>> filter) {
+    // send request
+    return rpcSession
+        .withSorobanClientSingle(sorobanClient -> sendSingle(sorobanClient, request))
+        // wait reply
+        .map(req -> waitReplyObject(rpcSession, req, type, replyTimeoutMs, filter));
   }
 
-  public Completable loopSendUntilReplyAck(
-      RpcSession rpcSession, SorobanPayloadable request, long waitReplyTimeoutMs) {
+  public Completable sendAndWaitReplyAck(RpcSession rpcSession, SorobanPayloadable request) {
+    return sendAndWaitReplyAck(rpcSession, request, null, null);
+  }
+
+  public Completable sendAndWaitReplyAck(
+      RpcSession rpcSession, SorobanPayloadable request, Integer replyTimeoutMs) {
+    return sendAndWaitReplyAck(rpcSession, request, replyTimeoutMs, null);
+  }
+
+  private Completable sendAndWaitReplyAck(
+      RpcSession rpcSession,
+      SorobanPayloadable request,
+      Integer replyTimeoutMs,
+      Consumer<SorobanItemFilter<SorobanItemTyped>> filter) {
     return Completable.fromSingle(
-        loopSendUntilReplyObject(rpcSession, request, waitReplyTimeoutMs, AckResponse.class));
+        sendAndWaitReplyObject(rpcSession, request, AckResponse.class, replyTimeoutMs, filter));
+  }
+
+  // LOOP SEND AND WAIT REPLY
+
+  // loop {send, then wait reply at endpoint.pollingFrequency} at
+  // endpoint.resendFrequencyWhenNoReply
+
+  public <T> T loopSendAndWaitReplyObject(
+      RpcSession rpcSession, SorobanPayloadable request, Class<T> replyType, int timeoutMs)
+      throws Exception {
+    return loopSendAndWaitReplyObject(
+        rpcSession, request, replyType, timeoutMs, null, getResendFrequencyWhenNoReplyMs());
+  }
+
+  public <T> T loopSendAndWaitReplyObject(
+      RpcSession rpcSession,
+      SorobanPayloadable request,
+      Class<T> replyType,
+      int timeoutMs,
+      Consumer<SorobanItemFilter<SorobanItemTyped>> filter)
+      throws Exception {
+    return loopSendAndWaitReplyObject(
+        rpcSession, request, replyType, timeoutMs, filter, getResendFrequencyWhenNoReplyMs());
+  }
+
+  private <T> T loopSendAndWaitReplyObject(
+      RpcSession rpcSession,
+      SorobanPayloadable request,
+      Class<T> replyType,
+      int timeoutMs,
+      Consumer<SorobanItemFilter<SorobanItemTyped>> filter,
+      Integer sendFrequencyMs)
+      throws Exception {
+    // important: cap with timeoutMs to avoid running multiple subloops
+    int sendFrequencyMsCapped = Math.min(timeoutMs, sendFrequencyMs);
+    return loopSendUntil(
+        rpcSession,
+        request,
+        timeoutMs,
+        req ->
+            // wait reply
+            waitReplyObject(rpcSession, req, replyType, sendFrequencyMsCapped, filter));
+  }
+
+  public void loopSendAndWaitReplyAck(
+      RpcSession rpcSession, SorobanPayloadable request, int timeoutMs) throws Exception {
+    loopSendAndWaitReplyAck(rpcSession, request, timeoutMs, getResendFrequencyWhenNoReplyMs());
+  }
+
+  private void loopSendAndWaitReplyAck(
+      RpcSession rpcSession, SorobanPayloadable request, int timeoutMs, Integer sendFrequencyMs)
+      throws Exception {
+    loopSendUntil(
+        rpcSession,
+        request,
+        timeoutMs,
+        req ->
+            // wait reply
+            waitReplyAck(rpcSession, req, sendFrequencyMs));
   }
 
   @Override
-  public SorobanEndpointTyped getEndpointReply(SorobanItemTyped request) {
-    String pathReply = getPathReply(request);
-    // require sender for encryption
-    PaymentCode sender = request.getMetaSender();
-    return new SorobanEndpointTyped(
-        getApp(),
-        pathReply,
-        RpcMode.SHORT,
-        new SorobanWrapper[] {new SorobanWrapperMetaEncryptWithSender(sender)},
-        replyTypesAllowedOrNull);
+  protected String logEntry(Pair<String, SorobanMetadata> entry) {
+    String type = SorobanWrapperMetaType.getType(entry.getRight());
+    return "[" + type + "] " + super.logEntry(entry);
+  }
+
+  @Override
+  public SorobanEndpointTyped setDecryptFromSender() {
+    return (SorobanEndpointTyped) super.setDecryptFromSender();
+  }
+
+  @Override
+  public SorobanEndpointTyped setDecryptFrom(PaymentCode decryptFrom) {
+    return (SorobanEndpointTyped) super.setDecryptFrom(decryptFrom);
+  }
+
+  @Override
+  public SorobanEndpointTyped setEncryptTo(PaymentCode encryptPartner) {
+    return (SorobanEndpointTyped) super.setEncryptTo(encryptPartner);
+  }
+
+  @Override
+  public SorobanEndpointTyped setEncryptToWithSender(PaymentCode encryptTo) {
+    return (SorobanEndpointTyped) super.setEncryptToWithSender(encryptTo);
   }
 }

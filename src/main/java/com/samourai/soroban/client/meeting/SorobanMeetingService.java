@@ -75,7 +75,7 @@ public class SorobanMeetingService {
       RpcSession rpcSession,
       PaymentCode paymentCodePartner,
       SorobanRequestMessage request,
-      final long timeoutMs)
+      final int timeoutMs)
       throws Exception {
     // send request
     String info = "[initiator]";

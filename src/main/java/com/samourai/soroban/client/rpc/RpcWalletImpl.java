@@ -46,6 +46,6 @@ public class RpcWalletImpl implements RpcWallet {
   }
 
   public RpcSession createRpcSession() {
-    return new RpcSession(rpcClientService, cryptoUtil, bip47Util, this);
+    return new RpcSession(rpcClientService, this);
   }
 }

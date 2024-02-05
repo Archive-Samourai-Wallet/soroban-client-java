@@ -43,27 +43,28 @@ public class RpcDialog {
   }
 
   public Single<SorobanMessageWithSender> receiveWithSender() {
-    return rpcSession.directoryValueWait(
-        nextDirectory,
-        (sorobanClient, value) -> {
-          // read paymentCode from sender
-          SorobanMessageWithSender messageWithSender = SorobanMessageWithSender.parse(value);
-          String encryptedPayload = messageWithSender.getPayload();
-          String sender = messageWithSender.getSender();
-          PaymentCode paymentCodePartner = new PaymentCode(sender);
+    return null; // TODO
+    /*return rpcSession.directoryValueWait(
+    nextDirectory,
+    (sorobanClient, value) -> {
+      // read paymentCode from sender
+      SorobanMessageWithSender messageWithSender = SorobanMessageWithSender.parse(value);
+      String encryptedPayload = messageWithSender.getPayload();
+      String sender = messageWithSender.getSender();
+      PaymentCode paymentCodePartner = new PaymentCode(sender);
 
-          // decrypt
-          onEncryptedPayload.accept(value);
-          if (true) throw new RuntimeException("TODO zl !!!");
-          String payload = "TODO zl !!!";
-          // TODO String payload = sorobanClient.decrypt(encryptedPayload, paymentCodePartner);
+      // decrypt
+      onEncryptedPayload.accept(value);
+      if (true) throw new RuntimeException("TODO zl !!!");
+      String payload = "TODO zl !!!";
+      // TODO String payload = sorobanClient.decrypt(encryptedPayload, paymentCodePartner);
 
-          // return clear object
-          return new SorobanMessageWithSender(sender, payload);
-        });
+      // return clear object
+      return new SorobanMessageWithSender(sender, payload);
+    });*/
   }
 
-  public Single<String> receive(final PaymentCode paymentCodePartner, long timeoutMs)
+  public Single<String> receive(final PaymentCode paymentCodePartner, int timeoutMs)
       throws Exception {
     Bip47Partner bip47Partner =
         rpcSession.getRpcWallet().getBip47Partner(paymentCodePartner, false);

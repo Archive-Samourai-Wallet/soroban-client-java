@@ -3,16 +3,17 @@ package examples;
 import com.samourai.soroban.client.endpoint.SorobanApp;
 import com.samourai.soroban.client.endpoint.meta.typed.SorobanEndpointTyped;
 import com.samourai.soroban.client.endpoint.meta.typed.SorobanItemTyped;
-import com.samourai.soroban.client.endpoint.meta.typed.SorobanListTyped;
 import com.samourai.soroban.client.endpoint.meta.wrapper.*;
 import com.samourai.soroban.client.endpoint.wrapper.SorobanWrapper;
 import com.samourai.soroban.client.rpc.*;
 import com.samourai.wallet.bip47.rpc.BIP47Account;
+import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.util.AsyncUtil;
 import com.samourai.whirlpool.client.wallet.beans.WhirlpoolNetwork;
 import java.lang.invoke.MethodHandles;
 import java.util.List;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,7 +35,8 @@ public class SorobanAppExample {
             // optional: enable metadata "sender" for enabling encrypted request replies
             new SorobanWrapperMetaSender(),
             // optional: encrypt payload for already-known receiver
-            new SorobanWrapperMetaEncryptWithSender(new PaymentCode("paymentCodeReceiver")),
+            //// TODO new SorobanWrapperMetaEncryptWithSender(new
+            // PaymentCode("paymentCodeReceiver")),
             // optional: restrict users
             new SorobanWrapperMetaFilterSender(new PaymentCode[] {new PaymentCode("foo")}),
             // optional: sign payload (to authenticate unencrypted messages)
@@ -66,51 +68,70 @@ public class SorobanAppExample {
           return endpoint.send(sorobanClient, request);
         });
 
-    // send payload and wait reply
+    // send payload and wait reply for 2sec
     SorobanItemTyped reply =
-        asyncUtil.blockingGet(endpoint.loopSendUntilReply(rpcSession, request, 2000L));
+        endpoint.loopSendUntil(
+            rpcSession, request, 2000, query -> endpoint.loopWaitReply(rpcSession, query));
 
-    // send payload and wait specific reply
+    // send payload and wait reply as object
     TestResponsePayload replyObject =
-        asyncUtil.blockingGet(
-            endpoint.loopSendUntilReplyObject(
-                rpcSession, request, 2000, TestResponsePayload.class));
+        endpoint.loopSendUntil(
+            rpcSession,
+            request,
+            2000,
+            query -> endpoint.waitReplyObject(rpcSession, query, TestResponsePayload.class));
 
     // send payload and wait ACK
-    endpoint.loopSendUntilReplyAck(rpcSession, request, 2000);
+    endpoint.loopSendUntil(
+        rpcSession, request, 2000, query -> endpoint.waitReplyAck(rpcSession, query));
 
     // receive payload
     TestPayload payloadObject =
         rpcSession.withSorobanClient(
             sorobanClient -> {
-              // get first/last payload
-              SorobanItemTyped firstPayload =
-                  asyncUtil.blockingGet(endpoint.getFirst(sorobanClient), 5000).get();
-              SorobanItemTyped lastPayload =
-                  asyncUtil.blockingGet(endpoint.getLast(sorobanClient), 5000).get();
-              log.info("sender: " + lastPayload.getMetaSender());
-              log.info("nonce: " + lastPayload.getMetaNonce());
-              // handle multiple payload types
-              TestPayload testPayload =
-                  lastPayload.readOn(TestPayload.class, p -> log.info("This is a TestPayload!"));
-              TestResponsePayload testResponsePayload =
-                  lastPayload.readOn(
+              // get any payload
+              SorobanItemTyped payload =
+                  asyncUtil.blockingGet(endpoint.findAny(sorobanClient), 5000).get();
+              log.info("sender: " + payload.getMetaSender());
+              log.info("nonce: " + payload.getMetaNonce());
+
+              // do stuff depending on payload type
+              Optional<TestPayload> testPayload =
+                  payload.readOn(TestPayload.class, p -> log.info("This is a TestPayload!"));
+              Optional<TestResponsePayload> testResponsePayload =
+                  payload.readOn(
                       TestResponsePayload.class, p -> log.info("This is a TestResponsePayload!"));
-              // handle specific payload type: throws UnexpectedSorobanPayloadTypedException when
-              // not such type
-              TestPayload object = lastPayload.read(TestPayload.class);
+
+              // force to given type
+              // throws UnexpectedSorobanPayloadTypedException when not such type
+              TestPayload object = payload.read(TestPayload.class);
 
               // get all payloads
-              SorobanListTyped listPayloads =
-                  asyncUtil
-                      .blockingGet(endpoint.getList(sorobanClient))
-                      // sort by time
-                      .sortByNonce(false)
-                      // filter by type
-                      .filterByType(TestPayload.class)
-                      // keep only the latest by sender
-                      .distinctLatestBySender();
-              List<TestPayload> testPayloads = listPayloads.getListObjects(TestPayload.class);
+              List<SorobanItemTyped> listPayloads =
+                  asyncUtil.blockingGet(
+                      endpoint.getList(
+                          sorobanClient,
+                          f ->
+                              // sort by time
+                              f.sortByNonce(false)
+                                  // filter by type
+                                  .filterByType(TestPayload.class)
+                                  // keep only the latest by sender
+                                  .distinctBySenderWithLastNonce()));
+
+              // get all payloads as objects
+              List<TestPayload> listObjects =
+                  asyncUtil.blockingGet(
+                      endpoint.getListObjects(
+                          sorobanClient,
+                          TestPayload.class,
+                          f ->
+                              // sort by time
+                              f.sortByNonce(false)
+                                  // filter by type
+                                  .filterByType(TestPayload.class)
+                                  // keep only the latest by sender
+                                  .distinctBySenderWithLastNonce()));
               return null;
             });
 
@@ -118,13 +139,14 @@ public class SorobanAppExample {
         sorobanClient -> {
           // get next payload
           SorobanItemTyped payload =
-              asyncUtil.blockingGet(endpoint.getFirst(sorobanClient), 5000).get();
+              asyncUtil.blockingGet(endpoint.findAny(sorobanClient), 5000).get();
 
           // send reply
-          payload.getEndpointReply().send(sorobanClient, new TestResponsePayload("OK"));
+          Bip47Encrypter encrypter = rpcSession.getRpcWallet().getBip47Encrypter();
+          payload.getEndpointReply(encrypter).send(sorobanClient, new TestResponsePayload("OK"));
 
           // send ACK
-          payload.getEndpointReply().sendAck(sorobanClient);
+          payload.getEndpointReply(encrypter).sendAck(sorobanClient);
 
           return payload.read(TestPayload.class);
         });

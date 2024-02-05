@@ -1,6 +1,6 @@
 package com.samourai.soroban.client.exception;
 
-import com.samourai.soroban.protocol.SorobanErrorMessage;
+import com.samourai.soroban.protocol.payload.SorobanErrorMessage;
 
 public class SorobanErrorMessageException extends SorobanPayloadException {
   public SorobanErrorMessageException(SorobanErrorMessage sorobanErrorMessage) {

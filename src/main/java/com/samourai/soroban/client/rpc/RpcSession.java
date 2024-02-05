@@ -5,20 +5,17 @@ import com.samourai.soroban.client.SorobanClient;
 import com.samourai.soroban.client.SorobanServerDex;
 import com.samourai.soroban.client.dialog.RpcDialog;
 import com.samourai.wallet.api.backend.beans.HttpException;
-import com.samourai.wallet.bip47.BIP47UtilGeneric;
 import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
-import com.samourai.wallet.crypto.CryptoUtil;
 import com.samourai.wallet.util.AsyncUtil;
 import com.samourai.wallet.util.CallbackWithArg;
 import com.samourai.wallet.util.RandomUtil;
 import com.samourai.wallet.util.urlStatus.UpStatusPool;
 import io.reactivex.Single;
-import io.reactivex.functions.BiFunction;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Callable;
-import java.util.concurrent.TimeoutException;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.slf4j.Logger;
@@ -26,26 +23,21 @@ import org.slf4j.LoggerFactory;
 
 public class RpcSession {
   private static final Logger log = LoggerFactory.getLogger(RpcSession.class.getName());
-  private static final int DOWN_EXPIRATION_DELAY_MS = 300000; // 5min
-  protected static final int WAIT_RETRY_MS = 2000; // 2s
+  private static final int DOWN_EXPIRATION_DELAY_MS = 600000; // 10min
   private static final UpStatusPool upStatusPool = new UpStatusPool(DOWN_EXPIRATION_DELAY_MS);
   private static final AsyncUtil asyncUtil = AsyncUtil.getInstance();
 
   private RpcClientService rpcClientService;
-  private CryptoUtil cryptoUtil;
-  private BIP47UtilGeneric bip47Util;
   private ECKey authenticationKey;
   private RpcWallet rpcWallet;
   private boolean done;
 
-  public RpcSession(
-      RpcClientService rpcClientService,
-      CryptoUtil cryptoUtil,
-      BIP47UtilGeneric bip47Util,
-      RpcWallet rpcWallet) {
+  public RpcSession(RpcSession rpcSession) {
+    this(rpcSession.rpcClientService, rpcSession.rpcWallet);
+  }
+
+  public RpcSession(RpcClientService rpcClientService, RpcWallet rpcWallet) {
     this.rpcClientService = rpcClientService;
-    this.cryptoUtil = cryptoUtil;
-    this.bip47Util = bip47Util;
     this.rpcWallet = rpcWallet;
     this.done = false;
   }
@@ -54,14 +46,19 @@ public class RpcSession {
     this.authenticationKey = authenticationKey;
   }
 
-  protected Collection<String> getServerUrlsUp() {
-    NetworkParameters params = rpcClientService.getParams();
+  public Collection<String> getServerUrlsUp() {
     boolean onion = rpcClientService.isOnion();
+    return getServerUrlsUp(onion);
+  }
+
+  public Collection<String> getServerUrlsUp(boolean onion) {
+    NetworkParameters params = rpcClientService.getParams();
     Collection<String> serverUrls = SorobanServerDex.get(params).getServerUrls(onion);
     Collection<String> serverUrlsUp = upStatusPool.filterNotDown(serverUrls);
     if (serverUrlsUp.isEmpty()) {
       // retry when all down
-      log.warn("All SorobanServerDex appears to be down, retrying...");
+      log.warn("All SorobanServerDex appears to be down, retrying all...");
+      upStatusPool.expireAll();
       return serverUrls;
     }
     return serverUrlsUp;
@@ -109,12 +106,11 @@ public class RpcSession {
     }
     try {
       R result = callable.apply(serverUrlForced + RpcClient.ENDPOINT_RPC);
-      upStatusPool.setStatusUp(serverUrlForced);
       return result;
-    } catch (TimeoutException e) {
-      upStatusPool.setStatusDown(serverUrlForced, e);
-      throw e;
-    } catch (Throwable e) {
+    } /*catch (TimeoutException e) {
+        upStatusPool.setStatusDown(serverUrlForced, e.getMessage());
+        throw e;
+      } */ catch (Throwable e) {
       throw e;
     }
   }
@@ -152,6 +148,7 @@ public class RpcSession {
     try {
       return withSorobanClient(callable, serverUrlForced);
     } catch (Exception e) {
+      log.error("withSorobanClientSingle() failed", e);
       return (R) Single.error(e);
     }
   }
@@ -164,6 +161,7 @@ public class RpcSession {
     try {
       return withSorobanClient(callable, null);
     } catch (Exception e) {
+      log.error("withSorobanClientSingle() failed", e);
       return (R) Single.error(e);
     }
   }
@@ -180,43 +178,34 @@ public class RpcSession {
     return upStatusPool;
   }
 
-  public <R> Single<R> directoryValueWait(
-      final String directory, BiFunction<SorobanClient, String, R> mapValue) {
+  public <R> R loopUntilSuccess(
+      CallbackWithArg<SorobanClient, Optional<R>> fetchValue,
+      int pollingFrequencyMs,
+      long timeoutMs)
+      throws Exception {
+
+    /*if (log.isDebugEnabled()) {
+      log.debug("START_LOOP_RPC_SESSION at " + pollingFrequencyMs + " frequency");
+    }*/
 
     // fetch value
-    Callable<R> loop =
+    Callable<Optional<R>> loop =
         () -> {
-          try {
-            return asyncUtil.blockingGet(
-                withSorobanClient(
-                    sorobanClient ->
-                        sorobanClient
-                            .getRpcClient()
-                            .directoryValue(directory)
-                            .map(value -> mapValue.apply(sorobanClient, value))));
-          } catch (NoValueRpcException e) {
-            throw new TimeoutException("NoValueRpcException"); // continue to next loop
-          }
+          /*if (log.isDebugEnabled()) {
+            log.debug("CYCLE_LOOP_RPC_SESSION at " + pollingFrequencyMs + " frequency");
+          }*/
+          return withSorobanClient(sorobanClient -> fetchValue.apply(sorobanClient));
         };
 
-    // run loop every 1s (until value found)
-    return asyncUtil.runAndRetry(loop, WAIT_RETRY_MS, () -> done);
-  }
-
-  public Single<String> directoryValueWait(final String directory) {
-    return directoryValueWait(directory, (sorobanClient, value) -> value);
-  }
-
-  public Single<String> directoryValueWaitAndRemove(final String directory) {
-    return directoryValueWait(
-        directory,
-        (sorobanClient, value) -> {
-          sorobanClient.getRpcClient().directoryRemove(directory, value).subscribe();
-          return value;
-        });
+    // run loop until value found
+    return asyncUtil.loopUntilSuccess(loop, pollingFrequencyMs, timeoutMs, () -> done);
   }
 
   public void exit() {
     done = true;
+  }
+
+  public boolean isDone() {
+    return done;
   }
 }

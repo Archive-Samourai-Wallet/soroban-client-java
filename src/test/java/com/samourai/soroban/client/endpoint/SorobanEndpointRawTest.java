@@ -1,7 +1,6 @@
 package com.samourai.soroban.client.endpoint;
 
 import com.samourai.soroban.client.AbstractTest;
-import com.samourai.soroban.client.endpoint.wrapper.SorobanWrapperEncrypt;
 import com.samourai.soroban.client.endpoint.wrapper.SorobanWrapperString;
 import com.samourai.soroban.client.rpc.RpcMode;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
@@ -36,17 +35,11 @@ public class SorobanEndpointRawTest extends AbstractTest {
     BiPredicate<String, String> equals = (s, i) -> i.equals(s);
 
     SorobanEndpointRaw endpointInitiator =
-        new SorobanEndpointRaw(
-            app,
-            "ENCRYPTED",
-            RpcMode.SHORT,
-            new SorobanWrapperString[] {new SorobanWrapperEncrypt(paymentCodeCounterparty)});
+        new SorobanEndpointRaw(app, "ENCRYPTED", RpcMode.SHORT, new SorobanWrapperString[] {})
+            .setEncryptTo(paymentCodeCounterparty);
     SorobanEndpointRaw endpointCounterparty =
-        new SorobanEndpointRaw(
-            app,
-            "ENCRYPTED",
-            RpcMode.SHORT,
-            new SorobanWrapperString[] {new SorobanWrapperEncrypt(paymentCodeInitiator)});
+        new SorobanEndpointRaw(app, "ENCRYPTED", RpcMode.SHORT, new SorobanWrapperString[] {})
+            .setDecryptFrom(paymentCodeInitiator);
 
     doTestEndpointReply(endpointInitiator, endpointCounterparty, payload, responsePayload, equals);
   }
@@ -59,17 +52,11 @@ public class SorobanEndpointRawTest extends AbstractTest {
     PaymentCode paymentCodeTemp =
         rpcClientService.generateRpcWallet().getBip47Account().getPaymentCode();
     SorobanEndpointRaw endpointInitiator =
-        new SorobanEndpointRaw(
-            app,
-            "ENCRYPTED",
-            RpcMode.SHORT,
-            new SorobanWrapperString[] {new SorobanWrapperEncrypt(paymentCodeTemp)});
+        new SorobanEndpointRaw(app, "ENCRYPTED", RpcMode.SHORT, new SorobanWrapperString[] {})
+            .setEncryptTo(paymentCodeTemp);
     SorobanEndpointRaw endpointCounterparty =
-        new SorobanEndpointRaw(
-            app,
-            "ENCRYPTED",
-            RpcMode.SHORT,
-            new SorobanWrapperString[] {new SorobanWrapperEncrypt(paymentCodeInitiator)});
+        new SorobanEndpointRaw(app, "ENCRYPTED", RpcMode.SHORT, new SorobanWrapperString[] {})
+            .setDecryptFrom(paymentCodeInitiator);
 
     doTestEndpointSkippedPayload(endpointInitiator, endpointCounterparty, payload);
   }

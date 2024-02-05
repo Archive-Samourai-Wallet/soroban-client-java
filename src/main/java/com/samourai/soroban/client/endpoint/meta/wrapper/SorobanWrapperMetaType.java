@@ -31,7 +31,7 @@ public class SorobanWrapperMetaType implements SorobanWrapperMeta {
     // require type
     String type = getType(entry.getRight());
     if (StringUtils.isEmpty(type)) {
-      throw new SorobanException("Missing metadata.type: " + entry.getRight());
+      throw new SorobanException("Missing metadata.type");
     }
     return entry;
   }

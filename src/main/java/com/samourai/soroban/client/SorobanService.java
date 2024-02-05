@@ -41,7 +41,7 @@ public class SorobanService {
       final CahootsContext cahootsContext,
       final SorobanMessageService messageService,
       final PaymentCode paymentCodeCounterParty,
-      final long timeoutMs,
+      final int timeoutMs,
       final SorobanMessage message,
       Consumer<OnlineSorobanInteraction> onInteraction)
       throws Exception {
@@ -87,7 +87,7 @@ public class SorobanService {
       final CahootsContext cahootsContext,
       final SorobanMessageService messageService,
       final PaymentCode paymentCodeInitiator,
-      final long timeoutMs)
+      final int timeoutMs)
       throws Exception {
     final BehaviorSubject onMessage = BehaviorSubject.create();
     CahootsWallet cahootsWallet = cahootsContext.getCahootsWallet();
@@ -168,7 +168,7 @@ public class SorobanService {
       SorobanMessageService messageService,
       RpcDialog dialog,
       PaymentCode paymentCodePartner,
-      long timeoutMs,
+      int timeoutMs,
       SorobanMessage message,
       String info,
       Subject<SorobanMessage> onMessage,
@@ -258,7 +258,7 @@ public class SorobanService {
       final SorobanMessageService messageService,
       RpcDialog dialog,
       PaymentCode paymentCodePartner,
-      long timeoutMs)
+      int timeoutMs)
       throws Exception {
     return dialog
         .receive(paymentCodePartner, timeoutMs)

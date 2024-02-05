@@ -1,7 +1,7 @@
 package com.samourai.soroban.client.endpoint.meta;
 
 import com.samourai.soroban.client.AbstractTest;
-import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaEncryptWithSender;
+import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaAuthWithSamouraiSender;
 import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaSender;
 import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaSign;
 import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaSignWithSender;
@@ -76,25 +76,73 @@ public class SorobanEndpointMetaStringTest extends AbstractTest {
   }
 
   @Test
+  public void authWithSamouraiSender() throws Exception {
+    String payload = "REQUEST";
+    String responsePayload = "RESPONSE";
+    BiPredicate<String, SorobanItem> equals = (s, i) -> i.getPayload().equals(s);
+
+    String auth = messageSignUtil.signMessage(samouraiSigningKey, paymentCodeInitiator.toString());
+    SorobanEndpointMetaString endpointCoordinator =
+        new SorobanEndpointMetaString(
+            app,
+            "SIGNED",
+            RpcMode.SHORT,
+            new SorobanWrapper[] {
+              new SorobanWrapperMetaSender(),
+              new SorobanWrapperMetaAuthWithSamouraiSender(whirlpoolNetwork, auth)
+            });
+
+    SorobanEndpointMetaString endpointClient =
+        new SorobanEndpointMetaString(
+            app,
+            "SIGNED",
+            RpcMode.SHORT,
+            new SorobanWrapper[] {
+              new SorobanWrapperMetaSender(),
+              new SorobanWrapperMetaAuthWithSamouraiSender(whirlpoolNetwork)
+            });
+
+    doTestEndpointReply(endpointCoordinator, endpointClient, payload, responsePayload, equals);
+  }
+
+  @Test
+  public void authWithSamouraiSender_invalid() throws Exception {
+    String payload = "REQUEST";
+
+    // invalid auth
+    String auth = messageSignUtil.signMessage(samouraiSigningKey, paymentCodeInitiator + "INVALID");
+    SorobanEndpointMetaString endpointCoordinator =
+        new SorobanEndpointMetaString(
+            app,
+            "SIGNED",
+            RpcMode.SHORT,
+            new SorobanWrapper[] {
+              new SorobanWrapperMetaAuthWithSamouraiSender(whirlpoolNetwork, auth)
+            });
+
+    SorobanEndpointMetaString endpointClient =
+        new SorobanEndpointMetaString(
+            app,
+            "SIGNED",
+            RpcMode.SHORT,
+            new SorobanWrapper[] {new SorobanWrapperMetaAuthWithSamouraiSender(whirlpoolNetwork)});
+
+    doTestEndpointSkippedPayload(endpointCoordinator, endpointClient, payload);
+  }
+
+  @Test
   public void encrypted() throws Exception {
     String payload = "REQUEST";
     String responsePayload = "RESPONSE";
     BiPredicate<String, SorobanItem> equals = (s, i) -> i.getPayload().equals(s);
 
     SorobanEndpointMetaString endpointInitiator =
-        new SorobanEndpointMetaString(
-            app,
-            "ENCRYPTED",
-            RpcMode.SHORT,
-            new SorobanWrapper[] {
-              new SorobanWrapperMetaEncryptWithSender(paymentCodeCounterparty)
-            });
+        new SorobanEndpointMetaString(app, "ENCRYPTED", RpcMode.SHORT, new SorobanWrapper[] {})
+            .setEncryptTo(paymentCodeCounterparty);
+
     SorobanEndpointMetaString endpointCounterparty =
-        new SorobanEndpointMetaString(
-            app,
-            "ENCRYPTED",
-            RpcMode.SHORT,
-            new SorobanWrapper[] {new SorobanWrapperMetaEncryptWithSender(paymentCodeInitiator)});
+        new SorobanEndpointMetaString(app, "ENCRYPTED", RpcMode.SHORT, new SorobanWrapper[] {})
+            .setDecryptFrom(paymentCodeInitiator);
 
     doTestEndpointReply(endpointInitiator, endpointCounterparty, payload, responsePayload, equals);
   }
@@ -107,19 +155,33 @@ public class SorobanEndpointMetaStringTest extends AbstractTest {
     PaymentCode paymentCodeTemp =
         rpcClientService.generateRpcWallet().getBip47Account().getPaymentCode();
     SorobanEndpointMetaString endpointInitiator =
-        new SorobanEndpointMetaString(
-            app,
-            "ENCRYPTED",
-            RpcMode.SHORT,
-            new SorobanWrapper[] {new SorobanWrapperMetaEncryptWithSender(paymentCodeTemp)});
+        new SorobanEndpointMetaString(app, "ENCRYPTED", RpcMode.SHORT, new SorobanWrapper[] {})
+            .setEncryptTo(paymentCodeTemp);
+
     SorobanEndpointMetaString endpointCounterparty =
-        new SorobanEndpointMetaString(
-            app,
-            "ENCRYPTED",
-            RpcMode.SHORT,
-            new SorobanWrapper[] {new SorobanWrapperMetaEncryptWithSender(paymentCodeInitiator)});
+        new SorobanEndpointMetaString(app, "ENCRYPTED", RpcMode.SHORT, new SorobanWrapper[] {})
+            .setDecryptFrom(paymentCodeInitiator);
 
     doTestEndpointSkippedPayload(endpointInitiator, endpointCounterparty, payload);
+  }
+
+  @Test
+  public void encryptWithSender() throws Exception {
+    String payload = "REQUEST";
+    String responsePayload = "RESPONSE";
+    BiPredicate<String, SorobanItem> equals = (s, i) -> i.getPayload().equals(s);
+
+    // encrypt to partner with sender
+    SorobanEndpointMetaString endpointInitiator =
+        new SorobanEndpointMetaString(app, "ENCRYPTED", RpcMode.SHORT, new SorobanWrapper[] {})
+            .setEncryptToWithSender(paymentCodeCounterparty);
+
+    // counterparty decrypts from sender
+    SorobanEndpointMetaString endpointCounterparty =
+        new SorobanEndpointMetaString(app, "ENCRYPTED", RpcMode.SHORT, new SorobanWrapper[] {})
+            .setDecryptFromSender();
+
+    doTestEndpointReply(endpointInitiator, endpointCounterparty, payload, responsePayload, equals);
   }
 
   @Test
@@ -151,19 +213,12 @@ public class SorobanEndpointMetaStringTest extends AbstractTest {
     String payload2 = "payloadInitiator2";
 
     SorobanEndpointMetaString endpointInitiator =
-        new SorobanEndpointMetaString(
-            app,
-            "ENCRYPTED",
-            RpcMode.SHORT,
-            new SorobanWrapper[] {
-              new SorobanWrapperMetaEncryptWithSender(paymentCodeCounterparty)
-            });
+        new SorobanEndpointMetaString(app, "ENCRYPTED", RpcMode.SHORT, new SorobanWrapper[] {})
+            .setEncryptTo(paymentCodeCounterparty);
+
     SorobanEndpointMetaString endpointCounterparty =
-        new SorobanEndpointMetaString(
-            app,
-            "ENCRYPTED",
-            RpcMode.SHORT,
-            new SorobanWrapper[] {new SorobanWrapperMetaEncryptWithSender(paymentCodeInitiator)});
+        new SorobanEndpointMetaString(app, "ENCRYPTED", RpcMode.SHORT, new SorobanWrapper[] {})
+            .setDecryptFrom(paymentCodeInitiator);
 
     doTestEndpointDelete(endpointInitiator, endpointCounterparty, payload1, payload2);
   }

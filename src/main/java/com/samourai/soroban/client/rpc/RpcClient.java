@@ -55,10 +55,9 @@ public class RpcClient {
     this.started = false;
   }
 
-  private Single<Map<String, Object>> call(String method, Map<String, Object> params)
-      throws IOException {
+  private Single<Map<String, Object>> call(String method, Map<String, Object> params) {
     if (!started) {
-      throw new IOException("RpcClient stopped");
+      return Single.error(new IOException("RpcClient stopped"));
     }
 
     Map<String, String> headers = new HashMap<>();
@@ -97,7 +96,7 @@ public class RpcClient {
     return result;
   }
 
-  public Single<String[]> directoryValues(String name) throws IOException {
+  public Single<String[]> directoryValues(String name) {
     if (log.isTraceEnabled()) {
       log.trace("=> list " + shortDirectory(name));
     }
@@ -113,8 +112,7 @@ public class RpcClient {
               String[] dest = new String[src.size()];
               System.arraycopy(src.toArray(), 0, dest, 0, src.size());
               if (log.isDebugEnabled()) {
-                log.debug(
-                    "<= list " + shortDirectory(name) + ": " + src.size() + " entries, url=" + url);
+                log.debug("<= list(" + src.size() + ") " + shortDirectory(name) + ", url=" + url);
               }
               return dest;
             });
@@ -135,7 +133,7 @@ public class RpcClient {
             });
   }
 
-  public Completable directoryAdd(String name, String entry, RpcMode rpcMode) throws IOException {
+  public Completable directoryAdd(String name, String entry, RpcMode rpcMode) {
     if (log.isTraceEnabled()) {
       log.trace("=> add " + shortDirectory(name) + " => " + entry + ", url=" + url);
     } else if (log.isDebugEnabled()) {
@@ -146,7 +144,7 @@ public class RpcClient {
     return Completable.fromSingle(call("directory.Add", params));
   }
 
-  public Completable directoryRemove(String name, String entry) throws IOException {
+  public Completable directoryRemove(String name, String entry) {
     if (log.isDebugEnabled()) {
       log.debug("=> remove " + shortDirectory(name) + ": " + entry + ", url=" + url);
     }
@@ -154,7 +152,7 @@ public class RpcClient {
     return Completable.fromSingle(call("directory.Remove", params));
   }
 
-  public Completable directoryRemoveAll(String name) throws IOException {
+  public Completable directoryRemoveAll(String name) {
     return Completable.fromSingle(
         directoryValues(name)
             .map(

@@ -1,4 +1,4 @@
-package com.samourai.soroban.protocol;
+package com.samourai.soroban.protocol.payload;
 
 import com.samourai.soroban.client.AbstractSorobanPayloadable;
 import org.slf4j.Logger;

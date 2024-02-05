@@ -1,10 +1,11 @@
 package com.samourai.soroban.client.endpoint;
 
+import com.samourai.soroban.client.endpoint.meta.SorobanFilter;
 import com.samourai.soroban.client.endpoint.wrapper.SorobanWrapperString;
 import com.samourai.soroban.client.rpc.RpcMode;
+import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
+import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.util.Pair;
-import java.util.LinkedList;
-import java.util.List;
 
 /**
  * This endpoint uses raw String as payload.
@@ -14,10 +15,15 @@ import java.util.List;
  * - .remove() is NOT supported when using SorobanWrapperEncrypt, use .removeRaw() instead
  */
 public class SorobanEndpointRaw
-    extends AbstractSorobanEndpoint<String, List<String>, String, Void> {
+    extends AbstractSorobanEndpoint<String, String, Void, SorobanFilter<String>> {
   public SorobanEndpointRaw(
       SorobanApp app, String path, RpcMode rpcMode, SorobanWrapperString[] wrappers) {
     super(app, path, rpcMode, wrappers);
+  }
+
+  @Override
+  protected SorobanFilter<String> newFilterBuilder() {
+    return null; // not supported yet
   }
 
   @Override
@@ -28,11 +34,6 @@ public class SorobanEndpointRaw
   @Override
   protected Pair<String, Void> rawToEntry(String rawEntry) throws Exception {
     return Pair.of(rawEntry, null);
-  }
-
-  @Override
-  protected List<String> newList(List<String> items) {
-    return new LinkedList<>(items);
   }
 
   @Override
@@ -56,8 +57,21 @@ public class SorobanEndpointRaw
   }
 
   @Override
-  public SorobanEndpoint getEndpointReply(String request) {
-    return new SorobanEndpointRaw(
-        getApp(), getPath(), RpcMode.SHORT, new SorobanWrapperString[] {});
+  public SorobanEndpoint newEndpointReply(String request, Bip47Encrypter encrypter) {
+    SorobanEndpointRaw endpoint =
+        new SorobanEndpointRaw(getApp(), getPath(), RpcMode.SHORT, new SorobanWrapperString[] {});
+    endpoint.setEncryptReply(this, request, encrypter);
+    endpoint.setAutoRemove(true);
+    return endpoint;
+  }
+
+  @Override
+  public SorobanEndpointRaw setEncryptTo(PaymentCode encryptTo) {
+    return (SorobanEndpointRaw) super.setEncryptTo(encryptTo);
+  }
+
+  @Override
+  public SorobanEndpointRaw setDecryptFrom(PaymentCode decryptFrom) {
+    return (SorobanEndpointRaw) super.setDecryptFrom(decryptFrom);
   }
 }

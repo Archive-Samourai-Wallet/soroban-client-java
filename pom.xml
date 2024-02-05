@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.samourai.code.wallet</groupId>
     <artifactId>soroban-client-java</artifactId>
-    <version>0.1.2-dexwp2-SNAPSHOT</version>
+    <version>0.1.2-dexwp-beta1-SNAPSHOT</version>
     <properties>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
@@ -12,7 +12,7 @@
         <dependency>
             <groupId>io.samourai.code.wallet</groupId>
             <artifactId>extlibj</artifactId>
-            <version>0.0.43-dexwp2-SNAPSHOT</version>
+            <version>0.0.43-dexwp-beta1</version>
         </dependency>
         <dependency>
             <groupId>ch.qos.logback</groupId>
