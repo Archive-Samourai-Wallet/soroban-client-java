@@ -1,5 +1,9 @@
 package com.samourai.soroban.client.endpoint.meta;
 
+import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaNonce;
+import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaSender;
+import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaType;
+import com.samourai.wallet.bip47.rpc.PaymentCode;
 import org.json.JSONObject;
 
 public class SorobanMetadataImpl implements SorobanMetadata {
@@ -50,6 +54,19 @@ public class SorobanMetadataImpl implements SorobanMetadata {
 
   @Override
   public String toString() {
-    return jsonObject.toString();
+    String type = SorobanWrapperMetaType.getType(this);
+    PaymentCode sender = SorobanWrapperMetaSender.getSender(this);
+    Long nonce = SorobanWrapperMetaNonce.getNonce(this);
+    String str = jsonObject.toString();
+    if (sender != null) {
+      str += " sender=" + sender;
+    }
+    if (type != null) {
+      str += " typePayload=" + type;
+    }
+    if (nonce != null) {
+      str += " nonce=" + type;
+    }
+    return str;
   }
 }

@@ -14,11 +14,11 @@ public class SorobanApp {
     this.appVersion = appVersion;
   }
 
-  protected String getDir(String id) {
+  public String getDir(String id) {
     return whirlpoolNetwork.name() + "/" + appId + "/" + appVersion + "/" + id;
   }
 
-  protected String getDirShared(Bip47Partner bip47Partner, String id) {
+  public String getDirShared(Bip47Partner bip47Partner, String id) {
     return getDir("SESSION/" + bip47Partner.getSharedAddressBech32() + "/" + id);
   }
 

@@ -10,7 +10,12 @@ public enum RpcMode {
   SHORT(
       "short", 60000, // 1min
       20000, // 20s
-      5000); // 5s
+      5000),
+  SHORT_FAST(
+      "short", 60000, // 1min
+      20000, // 20s
+      2000),
+  ; // 2s
 
   private String value;
 

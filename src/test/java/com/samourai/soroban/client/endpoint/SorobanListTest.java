@@ -34,8 +34,7 @@ public class SorobanListTest extends AbstractTest {
 
     endpoint =
         new SorobanEndpointTyped(
-            app,
-            "CLEAR",
+            app.getDir("TEST"),
             RpcMode.SHORT,
             new SorobanWrapper[] {
               new SorobanWrapperMetaSender(), new SorobanWrapperMetaNonce(),

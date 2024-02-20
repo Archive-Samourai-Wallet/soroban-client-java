@@ -1,8 +1,6 @@
 package com.samourai.soroban.client.endpoint;
 
 import com.samourai.soroban.client.AbstractTest;
-import com.samourai.soroban.client.endpoint.wrapper.SorobanWrapperString;
-import com.samourai.soroban.client.rpc.RpcMode;
 import com.samourai.wallet.bip47.rpc.Bip47PartnerImpl;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,9 +16,7 @@ public class SorobanAppTest extends AbstractTest {
 
   @Test
   public void getDir() {
-    SorobanEndpointRaw endpoint =
-        new SorobanEndpointRaw(app, "FOO", RpcMode.SHORT, new SorobanWrapperString[] {});
-    Assertions.assertEquals("TESTNET/APP_TEST/" + appVersion + "/FOO", endpoint.getDir());
+    Assertions.assertEquals("TESTNET/APP_TEST/" + appVersion + "/FOO", app.getDir("FOO"));
   }
 
   @Test

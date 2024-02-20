@@ -16,9 +16,8 @@ import com.samourai.wallet.util.Pair;
  */
 public class SorobanEndpointRaw
     extends AbstractSorobanEndpoint<String, String, Void, SorobanFilter<String>> {
-  public SorobanEndpointRaw(
-      SorobanApp app, String path, RpcMode rpcMode, SorobanWrapperString[] wrappers) {
-    super(app, path, rpcMode, wrappers);
+  public SorobanEndpointRaw(String dir, RpcMode rpcMode, SorobanWrapperString[] wrappers) {
+    super(dir, rpcMode, wrappers);
   }
 
   @Override
@@ -48,18 +47,17 @@ public class SorobanEndpointRaw
 
   @Override
   protected String getRawEntry(String entry) {
-    return entry;
-  }
-
-  @Override
-  public String computeUniqueId(String entry) {
+    if (getEncryptTo() != null || getDecryptFrom() != null) {
+      throw new RuntimeException(
+          "getRawEntry() not available for SorobanEndpointRaw with encryption");
+    }
     return entry;
   }
 
   @Override
   public SorobanEndpoint newEndpointReply(String request, Bip47Encrypter encrypter) {
     SorobanEndpointRaw endpoint =
-        new SorobanEndpointRaw(getApp(), getPath(), RpcMode.SHORT, new SorobanWrapperString[] {});
+        new SorobanEndpointRaw(getDir(), RpcMode.SHORT, new SorobanWrapperString[] {});
     endpoint.setEncryptReply(this, request, encrypter);
     endpoint.setAutoRemove(true);
     return endpoint;

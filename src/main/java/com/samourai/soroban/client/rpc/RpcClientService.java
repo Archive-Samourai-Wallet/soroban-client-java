@@ -19,6 +19,7 @@ public class RpcClientService {
   private BIP47UtilGeneric bip47Util;
   private boolean onion;
   private NetworkParameters params;
+  private BIP47Account testModeBIP47Account; // for reproductible unit tests
 
   public RpcClientService(
       IHttpClientService httpClientService,
@@ -31,6 +32,7 @@ public class RpcClientService {
     this.bip47Util = bip47Util;
     this.onion = onion;
     this.params = params;
+    this.testModeBIP47Account = null;
   }
 
   public RpcWalletImpl getRpcWallet(BIP47Account bip47Account) {
@@ -45,9 +47,16 @@ public class RpcClientService {
   }
 
   public RpcWalletImpl generateRpcWallet() {
-    HD_Wallet hdw = HD_WalletFactoryGeneric.getInstance().generateWallet(44, params);
-    BIP47Account bip47Account = new BIP47Wallet(hdw).getAccount(0);
+    BIP47Account bip47Account = generateBip47Account();
     return new RpcWalletImpl(bip47Account, cryptoUtil, bip47Util, this);
+  }
+
+  protected BIP47Account generateBip47Account() {
+    if (testModeBIP47Account != null) {
+      return testModeBIP47Account;
+    }
+    HD_Wallet hdw = HD_WalletFactoryGeneric.getInstance().generateWallet(44, params);
+    return new BIP47Wallet(hdw).getAccount(0);
   }
 
   protected RpcClient createRpcClient(String url) {
@@ -61,5 +70,13 @@ public class RpcClientService {
 
   public boolean isOnion() {
     return onion;
+  }
+
+  public void _setTestModeBIP47Account(BIP47Account testModeBIP47Account) {
+    this.testModeBIP47Account = testModeBIP47Account;
+  }
+
+  public BIP47Account _getTestModeBIP47Account() {
+    return testModeBIP47Account;
   }
 }

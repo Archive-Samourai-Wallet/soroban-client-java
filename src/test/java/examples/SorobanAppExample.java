@@ -28,8 +28,7 @@ public class SorobanAppExample {
   // new communication channel
   private SorobanEndpointTyped endpoint =
       new SorobanEndpointTyped(
-          app,
-          "DEMO_ENCRYPTED",
+          app.getDir("DEMO"),
           RpcMode.SHORT,
           new SorobanWrapper[] {
             // optional: enable metadata "sender" for enabling encrypted request replies
@@ -60,7 +59,7 @@ public class SorobanAppExample {
 
     // use withSorobanClient() to choose a random Soroban node (and retry with next node on network
     // failures)
-    // or: use withSorobanClient(, serverUrl) to use a specific Soroban node
+    // or: use withSorobanClient(, sorobanUrl) to use a specific Soroban node
     TestPayload request = new TestPayload("HELLO WORLD");
     rpcSession.withSorobanClient(
         sorobanClient -> {

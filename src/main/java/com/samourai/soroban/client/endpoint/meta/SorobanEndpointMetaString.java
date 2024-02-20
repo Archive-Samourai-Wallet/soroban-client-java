@@ -1,6 +1,5 @@
 package com.samourai.soroban.client.endpoint.meta;
 
-import com.samourai.soroban.client.endpoint.SorobanApp;
 import com.samourai.soroban.client.endpoint.wrapper.SorobanWrapper;
 import com.samourai.soroban.client.rpc.RpcMode;
 import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
@@ -13,9 +12,8 @@ import com.samourai.wallet.util.Pair;
  */
 public class SorobanEndpointMetaString extends AbstractSorobanEndpointMeta<SorobanItem, String> {
 
-  public SorobanEndpointMetaString(
-      SorobanApp app, String path, RpcMode rpcMode, SorobanWrapper[] wrappersAll) {
-    super(app, path, rpcMode, wrappersAll);
+  public SorobanEndpointMetaString(String dir, RpcMode rpcMode, SorobanWrapper[] wrappersAll) {
+    super(dir, rpcMode, wrappersAll);
   }
 
   @Override
@@ -31,8 +29,7 @@ public class SorobanEndpointMetaString extends AbstractSorobanEndpointMeta<Sorob
   @Override
   public SorobanEndpointMetaString newEndpointReply(SorobanItem request, Bip47Encrypter encrypter) {
     SorobanEndpointMetaString endpoint =
-        new SorobanEndpointMetaString(
-            getApp(), getPathReply(request), RpcMode.SHORT, new SorobanWrapper[] {});
+        new SorobanEndpointMetaString(getDirReply(request), RpcMode.SHORT, new SorobanWrapper[] {});
     return endpoint;
   }
 

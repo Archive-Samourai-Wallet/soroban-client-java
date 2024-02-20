@@ -23,7 +23,7 @@ public class SorobanEndpointRawTest extends AbstractTest {
     BiPredicate<String, String> equals = (s, i) -> i.equals(s);
 
     SorobanEndpointRaw endpoint =
-        new SorobanEndpointRaw(app, "CLEAR", RpcMode.SHORT, new SorobanWrapperString[] {});
+        new SorobanEndpointRaw(app.getDir("TEST"), RpcMode.SHORT, new SorobanWrapperString[] {});
 
     doTestEndpointReply(endpoint, endpoint, payload, responsePayload, equals);
   }
@@ -35,10 +35,10 @@ public class SorobanEndpointRawTest extends AbstractTest {
     BiPredicate<String, String> equals = (s, i) -> i.equals(s);
 
     SorobanEndpointRaw endpointInitiator =
-        new SorobanEndpointRaw(app, "ENCRYPTED", RpcMode.SHORT, new SorobanWrapperString[] {})
+        new SorobanEndpointRaw(app.getDir("TEST"), RpcMode.SHORT, new SorobanWrapperString[] {})
             .setEncryptTo(paymentCodeCounterparty);
     SorobanEndpointRaw endpointCounterparty =
-        new SorobanEndpointRaw(app, "ENCRYPTED", RpcMode.SHORT, new SorobanWrapperString[] {})
+        new SorobanEndpointRaw(app.getDir("TEST"), RpcMode.SHORT, new SorobanWrapperString[] {})
             .setDecryptFrom(paymentCodeInitiator);
 
     doTestEndpointReply(endpointInitiator, endpointCounterparty, payload, responsePayload, equals);
@@ -52,10 +52,10 @@ public class SorobanEndpointRawTest extends AbstractTest {
     PaymentCode paymentCodeTemp =
         rpcClientService.generateRpcWallet().getBip47Account().getPaymentCode();
     SorobanEndpointRaw endpointInitiator =
-        new SorobanEndpointRaw(app, "ENCRYPTED", RpcMode.SHORT, new SorobanWrapperString[] {})
+        new SorobanEndpointRaw(app.getDir("TEST"), RpcMode.SHORT, new SorobanWrapperString[] {})
             .setEncryptTo(paymentCodeTemp);
     SorobanEndpointRaw endpointCounterparty =
-        new SorobanEndpointRaw(app, "ENCRYPTED", RpcMode.SHORT, new SorobanWrapperString[] {})
+        new SorobanEndpointRaw(app.getDir("TEST"), RpcMode.SHORT, new SorobanWrapperString[] {})
             .setDecryptFrom(paymentCodeInitiator);
 
     doTestEndpointSkippedPayload(endpointInitiator, endpointCounterparty, payload);
@@ -68,7 +68,7 @@ public class SorobanEndpointRawTest extends AbstractTest {
     String payload3 = "payloadCounterparty1";
     String payload4 = "payloadCounterparty2";
     SorobanEndpointRaw endpoint =
-        new SorobanEndpointRaw(app, "CLEAR", RpcMode.SHORT, new SorobanWrapperString[] {});
+        new SorobanEndpointRaw(app.getDir("TEST"), RpcMode.SHORT, new SorobanWrapperString[] {});
 
     doTestEndpoint2WaysList(
         endpoint, endpoint, new String[] {payload1, payload2, payload3, payload4});
@@ -79,7 +79,7 @@ public class SorobanEndpointRawTest extends AbstractTest {
     String payload1 = "payloadInitiator1";
     String payload2 = "payloadInitiator2";
     SorobanEndpointRaw endpoint =
-        new SorobanEndpointRaw(app, "CLEAR", RpcMode.SHORT, new SorobanWrapperString[] {});
+        new SorobanEndpointRaw(app.getDir("TEST"), RpcMode.SHORT, new SorobanWrapperString[] {});
 
     doTestEndpointDelete(endpoint, endpoint, payload1, payload2);
   }

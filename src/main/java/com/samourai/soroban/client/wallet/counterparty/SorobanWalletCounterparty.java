@@ -42,8 +42,7 @@ public class SorobanWalletCounterparty extends SorobanWallet {
               while (listening) {
                 log.info("Listening for Soroban requests...");
                 try {
-                  SorobanRequestMessage request =
-                      asyncUtil.blockingGet(receiveMeetingRequest(), getTimeoutMeetingMs());
+                  SorobanRequestMessage request = receiveMeetingRequest();
                   log.info("New Soroban request: " + request);
                   listener.onRequest(request);
                 } catch (NoValueRpcException e) {
@@ -67,8 +66,8 @@ public class SorobanWalletCounterparty extends SorobanWallet {
     return listening;
   }
 
-  public Single<SorobanRequestMessage> receiveMeetingRequest() throws Exception {
-    return sorobanMeetingService.receiveMeetingRequest(rpcSession);
+  public SorobanRequestMessage receiveMeetingRequest() throws Exception {
+    return sorobanMeetingService.receiveMeetingRequest(rpcSession, getTimeoutMeetingMs());
   }
 
   public Single<SorobanResponseMessage> sendMeetingResponse(
@@ -107,7 +106,7 @@ public class SorobanWalletCounterparty extends SorobanWallet {
               // start Cahoots
               CahootsContext cahootsContext =
                   listener.newCounterpartyContext(cahootsWallet, cahootsRequest);
-              PaymentCode paymentCodeSender = new PaymentCode(cahootsRequest.getSender());
+              PaymentCode paymentCodeSender = cahootsRequest.getSender();
               Consumer<OnlineCahootsMessage> onProgress =
                   sorobanMessage -> listener.progress(sorobanMessage);
               return counterparty(cahootsContext, paymentCodeSender, onProgress);

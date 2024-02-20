@@ -7,7 +7,6 @@ import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.segwit.SegwitAddress;
 import org.bitcoinj.core.NetworkParameters;
 
-@Deprecated // TODO
 public class SorobanProtocolMeeting {
   public SorobanProtocolMeeting() {}
 

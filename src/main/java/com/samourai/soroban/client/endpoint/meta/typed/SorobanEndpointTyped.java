@@ -2,7 +2,6 @@ package com.samourai.soroban.client.endpoint.meta.typed;
 
 import com.samourai.soroban.client.SorobanClient;
 import com.samourai.soroban.client.SorobanPayloadable;
-import com.samourai.soroban.client.endpoint.SorobanApp;
 import com.samourai.soroban.client.endpoint.meta.AbstractSorobanEndpointMeta;
 import com.samourai.soroban.client.endpoint.meta.SorobanItemFilter;
 import com.samourai.soroban.client.endpoint.meta.SorobanMetadata;
@@ -15,6 +14,7 @@ import com.samourai.soroban.client.endpoint.wrapper.SorobanWrapperString;
 import com.samourai.soroban.client.rpc.RpcMode;
 import com.samourai.soroban.client.rpc.RpcSession;
 import com.samourai.soroban.protocol.payload.AckResponse;
+import com.samourai.soroban.protocol.payload.SorobanErrorMessage;
 import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.util.CallbackWithArg;
@@ -22,6 +22,7 @@ import com.samourai.wallet.util.Pair;
 import io.reactivex.Completable;
 import io.reactivex.Single;
 import java.lang.invoke.MethodHandles;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -39,15 +40,13 @@ public class SorobanEndpointTyped
   private Class[] replyTypesAllowedOrNull;
 
   public SorobanEndpointTyped(
-      SorobanApp app,
-      String path,
+      String dir,
       RpcMode rpcMode,
       SorobanWrapper[] wrappersAll,
       Class[] typesAllowedOrNull,
       Class[] replyTypesAllowedOrNull) {
     this(
-        app,
-        path,
+        dir,
         rpcMode,
         findWrappersString(wrappersAll),
         findWrappersMeta(wrappersAll, typesAllowedOrNull),
@@ -55,34 +54,27 @@ public class SorobanEndpointTyped
   }
 
   public SorobanEndpointTyped(
-      SorobanApp app,
-      String path,
-      RpcMode rpcMode,
-      SorobanWrapper[] wrappersAll,
-      Class[] typesAllowedOrNull) {
-    this(app, path, rpcMode, wrappersAll, typesAllowedOrNull, null);
+      String dir, RpcMode rpcMode, SorobanWrapper[] wrappersAll, Class[] typesAllowedOrNull) {
+    this(dir, rpcMode, wrappersAll, typesAllowedOrNull, null);
   }
 
-  public SorobanEndpointTyped(
-      SorobanApp app, String path, RpcMode rpcMode, SorobanWrapper[] wrappersAll) {
-    this(app, path, rpcMode, wrappersAll, null);
+  public SorobanEndpointTyped(String dir, RpcMode rpcMode, SorobanWrapper[] wrappersAll) {
+    this(dir, rpcMode, wrappersAll, null);
   }
 
   protected SorobanEndpointTyped(
-      SorobanApp app,
-      String path,
+      String dir,
       RpcMode rpcMode,
       SorobanWrapperString[] wrappers,
       List<SorobanWrapperMeta> wrapperMetas,
       Class[] replyTypesAllowedOrNull) {
-    super(app, path, rpcMode, wrappers, wrapperMetas);
+    super(dir, rpcMode, wrappers, wrapperMetas);
     this.replyTypesAllowedOrNull = replyTypesAllowedOrNull;
   }
 
   public SorobanEndpointTyped(SorobanEndpointTyped copy) {
     this(
-        copy.getApp(),
-        copy.getPath(),
+        copy.getDir(),
         copy.getRpcMode(),
         copy.getWrappers().toArray(new SorobanWrapperString[] {}),
         copy.getWrappersMeta(),
@@ -122,10 +114,10 @@ public class SorobanEndpointTyped
 
   @Override
   public SorobanEndpointTyped newEndpointReply(SorobanItemTyped request, Bip47Encrypter encrypter) {
-    String pathReply = getPathReply(request);
+    String dirReply = getDirReply(request);
+    Class[] replyTypes = computeReplyTypes(replyTypesAllowedOrNull);
     SorobanEndpointTyped endpoint =
-        new SorobanEndpointTyped(
-            getApp(), pathReply, RpcMode.SHORT, new SorobanWrapper[] {}, replyTypesAllowedOrNull);
+        new SorobanEndpointTyped(dirReply, RpcMode.SHORT, new SorobanWrapper[] {}, replyTypes);
     endpoint.setEncryptReply(this, request, encrypter);
     return endpoint;
   }
@@ -250,6 +242,22 @@ public class SorobanEndpointTyped
     return waitReplyObject(rpcSession, request, type, null, filterBuilderOrNull);
   }*/
 
+  // overridable
+  protected Class[] computeReplyTypes(Class... classesAllowed) {
+    if (classesAllowed == null) {
+      // no type restriction
+      return null;
+    }
+
+    List<Class> listAllowed = new LinkedList<>();
+    for (Class c : classesAllowed) {
+      listAllowed.add(c);
+    }
+    // always accept SorobanErrorMessage to allow error responses
+    listAllowed.add(SorobanErrorMessage.class);
+    return listAllowed.toArray(new Class[] {});
+  }
+
   // wait during replyTimeoutMs (default=endpoint.expirationMs) at endpoint.polling frequency
   private <T> T waitReplyObject(
       RpcSession rpcSession,
@@ -265,7 +273,8 @@ public class SorobanEndpointTyped
             filterBuilderOrNull.accept(f);
           }
           // filter by type
-          f.filterByType(type);
+          Class[] replyTypes = computeReplyTypes(type);
+          f.filterByType(replyTypes);
         };
     SorobanItemTyped item = super.loopWaitReply(rpcSession, request, replyTimeoutMs, filter);
     return item.read(type);
@@ -387,12 +396,6 @@ public class SorobanEndpointTyped
         req ->
             // wait reply
             waitReplyAck(rpcSession, req, sendFrequencyMs));
-  }
-
-  @Override
-  protected String logEntry(Pair<String, SorobanMetadata> entry) {
-    String type = SorobanWrapperMetaType.getType(entry.getRight());
-    return "[" + type + "] " + super.logEntry(entry);
   }
 
   @Override

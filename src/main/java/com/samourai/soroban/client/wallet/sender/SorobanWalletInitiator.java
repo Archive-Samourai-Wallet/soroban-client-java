@@ -35,7 +35,7 @@ public class SorobanWalletInitiator extends SorobanWallet {
     return sorobanMeetingService
         .sendMeetingRequest(rpcSession, paymentCodeCounterparty, cahootsType)
         // receive response
-        .flatMap(
+        .map(
             request ->
                 sorobanMeetingService.receiveMeetingResponse(
                     rpcSession, paymentCodeCounterparty, request, timeoutMeetingMs));

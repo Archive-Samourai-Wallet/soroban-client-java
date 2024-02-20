@@ -5,7 +5,6 @@ import com.samourai.wallet.hd.HD_Wallet;
 import com.samourai.wallet.hd.HD_WalletFactoryGeneric;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
 import org.bitcoinj.core.ECKey;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,7 +14,6 @@ import org.slf4j.LoggerFactory;
 
 public class RpcClientTest extends AbstractTest {
   private static final Logger log = LoggerFactory.getLogger(RpcClientTest.class);
-  private static final ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(5);
 
   private static final String SIGNATURE_SEED_WORDS =
       "income wisdom battle label wolf confirm shoulder tumble ecology current news taste";
@@ -44,7 +42,7 @@ public class RpcClientTest extends AbstractTest {
     String key = "com.samourai.whirlpool.ro.coordinators.TESTNET";
 
     Map<String, Integer> messagesByServer = new LinkedHashMap<>();
-    for (String serverUrl : initialSorobanServerTestnetClearUrls) {
+    for (String sorobanUrl : initialSorobanServerTestnetClearUrls) {
       try {
         synchronized (this) {
           try {
@@ -55,12 +53,12 @@ public class RpcClientTest extends AbstractTest {
         int nbValues =
             asyncUtil.blockingGet(
                     rpcClientService
-                        .createRpcClient(serverUrl + RpcClient.ENDPOINT_RPC)
+                        .createRpcClient(sorobanUrl + RpcClient.ENDPOINT_RPC)
                         .directoryValues(key))
                 .length;
-        messagesByServer.put(serverUrl, nbValues);
+        messagesByServer.put(sorobanUrl, nbValues);
       } catch (Exception e) {
-        messagesByServer.put(serverUrl, -1);
+        messagesByServer.put(sorobanUrl, -1);
         log.error("", e);
       }
     }
@@ -108,6 +106,31 @@ public class RpcClientTest extends AbstractTest {
 
     asyncUtil.blockingAwait(rpcClient.directoryAdd(key, value, RpcMode.NORMAL));
     Assertions.assertEquals(value, asyncUtil.blockingGet(rpcClient.directoryValues(key))[0]);
+  }
+
+  @Test
+  public void directoryValues_success_multinodes() throws Exception {
+    String key = "directoryValues_success";
+    String value = "valueOne";
+
+    // cleanup
+    asyncUtil.blockingAwait(rpcClient.directoryRemove(key, value));
+
+    asyncUtil.blockingAwait(rpcClient.directoryAdd(key, value, RpcMode.NORMAL));
+    waitSorobanDelay();
+    waitSorobanDelay();
+    waitSorobanDelay();
+    Assertions.assertEquals(value, asyncUtil.blockingGet(rpcClient.directoryValues(key))[0]);
+    Assertions.assertEquals(
+        value,
+        asyncUtil
+            .blockingGet(
+                rpcSessionInitiator.withRpcClient(rpcClient -> rpcClient.directoryValues(key)))[0]);
+    Assertions.assertEquals(
+        value,
+        asyncUtil
+            .blockingGet(
+                rpcSessionInitiator.withRpcClient(rpcClient -> rpcClient.directoryValues(key)))[0]);
   }
 
   @Test

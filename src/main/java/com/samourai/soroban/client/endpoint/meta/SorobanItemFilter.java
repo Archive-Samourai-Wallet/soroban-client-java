@@ -121,7 +121,14 @@ public class SorobanItemFilter<I extends SorobanItem> implements SorobanFilter<I
   public Stream<I> applyFilter(Stream<I> stream) {
     // apply filters
     if (filter != null) {
-      stream = stream.filter(filter);
+      stream =
+          stream
+              /*.map(
+              i -> {
+                log.debug("BEFORE_FILTER " + i.getMetaSender() + " " + i.getMetaNonce());
+                return i;
+              })*/
+              .filter(filter);
     }
 
     // apply transformers
@@ -130,6 +137,12 @@ public class SorobanItemFilter<I extends SorobanItem> implements SorobanFilter<I
         stream = transformer.apply(stream);
       }
     }
+    /*stream =
+    stream.map(
+        i -> {
+          log.debug("AFTER_FILTER " + i.getMetaSender() + " " + i.getMetaNonce());
+          return i;
+        });*/
     return stream;
   }
 }

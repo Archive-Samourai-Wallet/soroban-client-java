@@ -171,9 +171,9 @@ public abstract class AbstractTest {
 
     httpClient.getJettyHttpClient().start();
 
-    // only keep 1 SorobanServerDex to avoid RPC propagation delay
     initialSorobanServerTestnetClearUrls =
         DexConfigProvider.getInstance().getSamouraiConfig().getSorobanServerDexTestnetClear();
+    // only keep 1 SorobanServerDex to avoid RPC propagation delay
     DexConfigProvider.getInstance()
         .getSamouraiConfig()
         .setSorobanServerDexTestnetClear(

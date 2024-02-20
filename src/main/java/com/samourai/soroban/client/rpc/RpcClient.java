@@ -39,10 +39,6 @@ public class RpcClient {
     this.authenticationKey = authenticationKey;
   }
 
-  public static String shortDirectory(String directory) {
-    return /*Util.maskString(*/ directory /*)*/; // TODO enable maskString
-  }
-
   public String getUrl() {
     return url;
   }
@@ -97,9 +93,6 @@ public class RpcClient {
   }
 
   public Single<String[]> directoryValues(String name) {
-    if (log.isTraceEnabled()) {
-      log.trace("=> list " + shortDirectory(name));
-    }
     Map<String, Object> params = computeParams(name);
     return call("directory.List", params)
         .map(
@@ -112,7 +105,7 @@ public class RpcClient {
               String[] dest = new String[src.size()];
               System.arraycopy(src.toArray(), 0, dest, 0, src.size());
               if (log.isDebugEnabled()) {
-                log.debug("<= list(" + src.size() + ") " + shortDirectory(name) + ", url=" + url);
+                log.debug("<= list(" + src.size() + ") sorobanDir=" + name + ", sorobanUrl=" + url);
               }
               return dest;
             });
@@ -135,9 +128,9 @@ public class RpcClient {
 
   public Completable directoryAdd(String name, String entry, RpcMode rpcMode) {
     if (log.isTraceEnabled()) {
-      log.trace("=> add " + shortDirectory(name) + " => " + entry + ", url=" + url);
+      log.trace("=> add sorobanDir=" + name + ", sorobanUrl=" + url + " => " + entry);
     } else if (log.isDebugEnabled()) {
-      log.debug("=> add " + shortDirectory(name) + ", url=" + url);
+      log.debug("=> add sorobanDir=" + name + ", sorobanUrl=" + url);
     }
     Map<String, Object> params = computeParams(name, entry);
     params.put("Mode", rpcMode.getValue());
@@ -146,7 +139,7 @@ public class RpcClient {
 
   public Completable directoryRemove(String name, String entry) {
     if (log.isDebugEnabled()) {
-      log.debug("=> remove " + shortDirectory(name) + ": " + entry + ", url=" + url);
+      log.debug("=> remove sorobanDir=" + name + ": " + entry + ", sorobanUrl=" + url);
     }
     Map<String, Object> params = computeParams(name, entry);
     return Completable.fromSingle(call("directory.Remove", params));

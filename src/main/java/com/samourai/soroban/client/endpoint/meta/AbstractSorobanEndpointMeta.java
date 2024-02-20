@@ -2,7 +2,6 @@ package com.samourai.soroban.client.endpoint.meta;
 
 import com.samourai.soroban.client.SorobanClient;
 import com.samourai.soroban.client.endpoint.AbstractSorobanEndpoint;
-import com.samourai.soroban.client.endpoint.SorobanApp;
 import com.samourai.soroban.client.endpoint.SorobanEndpoint;
 import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMeta;
 import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaSender;
@@ -41,19 +40,17 @@ public abstract class AbstractSorobanEndpointMeta<I extends SorobanItem, S>
   private List<SorobanWrapperMeta> wrappersMeta;
   private boolean decryptFromSender;
 
-  protected AbstractSorobanEndpointMeta(
-      SorobanApp app, String path, RpcMode rpcMode, SorobanWrapper[] wrappersAll) {
-    super(app, path, rpcMode, findWrappersString(wrappersAll));
+  protected AbstractSorobanEndpointMeta(String dir, RpcMode rpcMode, SorobanWrapper[] wrappersAll) {
+    super(dir, rpcMode, findWrappersString(wrappersAll));
     this.wrappersMeta = findWrappersMeta(wrappersAll);
   }
 
   protected AbstractSorobanEndpointMeta(
-      SorobanApp app,
-      String path,
+      String dir,
       RpcMode rpcMode,
       SorobanWrapperString[] wrappersString,
       List<SorobanWrapperMeta> wrappersMeta) {
-    super(app, path, rpcMode, wrappersString);
+    super(dir, rpcMode, wrappersString);
     this.wrappersMeta = wrappersMeta;
   }
 
@@ -181,13 +178,12 @@ public abstract class AbstractSorobanEndpointMeta<I extends SorobanItem, S>
         entry = wrapperMeta.onReceive(encrypter, entry);
       }
     } catch (Exception e) {
-      log.warn(" <- " + getDir() + ": " + entry + ": INVALID: " + e.getMessage());
+      log.warn(" <- sorobanDir=" + getDir() + ": " + entry + ": INVALID: " + e.getMessage());
       throw e;
     }
     return entry;
   }
 
-  @Override
   public String computeUniqueId(I entry) {
     List<String> uniqueParts = new LinkedList<>();
     uniqueParts.add(entry.getPayload()); // decrypted payload
@@ -235,6 +231,7 @@ public abstract class AbstractSorobanEndpointMeta<I extends SorobanItem, S>
 
     // get reply with timeout
     Bip47Encrypter encrypter = rpcSession.getRpcWallet().getBip47Encrypter();
+    SorobanEndpoint endpointReply = getEndpointReply(request, encrypter);
     try {
       if (log.isDebugEnabled()) {
         log.debug(
@@ -242,13 +239,18 @@ public abstract class AbstractSorobanEndpointMeta<I extends SorobanItem, S>
                 + timeoutMs
                 + " at "
                 + getPollingFrequencyMs()
-                + " frequency) "
-                + getPath());
+                + " frequency) sorobanDir="
+                + endpointReply.getDir());
       }
-      return (I) getEndpointReply(request, encrypter).loopWaitAny(rpcSession, timeoutMs, filter);
+      return (I) endpointReply.loopWaitAny(rpcSession, timeoutMs, filter);
     } catch (TimeoutException e) {
       if (log.isTraceEnabled()) {
-        log.trace("waitReply(): Timeout after " + timeoutMs + "ms on " + getPath());
+        log.trace(
+            "waitReply() sorobanDir="
+                + endpointReply.getDir()
+                + ": Timeout after "
+                + timeoutMs
+                + "ms");
       }
       throw e;
     }
@@ -314,7 +316,7 @@ public abstract class AbstractSorobanEndpointMeta<I extends SorobanItem, S>
 
           // send request
           S request = getRequest.get();
-          if (log.isDebugEnabled()) {
+          /*if (log.isDebugEnabled()) {
             log.debug(
                 "CYCLE_LOOP_SEND_UNTIL ("
                     + (elapsedMs / 1000)
@@ -322,7 +324,7 @@ public abstract class AbstractSorobanEndpointMeta<I extends SorobanItem, S>
                     + (timeoutMs / 1000)
                     + ") => SEND_REQUEST "
                     + request);
-          }
+          }*/
           I requestItem = asyncUtil.blockingGet(sendSingle(sorobanClient, request));
           // wait reply
           /*if (log.isDebugEnabled()) {
@@ -394,5 +396,9 @@ public abstract class AbstractSorobanEndpointMeta<I extends SorobanItem, S>
 
   protected List<SorobanWrapperMeta> getWrappersMeta() {
     return wrappersMeta;
+  }
+
+  public String getDirReply(I entry) {
+    return getDir() + "/REPLY/" + computeUniqueId(entry);
   }
 }

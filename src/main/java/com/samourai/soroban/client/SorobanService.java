@@ -9,7 +9,6 @@ import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.cahoots.CahootsWallet;
 import com.samourai.wallet.util.AsyncUtil;
 import io.reactivex.Observable;
-import io.reactivex.Single;
 import io.reactivex.functions.Consumer;
 import io.reactivex.subjects.BehaviorSubject;
 import io.reactivex.subjects.Subject;
@@ -107,8 +106,7 @@ public class SorobanService {
                 closeDialogOnError(onMessage, dialog, paymentCodeInitiator, null);
 
                 SorobanMessage message =
-                    asyncUtil.blockingGet(
-                        receive(messageService, dialog, paymentCodeInitiator, timeoutMs));
+                    receive(messageService, dialog, paymentCodeInitiator, timeoutMs);
                 onMessage.onNext(message);
                 if (log.isDebugEnabled()) {
                   log.debug(info + "#(0) <= " + message.toString());
@@ -194,8 +192,7 @@ public class SorobanService {
       }
 
       // receive response
-      message =
-          asyncUtil.blockingGet(receive(messageService, dialog, paymentCodePartner, timeoutMs));
+      message = receive(messageService, dialog, paymentCodePartner, timeoutMs);
       if (onMessage != null) {
         onMessage.onNext(message);
       }
@@ -254,19 +251,15 @@ public class SorobanService {
     return onlineInteraction;
   }
 
-  private Single<SorobanMessage> receive(
+  private SorobanMessage receive(
       final SorobanMessageService messageService,
       RpcDialog dialog,
       PaymentCode paymentCodePartner,
       int timeoutMs)
       throws Exception {
-    return dialog
-        .receive(paymentCodePartner, timeoutMs)
-        .map(
-            payload -> {
-              SorobanMessage response = messageService.parse(payload);
-              return response;
-            });
+    String payload = dialog.receive(paymentCodePartner, timeoutMs);
+    SorobanMessage response = messageService.parse(payload);
+    return response;
   }
 
   private void closeDialogOnError(
@@ -300,7 +293,7 @@ public class SorobanService {
     if (dialog != null) {
       // send error before closing dialog
       try {
-        asyncUtil.blockingGet(dialog.sendError(error, paymentCodePartner));
+        asyncUtil.blockingAwait(dialog.sendError(error, paymentCodePartner));
       } catch (Exception e) {
       }
       dialog.close();

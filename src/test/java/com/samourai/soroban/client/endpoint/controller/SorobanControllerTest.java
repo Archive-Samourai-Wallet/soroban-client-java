@@ -43,7 +43,7 @@ public class SorobanControllerTest extends AbstractTest {
   @Test
   public void test_simple() throws Exception {
     SorobanEndpointTyped endpoint =
-        new SorobanEndpointTyped(app, "CLEAR", RpcMode.SHORT, new SorobanWrapperMeta[] {});
+        new SorobanEndpointTyped(app.getDir("TEST"), RpcMode.SHORT, new SorobanWrapperMeta[] {});
     SorobanControllerTyped controller = computeController(endpoint);
 
     TestPayload initiator1 = new TestPayload("initiator1");
@@ -100,7 +100,9 @@ public class SorobanControllerTest extends AbstractTest {
   public void test_nonce() throws Exception {
     SorobanEndpointTyped endpoint =
         new SorobanEndpointTyped(
-            app, "TEST", RpcMode.SHORT, new SorobanWrapperMeta[] {new SorobanWrapperMetaNonce()});
+            app.getDir("TEST"),
+            RpcMode.SHORT,
+            new SorobanWrapperMeta[] {new SorobanWrapperMetaNonce()});
     SorobanControllerTyped controller = computeController(endpoint);
 
     TestPayload initiator1 = new TestPayload("initiator1");

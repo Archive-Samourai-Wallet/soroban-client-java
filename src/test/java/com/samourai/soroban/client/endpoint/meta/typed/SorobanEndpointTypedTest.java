@@ -29,8 +29,7 @@ public class SorobanEndpointTypedTest extends AbstractTest {
 
     endpoint =
         new SorobanEndpointTyped(
-            app,
-            "CLEAR",
+            app.getDir("TEST"),
             RpcMode.SHORT,
             new SorobanWrapper[] {new SorobanWrapperMetaSender()},
             new Class[] {TestPayload.class});
@@ -56,8 +55,7 @@ public class SorobanEndpointTypedTest extends AbstractTest {
   public void signed() throws Exception {
     SorobanEndpointTyped endpoint =
         new SorobanEndpointTyped(
-            app,
-            "SIGNED",
+            app.getDir("TEST"),
             RpcMode.SHORT,
             new SorobanWrapper[] {new SorobanWrapperMetaSignWithSender()},
             new Class[] {TestPayload.class});
@@ -80,8 +78,7 @@ public class SorobanEndpointTypedTest extends AbstractTest {
   public void encrypted() throws Exception {
     SorobanEndpointTyped endpointInitiator =
         new SorobanEndpointTyped(
-                app,
-                "ENCRYPTED",
+                app.getDir("TEST"),
                 RpcMode.SHORT,
                 new SorobanWrapper[] {},
                 new Class[] {TestPayload.class})
@@ -89,8 +86,7 @@ public class SorobanEndpointTypedTest extends AbstractTest {
 
     SorobanEndpointTyped endpointCounterparty =
         new SorobanEndpointTyped(
-                app,
-                "ENCRYPTED",
+                app.getDir("TEST"),
                 RpcMode.SHORT,
                 new SorobanWrapper[] {},
                 new Class[] {TestPayload.class})
@@ -119,8 +115,7 @@ public class SorobanEndpointTypedTest extends AbstractTest {
         rpcClientService.generateRpcWallet().getBip47Account().getPaymentCode();
     SorobanEndpointTyped endpointInitiator =
         new SorobanEndpointTyped(
-                app,
-                "ENCRYPTED",
+                app.getDir("TEST"),
                 RpcMode.SHORT,
                 new SorobanWrapper[] {},
                 new Class[] {TestPayload.class})
@@ -128,8 +123,7 @@ public class SorobanEndpointTypedTest extends AbstractTest {
 
     SorobanEndpointTyped endpointCounterparty =
         new SorobanEndpointTyped(
-                app,
-                "ENCRYPTED",
+                app.getDir("TEST"),
                 RpcMode.SHORT,
                 new SorobanWrapper[] {},
                 new Class[] {TestPayload.class})
@@ -143,8 +137,7 @@ public class SorobanEndpointTypedTest extends AbstractTest {
     // encrypt to partner with sender
     SorobanEndpointTyped endpointInitiator =
         new SorobanEndpointTyped(
-                app,
-                "ENCRYPTED",
+                app.getDir("TEST"),
                 RpcMode.SHORT,
                 new SorobanWrapper[] {},
                 new Class[] {TestPayload.class})
@@ -153,8 +146,7 @@ public class SorobanEndpointTypedTest extends AbstractTest {
     // counterparty decrypts from sender
     SorobanEndpointTyped endpointCounterparty =
         new SorobanEndpointTyped(
-                app,
-                "ENCRYPTED",
+                app.getDir("TEST"),
                 RpcMode.SHORT,
                 new SorobanWrapper[] {},
                 new Class[] {TestPayload.class})
@@ -181,8 +173,7 @@ public class SorobanEndpointTypedTest extends AbstractTest {
         rpcClientService.generateRpcWallet().getBip47Account().getPaymentCode();
     SorobanEndpointTyped endpointInitiator =
         new SorobanEndpointTyped(
-                app,
-                "ENCRYPTED",
+                app.getDir("TEST"),
                 RpcMode.SHORT,
                 new SorobanWrapper[] {},
                 new Class[] {TestPayload.class})
@@ -191,8 +182,7 @@ public class SorobanEndpointTypedTest extends AbstractTest {
     // counterparty decrypts from sender
     SorobanEndpointTyped endpointCounterparty =
         new SorobanEndpointTyped(
-                app,
-                "ENCRYPTED",
+                app.getDir("TEST"),
                 RpcMode.SHORT,
                 new SorobanWrapper[] {},
                 new Class[] {TestPayload.class})
@@ -220,7 +210,10 @@ public class SorobanEndpointTypedTest extends AbstractTest {
     TestPayload payload4 = new TestPayload("payload4");
     SorobanEndpointTyped endpoint =
         new SorobanEndpointTyped(
-            app, "CLEAR", RpcMode.SHORT, new SorobanWrapper[] {}, new Class[] {TestPayload.class});
+            app.getDir("TEST"),
+            RpcMode.SHORT,
+            new SorobanWrapper[] {},
+            new Class[] {TestPayload.class});
 
     doTestEndpoint2WaysList(
         endpoint, endpoint, new TestPayload[] {payload1, payload2, payload3, payload4});
@@ -232,7 +225,10 @@ public class SorobanEndpointTypedTest extends AbstractTest {
     TestPayload payload2 = new TestPayload("payload2");
     SorobanEndpointTyped endpoint =
         new SorobanEndpointTyped(
-            app, "CLEAR", RpcMode.SHORT, new SorobanWrapper[] {}, new Class[] {TestPayload.class});
+            app.getDir("TEST"),
+            RpcMode.SHORT,
+            new SorobanWrapper[] {},
+            new Class[] {TestPayload.class});
 
     doTestEndpointDelete(endpoint, endpoint, payload1, payload2);
   }
@@ -243,8 +239,7 @@ public class SorobanEndpointTypedTest extends AbstractTest {
     TestPayload payload2 = new TestPayload("payload2");
     SorobanEndpointTyped endpointInitiator =
         new SorobanEndpointTyped(
-                app,
-                "ENCRYPTED",
+                app.getDir("TEST"),
                 RpcMode.SHORT,
                 new SorobanWrapper[] {},
                 new Class[] {TestPayload.class})
@@ -252,8 +247,7 @@ public class SorobanEndpointTypedTest extends AbstractTest {
 
     SorobanEndpointTyped endpointCounterparty =
         new SorobanEndpointTyped(
-                app,
-                "ENCRYPTED",
+                app.getDir("TEST"),
                 RpcMode.SHORT,
                 new SorobanWrapper[] {},
                 new Class[] {TestPayload.class})
@@ -289,8 +283,7 @@ public class SorobanEndpointTypedTest extends AbstractTest {
   public void waitAnyObject() throws Exception {
     SorobanEndpointTyped endpointMulti =
         new SorobanEndpointTyped(
-            app,
-            "CLEAR",
+            app.getDir("TEST"),
             RpcMode.SHORT,
             new SorobanWrapper[] {},
             new Class[] {TestPayload.class, TestResponsePayload.class});
@@ -565,15 +558,13 @@ public class SorobanEndpointTypedTest extends AbstractTest {
   public void filterSender() throws Exception {
     endpoint =
         new SorobanEndpointTyped(
-            app,
-            "CLEAR",
+            app.getDir("TEST"),
             RpcMode.SHORT,
             new SorobanWrapper[] {new SorobanWrapperMetaFilterSender(paymentCodeInitiator)},
             new Class[] {TestPayload.class});
     SorobanEndpointTyped endpointBypass =
         new SorobanEndpointTyped(
-            app,
-            "CLEAR",
+            app.getDir("TEST"),
             RpcMode.SHORT,
             new SorobanWrapper[] {new SorobanWrapperMetaSender()},
             new Class[] {TestPayload.class});

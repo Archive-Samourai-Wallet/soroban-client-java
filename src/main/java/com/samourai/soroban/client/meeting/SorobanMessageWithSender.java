@@ -1,27 +1,20 @@
 package com.samourai.soroban.client.meeting;
 
 import com.samourai.soroban.client.SorobanPayloadable;
+import com.samourai.wallet.bip47.rpc.PaymentCode;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-@Deprecated // TODO
 public class SorobanMessageWithSender implements SorobanPayloadable {
-  private static final Logger log = LoggerFactory.getLogger(SorobanMessageWithSender.class);
 
-  private String sender;
+  private PaymentCode sender;
   private String payload;
-  private long timePayload;
+  private String rawEntry; // encrypted SorobanMessageWithSender.payload
 
-  public SorobanMessageWithSender(String sender, String payload, long timePayload) {
+  public SorobanMessageWithSender(PaymentCode sender, String payload, String rawEntry) {
     this.sender = sender;
     this.payload = payload;
-    this.timePayload = timePayload;
-  }
-
-  public SorobanMessageWithSender(String sender, String payload) {
-    this(sender, payload, System.currentTimeMillis());
+    this.rawEntry = rawEntry;
   }
 
   public static SorobanMessageWithSender parse(String payloadStr) throws Exception {
@@ -32,12 +25,12 @@ public class SorobanMessageWithSender implements SorobanPayloadable {
     if (StringUtils.isEmpty(sender) || StringUtils.isEmpty(payload)) {
       throw new Exception("Invalid SorobanMessageWithSender");
     }
-    return new SorobanMessageWithSender(sender, payload);
+    return new SorobanMessageWithSender(new PaymentCode(sender), payload, null);
   }
 
-  public static String toPayload(String sender, String payload) {
+  public static String toPayload(PaymentCode sender, String payload) {
     JSONObject obj = new JSONObject();
-    obj.put("sender", sender);
+    obj.put("sender", sender.toString());
     obj.put("payload", payload);
     return obj.toString();
   }
@@ -47,32 +40,22 @@ public class SorobanMessageWithSender implements SorobanPayloadable {
     return toPayload(sender, payload);
   }
 
-  public String getTypePayload() {
-    return SorobanMessageWithSender.class.getName();
-  }
-
-  public long getTimePayload() {
-    return timePayload;
-  }
-
   @Override
   public String toString() {
     return "SorobanMessageWithSender{"
         + "sender='"
-        + sender
+        + sender.toString()
         + '\''
         + ", payload='"
         + payload
-        + "\', timePayload="
-        + timePayload
-        + '}';
+        + "\'}";
   }
 
-  public String getSender() {
+  public PaymentCode getSender() {
     return sender;
   }
 
-  public void setSender(String sender) {
+  public void setSender(PaymentCode sender) {
     this.sender = sender;
   }
 
@@ -82,5 +65,9 @@ public class SorobanMessageWithSender implements SorobanPayloadable {
 
   public void setPayload(String payload) {
     this.payload = payload;
+  }
+
+  public String getRawEntry() {
+    return rawEntry;
   }
 }

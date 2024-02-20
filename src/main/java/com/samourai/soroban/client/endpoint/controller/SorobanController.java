@@ -13,6 +13,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 public abstract class SorobanController<T, E extends SorobanEndpoint<T, ?, ?>>
     extends AbstractOrchestrator {
@@ -23,7 +24,7 @@ public abstract class SorobanController<T, E extends SorobanEndpoint<T, ?, ?>>
   protected final E endpoint;
   private long expirationMs; // should be > LOOP_DELAY
 
-  protected final String logId;
+  protected final String logInfo;
 
   private Map<String, Pair<Long, Long>> processedById; // Pair(process time,nonce) by uniqueId
 
@@ -33,41 +34,29 @@ public abstract class SorobanController<T, E extends SorobanEndpoint<T, ?, ?>>
   private int nbIgnored = 0;
 
   public SorobanController(
-      int loopDelayMs, int startDelayMs, String logId, RpcSession rpcSession, E endpoint) {
+      int loopDelayMs, int startDelayMs, String logInfo, RpcSession rpcSession, E endpoint) {
     super(loopDelayMs, startDelayMs, null);
-    this.logId = logId;
+    this.logInfo = logInfo + " sorobanDir=" + endpoint.getDir();
     this.rpcSession = rpcSession;
     this.endpoint = endpoint;
     this.expirationMs = endpoint.getExpirationMs() * 3;
-    logDebug("starting...");
+    if (log.isDebugEnabled()) {
+      log.debug("starting...");
+    }
   }
 
   // default loopDelay = endpoint.pollingFrequency
-  public SorobanController(int startDelayMs, String logId, RpcSession rpcSession, E endpoint) {
-    this(endpoint.getPollingFrequencyMs(), startDelayMs, logId, rpcSession, endpoint);
+  public SorobanController(int startDelayMs, String logInfo, RpcSession rpcSession, E endpoint) {
+    this(endpoint.getPollingFrequencyMs(), startDelayMs, logInfo, rpcSession, endpoint);
   }
 
   @Override
   protected String getThreadName() {
-    return super.getThreadName() + logId;
+    return super.getThreadName() + logInfo;
   }
 
   protected void setExpirationMs(long expirationMs) {
     this.expirationMs = expirationMs;
-  }
-
-  protected void logDebug(String msg) {
-    if (log.isDebugEnabled()) {
-      log.debug("[" + logId + "] " + msg);
-    }
-  }
-
-  protected void logError(String msg, Exception e) {
-    log.error("[" + logId + "] " + msg, e);
-  }
-
-  protected void logWarn(String msg) {
-    log.warn("[" + logId + "] " + msg);
   }
 
   protected abstract Collection<T> fetch() throws Exception;
@@ -86,6 +75,7 @@ public abstract class SorobanController<T, E extends SorobanEndpoint<T, ?, ?>>
 
   @Override
   protected synchronized void runOrchestrator() {
+    MDC.put("mdc", "sorobanDir=" + endpoint.getDir() + ", " + logInfo);
     nbProcesseds = 0;
     nbExistings = 0;
     nbIgnored = 0;
@@ -97,11 +87,11 @@ public abstract class SorobanController<T, E extends SorobanEndpoint<T, ?, ?>>
         try {
           onRequestAny(message, now);
         } catch (Exception e) {
-          logError("", e);
+          log.error("onRequestAny failed", e);
         }
       }
     } catch (Exception e) {
-      logError("[" + logId + "] Failed to fetch from Soroban", e);
+      log.error("Failed to fetch", e);
     }
 
     // clean expired inputs
@@ -117,6 +107,7 @@ public abstract class SorobanController<T, E extends SorobanEndpoint<T, ?, ?>>
               + nbExpired
               + " expired");
     }*/
+    MDC.clear();
   }
 
   // overridable
@@ -124,12 +115,18 @@ public abstract class SorobanController<T, E extends SorobanEndpoint<T, ?, ?>>
     return false;
   }
 
+  // overridable
+  protected boolean isRequestCacheable(T message) {
+    return true;
+  }
+
   protected void onRequestAny(T request, long now) {
     String uniqueId = computeUniqueId(request);
     if (!isRequestIgnored(request, uniqueId)) {
       Long requestNonce = computeNonce(request); // may be null
+      boolean requestCacheable = isRequestCacheable(request);
       Pair<Long, Long> existing = processedById.get(uniqueId);
-      if (existing != null) {
+      if (requestCacheable && existing != null) {
         try {
           Long lastNonce = existing.getRight();
           if (lastNonce == null || requestNonce == null || requestNonce > lastNonce) {
@@ -137,7 +134,7 @@ public abstract class SorobanController<T, E extends SorobanEndpoint<T, ?, ?>>
             onRequestExisting(request, uniqueId);
           } else {
             nbIgnored++;
-            logWarn(
+            log.warn(
                 "REQUEST (repeat) "
                     + uniqueId
                     + " => ignored: requestNonce="
@@ -147,23 +144,25 @@ public abstract class SorobanController<T, E extends SorobanEndpoint<T, ?, ?>>
             onRequestIgnored(request, uniqueId);
           }
         } catch (Exception e) {
-          logError("[" + logId + "] Error on existing message:", e);
+          log.error("Error on existing message:", e);
         }
       } else {
         nbProcesseds++;
-        processedById.put(uniqueId, Pair.of(now, requestNonce));
+        if (requestCacheable) {
+          processedById.put(uniqueId, Pair.of(now, requestNonce));
+        }
         try {
           // logDebug("Processing: " + uniqueId);
           onRequestNew(request, uniqueId);
         } catch (Exception e) {
-          logError("[" + logId + "] Error processing a message:", e);
+          log.error("Error processing a message:", e);
         }
       }
     }
     try {
       remove(request);
     } catch (Exception e) {
-      logError("[" + logId + "] Error removing a message:", e);
+      log.error("Error removing a message:", e);
     }
   }
 
@@ -180,7 +179,7 @@ public abstract class SorobanController<T, E extends SorobanEndpoint<T, ?, ?>>
           try {
             onExpiring(key);
           } catch (Exception e) {
-            logError("[" + logId + "] Error on expiring message:", e);
+            log.error("Error on expiring message:", e);
           }
           processedById.remove(key);
         });
@@ -197,7 +196,6 @@ public abstract class SorobanController<T, E extends SorobanEndpoint<T, ?, ?>>
   @Override
   public synchronized void stop() {
     super.stop();
-    logDebug("stop");
     processedById.clear();
   }
 

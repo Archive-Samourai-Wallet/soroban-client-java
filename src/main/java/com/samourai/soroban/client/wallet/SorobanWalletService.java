@@ -15,12 +15,8 @@ import com.samourai.wallet.cahoots.multi.MultiCahootsService;
 import com.samourai.wallet.cahoots.stonewallx2.Stonewallx2Service;
 import com.samourai.wallet.cahoots.stowaway.StowawayService;
 import org.bitcoinj.core.NetworkParameters;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class SorobanWalletService {
-  private final Logger log = LoggerFactory.getLogger(SorobanWalletService.class);
-
   private SorobanProtocolMeeting sorobanProtocol;
   private OnlineCahootsService onlineCahootsService;
   private SorobanService sorobanService;
@@ -41,7 +37,7 @@ public class SorobanWalletService {
     this.onlineCahootsService =
         new OnlineCahootsService(stowawayService, stonewallx2Service, multiCahootsService);
     this.sorobanService = new SorobanService(bip47Util, params, rpcClientService, sorobanProtocol);
-    this.sorobanMeetingService = new SorobanMeetingService(rpcClientService);
+    this.sorobanMeetingService = new SorobanMeetingService();
     this.manualCahootsService =
         new ManualCahootsService(stowawayService, stonewallx2Service, multiCahootsService);
   }

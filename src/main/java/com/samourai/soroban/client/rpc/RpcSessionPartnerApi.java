@@ -1,11 +1,8 @@
 package com.samourai.soroban.client.rpc;
 
 import com.samourai.wallet.bip47.rpc.Bip47Partner;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class RpcSessionPartnerApi extends RpcSessionApi {
-  private static final Logger log = LoggerFactory.getLogger(RpcSessionPartnerApi.class);
 
   protected final Bip47Partner bip47Partner;
 

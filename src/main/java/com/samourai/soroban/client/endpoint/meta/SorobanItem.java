@@ -1,26 +1,17 @@
 package com.samourai.soroban.client.endpoint.meta;
 
-import com.samourai.soroban.client.endpoint.SorobanEndpoint;
 import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaNonce;
 import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaSender;
-import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 
-public class SorobanItem {
-  private String payload;
-  private SorobanMetadata metadata;
-  private String rawEntry;
-  private AbstractSorobanEndpointMeta endpoint;
+public class SorobanItem extends AbstractSorobanItem<SorobanMetadata, AbstractSorobanEndpointMeta> {
 
   public SorobanItem(
       String payload,
       SorobanMetadata metadata,
       String rawEntry,
       AbstractSorobanEndpointMeta endpoint) {
-    this.payload = payload;
-    this.metadata = metadata;
-    this.rawEntry = rawEntry;
-    this.endpoint = endpoint;
+    super(payload, metadata, rawEntry, endpoint);
   }
 
   public SorobanItem(SorobanItem sorobanItem) {
@@ -31,48 +22,15 @@ public class SorobanItem {
         sorobanItem.getEndpoint());
   }
 
-  public String getPayload() {
-    return payload;
-  }
-
-  public SorobanMetadata getMetadata() {
-    return metadata;
-  }
-
-  public String getRawEntry() {
-    return rawEntry;
-  }
-
   public String getUniqueId() {
-    return endpoint.computeUniqueId(this);
-  }
-
-  public AbstractSorobanEndpointMeta getEndpoint() {
-    return endpoint;
+    return getEndpoint().computeUniqueId(this);
   }
 
   public PaymentCode getMetaSender() {
-    return SorobanWrapperMetaSender.getSender(metadata);
+    return SorobanWrapperMetaSender.getSender(getMetadata());
   }
 
   public Long getMetaNonce() {
-    return SorobanWrapperMetaNonce.getNonce(metadata);
-  }
-
-  public SorobanEndpoint getEndpointReply(Bip47Encrypter encrypter) {
-    return getEndpoint().getEndpointReply(this, encrypter);
-  }
-
-  @Override
-  public String toString() {
-    return "{"
-        + "payload='"
-        + payload
-        + '\''
-        + ", metadata="
-        + metadata
-        + ", endpoint="
-        + endpoint.toString()
-        + "}";
+    return SorobanWrapperMetaNonce.getNonce(getMetadata());
   }
 }

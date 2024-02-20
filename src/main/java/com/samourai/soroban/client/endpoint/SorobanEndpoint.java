@@ -32,13 +32,7 @@ public interface SorobanEndpoint<I, S, F extends SorobanFilter<I>> {
 
   Single<List<I>> getList(SorobanClient sorobanClient, Consumer<F> filterBuilder);
 
-  String getPathReply(I entry);
-
   SorobanEndpoint getEndpointReply(I request, Bip47Encrypter encrypter);
-
-  SorobanApp getApp();
-
-  String computeUniqueId(I entry);
 
   void setAutoRemove(boolean autoRemove);
 
@@ -51,4 +45,6 @@ public interface SorobanEndpoint<I, S, F extends SorobanFilter<I>> {
   int getResendFrequencyWhenNoReplyMs();
 
   void setResendFrequencyWhenNoReplyMs(int resendFrequencyWhenNoReplyMs);
+
+  String getDir();
 }

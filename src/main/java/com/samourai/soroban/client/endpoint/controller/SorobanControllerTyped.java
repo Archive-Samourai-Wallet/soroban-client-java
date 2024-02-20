@@ -7,10 +7,14 @@ import com.samourai.soroban.client.exception.SorobanException;
 import com.samourai.soroban.client.rpc.RpcSession;
 import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
+import java.lang.invoke.MethodHandles;
 import java.util.Collection;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class SorobanControllerTyped
     extends SorobanController<SorobanItemTyped, SorobanEndpointTyped> {
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   public SorobanControllerTyped(
       int startDelayMs, String logId, RpcSession rpcSession, SorobanEndpointTyped endpoint) {
@@ -47,10 +51,14 @@ public abstract class SorobanControllerTyped
   protected void onRequestNew(SorobanItemTyped request, String key) throws Exception {
     SorobanPayloadable reply = computeReplyOnRequestNew(request, key);
     if (reply != null) {
-      logDebug("NEW REPLY " + reply.getClass().getSimpleName() + " => " + request.getType());
+      if (log.isDebugEnabled()) {
+        log.debug("NEW REPLY " + reply.getClass().getSimpleName() + " => " + request.getType());
+      }
       sendReply(request, reply);
     } else {
-      logDebug("NO REPLY => " + request.getType());
+      if (log.isDebugEnabled()) {
+        log.debug("NO REPLY => " + request.getType());
+      }
     }
   }
 
@@ -59,10 +67,14 @@ public abstract class SorobanControllerTyped
     super.onRequestExisting(request, key);
     SorobanPayloadable reply = computeReplyOnRequestExisting(request, key);
     if (reply != null) {
-      logDebug("REPLY (existing) " + reply.getClass().getSimpleName());
+      if (log.isDebugEnabled()) {
+        log.debug("REPLY (existing) " + reply.getClass().getSimpleName());
+      }
       sendReply(request, reply);
     } else {
-      logDebug("NO REPLY (existing) for " + request.getType());
+      if (log.isDebugEnabled()) {
+        log.debug("NO REPLY (existing) for " + request.getType());
+      }
     }
   }
 
@@ -71,10 +83,15 @@ public abstract class SorobanControllerTyped
     super.onRequestIgnored(request, key);
     SorobanPayloadable reply = computeReplyOnRequestIgnored(request, key);
     if (reply != null) {
-      logDebug("REPLY (ignored) " + reply.getClass().getSimpleName() + " => " + request.getType());
+      if (log.isDebugEnabled()) {
+        log.debug(
+            "REPLY (ignored) " + reply.getClass().getSimpleName() + " => " + request.getType());
+      }
       sendReply(request, reply);
     } else {
-      logDebug("NO REPLY (ignored) for " + request.getType());
+      if (log.isDebugEnabled()) {
+        log.debug("NO REPLY (ignored) for " + request.getType());
+      }
     }
   }
 

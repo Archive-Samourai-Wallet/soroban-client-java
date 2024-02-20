@@ -4,6 +4,7 @@ import com.samourai.soroban.client.RpcWallet;
 import com.samourai.soroban.client.SorobanClient;
 import com.samourai.soroban.client.SorobanServerDex;
 import com.samourai.soroban.client.dialog.RpcDialog;
+import com.samourai.soroban.client.exception.SorobanErrorMessageException;
 import com.samourai.wallet.api.backend.beans.HttpException;
 import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
 import com.samourai.wallet.util.AsyncUtil;
@@ -16,6 +17,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Callable;
+import java.util.concurrent.TimeoutException;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.slf4j.Logger;
@@ -23,8 +25,7 @@ import org.slf4j.LoggerFactory;
 
 public class RpcSession {
   private static final Logger log = LoggerFactory.getLogger(RpcSession.class.getName());
-  private static final int DOWN_EXPIRATION_DELAY_MS = 600000; // 10min
-  private static final UpStatusPool upStatusPool = new UpStatusPool(DOWN_EXPIRATION_DELAY_MS);
+  private static final UpStatusPool upStatusPool = new SorobanUpStatusPool();
   private static final AsyncUtil asyncUtil = AsyncUtil.getInstance();
 
   private RpcClientService rpcClientService;
@@ -46,71 +47,96 @@ public class RpcSession {
     this.authenticationKey = authenticationKey;
   }
 
-  public Collection<String> getServerUrlsUp() {
+  public Collection<String> getSorobanUrlsUp() {
     boolean onion = rpcClientService.isOnion();
-    return getServerUrlsUp(onion);
+    return getSorobanUrlsUp(onion);
   }
 
-  public Collection<String> getServerUrlsUp(boolean onion) {
+  public Collection<String> getSorobanUrlsUp(boolean onion) {
     NetworkParameters params = rpcClientService.getParams();
-    Collection<String> serverUrls = SorobanServerDex.get(params).getServerUrls(onion);
-    Collection<String> serverUrlsUp = upStatusPool.filterNotDown(serverUrls);
-    if (serverUrlsUp.isEmpty()) {
+    Collection<String> sorobanUrls = SorobanServerDex.get(params).getSorobanUrls(onion);
+    Collection<String> sorobanUrlsUp = upStatusPool.filterNotDown(sorobanUrls);
+    if (sorobanUrlsUp.isEmpty()) {
       // retry when all down
-      log.warn("All SorobanServerDex appears to be down, retrying all...");
+      log.warn("All SorobanServerDex appears to be down, retrying all... onion=" + onion);
       upStatusPool.expireAll();
-      return serverUrls;
+      return sorobanUrls;
     }
-    return serverUrlsUp;
+    return sorobanUrlsUp;
   }
 
-  public <R> R withRpcServerUrl(CallbackWithArg<String, R> callable) throws Exception {
+  public <R> R withRpcSorobanUrl(CallbackWithArg<String, R> callable) throws Exception {
     int attempts = 0;
 
-    // shuffle serverUrls
-    List<String> serverUrls = new LinkedList<>(getServerUrlsUp());
-    if (serverUrls.isEmpty()) {
+    // shuffle sorobanUrls
+    List<String> sorobanUrls = new LinkedList<>(getSorobanUrlsUp());
+    if (sorobanUrls.isEmpty()) {
       throw new HttpException("RPC failed: no SorobanServerDex available");
     }
-    int nbServers = serverUrls.size();
-    RandomUtil.getInstance().shuffle(serverUrls);
+    int nbServers = sorobanUrls.size();
+    RandomUtil.getInstance().shuffle(sorobanUrls);
     Exception lastException = null;
 
-    while (!serverUrls.isEmpty()) {
-      // retry with each serverUrl
-      String serverUrl = serverUrls.remove(0);
+    while (!sorobanUrls.isEmpty()) {
+      // retry with each sorobanUrl
+      String sorobanUrl = sorobanUrls.remove(0);
       try {
-        R result = withRpcServerUrl(callable, serverUrl);
+        R result = withRpcSorobanUrl(callable, sorobanUrl);
         if (attempts > 0) {
           attempts++;
           if (log.isDebugEnabled()) {
-            log.debug("RPC success: attempt " + attempts + "/" + nbServers + ", url=" + serverUrl);
+            log.debug(
+                "RPC success: attempt "
+                    + attempts
+                    + "/"
+                    + nbServers
+                    + ", sorobanUrl="
+                    + sorobanUrl);
           }
         }
         return result;
       } catch (HttpException e) {
         attempts++;
         lastException = e;
-        log.warn("RPC failed: attempt " + attempts + "/" + nbServers + ", url=" + serverUrl);
+        log.warn(
+            "RPC failed: attempt " + attempts + "/" + nbServers + ", sorobanUrl=" + sorobanUrl);
       } catch (Throwable e) {
+        if (log.isDebugEnabled()) {
+          if (!(e instanceof TimeoutException)) {
+            if (e instanceof SorobanErrorMessageException) {
+              log.warn("SorobanErrorMessage=" + e.getMessage() + ", sorobanUrl=" + sorobanUrl);
+            } else {
+              log.warn("error running withRpcSorobanUrl(), sorobanUrl=" + sorobanUrl, e);
+            }
+          }
+        }
         throw e; // abort on non-http exception
       }
     }
     throw lastException;
   }
 
-  public <R> R withRpcServerUrl(CallbackWithArg<String, R> callable, String serverUrlForced)
+  public <R> R withRpcSorobanUrl(CallbackWithArg<String, R> callable, String sorobanUrlForced)
       throws Exception {
-    if (serverUrlForced == null) {
-      return withRpcServerUrl(callable);
+    if (sorobanUrlForced == null) {
+      return withRpcSorobanUrl(callable);
     }
     try {
-      R result = callable.apply(serverUrlForced + RpcClient.ENDPOINT_RPC);
+      R result = callable.apply(sorobanUrlForced + RpcClient.ENDPOINT_RPC);
       return result;
     } /*catch (TimeoutException e) {
-        upStatusPool.setStatusDown(serverUrlForced, e.getMessage());
+        upStatusPool.setStatusDown(sorobanUrlForced, e.getMessage());
         throw e;
       } */ catch (Throwable e) {
+      if (log.isDebugEnabled()) {
+        if (!(e instanceof TimeoutException)) {
+          if (e instanceof SorobanErrorMessageException) {
+            log.warn("SorobanErrorMessage=" + e.getMessage() + ", sorobanUrl=" + sorobanUrlForced);
+          } else {
+            log.warn("error running withRpcSorobanUrl(), sorobanUrl=" + sorobanUrlForced, e);
+          }
+        }
+      }
       throw e;
     }
   }
@@ -119,36 +145,35 @@ public class RpcSession {
     return withRpcClient(callable, null);
   }
 
-  public <R> R withRpcClient(CallbackWithArg<RpcClient, R> callable, String serverUrlForced)
+  public <R> R withRpcClient(CallbackWithArg<RpcClient, R> callable, String sorobanUrlForced)
       throws Exception {
-    return withRpcServerUrl(
-        serverUrl -> {
-          RpcClient rpcClient = rpcClientService.createRpcClient(serverUrl);
+    return withRpcSorobanUrl(
+        sorobanUrl -> {
+          RpcClient rpcClient = rpcClientService.createRpcClient(sorobanUrl);
           if (authenticationKey != null) {
             rpcClient.setAuthenticationKey(authenticationKey);
           }
           return callable.apply(rpcClient);
         },
-        serverUrlForced);
+        sorobanUrlForced);
   }
 
-  public <R> R withSorobanClient(CallbackWithArg<SorobanClient, R> callable, String serverUrlForced)
-      throws Exception {
+  public <R> R withSorobanClient(
+      CallbackWithArg<SorobanClient, R> callable, String sorobanUrlForced) throws Exception {
     Bip47Encrypter encrypter = rpcWallet.getBip47Encrypter();
     return withRpcClient(
         rpcClient -> {
           SorobanClient sorobanClient = new SorobanClient(rpcClient, encrypter);
           return callable.apply(sorobanClient);
         },
-        serverUrlForced);
+        sorobanUrlForced);
   }
 
   public <R extends Single> R withSorobanClientSingle(
-      CallbackWithArg<SorobanClient, R> callable, String serverUrlForced) {
+      CallbackWithArg<SorobanClient, R> callable, String sorobanUrlForced) {
     try {
-      return withSorobanClient(callable, serverUrlForced);
+      return withSorobanClient(callable, sorobanUrlForced);
     } catch (Exception e) {
-      log.error("withSorobanClientSingle() failed", e);
       return (R) Single.error(e);
     }
   }
@@ -161,7 +186,6 @@ public class RpcSession {
     try {
       return withSorobanClient(callable, null);
     } catch (Exception e) {
-      log.error("withSorobanClientSingle() failed", e);
       return (R) Single.error(e);
     }
   }

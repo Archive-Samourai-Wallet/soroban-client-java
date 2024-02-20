@@ -4,10 +4,14 @@ import com.samourai.soroban.client.SorobanPayloadable;
 import com.samourai.soroban.client.endpoint.meta.typed.SorobanEndpointTyped;
 import com.samourai.soroban.client.endpoint.meta.typed.SorobanItemTyped;
 import com.samourai.soroban.client.rpc.RpcSession;
+import java.lang.invoke.MethodHandles;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class SorobanControllerTypedWithCachedReply extends SorobanControllerTyped {
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private Map<String, SorobanPayloadable> replyByRequestId; // reply by request.uniqueId
 
@@ -40,7 +44,7 @@ public abstract class SorobanControllerTypedWithCachedReply extends SorobanContr
   protected boolean isRequestIgnored(SorobanItemTyped request, String uniqueId) {
     Long requestNonce = request.getMetaNonce();
     if (requestNonce == null) {
-      logWarn("REQUEST ignored (missing metadata.nonce): " + request.toString());
+      log.warn("REQUEST ignored (missing metadata.nonce): " + request.toString());
       return true;
     }
     return false;
