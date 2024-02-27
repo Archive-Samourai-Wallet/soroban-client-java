@@ -1,7 +1,7 @@
 package com.samourai.soroban.client.endpoint;
 
 import com.samourai.wallet.bip47.rpc.Bip47Partner;
-import com.samourai.whirlpool.client.wallet.beans.WhirlpoolNetwork;
+import com.samourai.wallet.constants.WhirlpoolNetwork;
 
 public class SorobanApp {
   protected final WhirlpoolNetwork whirlpoolNetwork;

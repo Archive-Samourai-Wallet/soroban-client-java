@@ -2,6 +2,7 @@ package com.samourai.http.client;
 
 import com.google.common.base.Charsets;
 import com.samourai.wallet.api.backend.beans.HttpException;
+import com.samourai.wallet.httpClient.JacksonHttpClient;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.eclipse.jetty.client.HttpClient;

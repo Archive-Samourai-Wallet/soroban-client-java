@@ -1,12 +1,12 @@
 package com.samourai.soroban.client.endpoint.controller;
 
-import com.samourai.soroban.client.SorobanPayloadable;
 import com.samourai.soroban.client.endpoint.meta.typed.SorobanEndpointTyped;
 import com.samourai.soroban.client.endpoint.meta.typed.SorobanItemTyped;
 import com.samourai.soroban.client.exception.SorobanException;
 import com.samourai.soroban.client.rpc.RpcSession;
 import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
+import com.samourai.wallet.sorobanClient.SorobanPayloadable;
 import java.lang.invoke.MethodHandles;
 import java.util.Collection;
 import org.slf4j.Logger;

@@ -1,7 +1,7 @@
 package com.samourai.soroban.client.meeting;
 
-import com.samourai.soroban.client.SorobanPayloadable;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
+import com.samourai.wallet.sorobanClient.SorobanPayloadable;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
 

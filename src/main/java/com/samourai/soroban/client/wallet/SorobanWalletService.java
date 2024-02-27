@@ -1,6 +1,5 @@
 package com.samourai.soroban.client.wallet;
 
-import com.samourai.soroban.cahoots.ManualCahootsService;
 import com.samourai.soroban.client.SorobanService;
 import com.samourai.soroban.client.cahoots.OnlineCahootsService;
 import com.samourai.soroban.client.meeting.SorobanMeetingService;
@@ -11,6 +10,7 @@ import com.samourai.soroban.client.wallet.sender.SorobanWalletInitiator;
 import com.samourai.wallet.bip47.BIP47UtilGeneric;
 import com.samourai.wallet.bipFormat.BipFormatSupplier;
 import com.samourai.wallet.cahoots.CahootsWallet;
+import com.samourai.wallet.cahoots.manual.ManualCahootsService;
 import com.samourai.wallet.cahoots.multi.MultiCahootsService;
 import com.samourai.wallet.cahoots.stonewallx2.Stonewallx2Service;
 import com.samourai.wallet.cahoots.stowaway.StowawayService;

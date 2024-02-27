@@ -1,8 +1,5 @@
 package com.samourai.soroban.client.rpc;
 
-import com.samourai.http.client.HttpUsage;
-import com.samourai.http.client.IHttpClient;
-import com.samourai.http.client.IHttpClientService;
 import com.samourai.soroban.client.dialog.RpcDialog;
 import com.samourai.wallet.bip47.BIP47UtilGeneric;
 import com.samourai.wallet.bip47.rpc.BIP47Account;
@@ -11,6 +8,9 @@ import com.samourai.wallet.cahoots.CahootsWallet;
 import com.samourai.wallet.crypto.CryptoUtil;
 import com.samourai.wallet.hd.HD_Wallet;
 import com.samourai.wallet.hd.HD_WalletFactoryGeneric;
+import com.samourai.wallet.httpClient.HttpUsage;
+import com.samourai.wallet.httpClient.IHttpClient;
+import com.samourai.wallet.httpClient.IHttpClientService;
 import org.bitcoinj.core.NetworkParameters;
 
 public class RpcClientService {

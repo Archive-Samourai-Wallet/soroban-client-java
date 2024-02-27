@@ -1,7 +1,8 @@
 package com.samourai.soroban.client;
 
-import com.samourai.soroban.cahoots.ManualCahootsMessage;
 import com.samourai.soroban.client.cahoots.OnlineCahootsMessage;
+import com.samourai.wallet.cahoots.manual.ManualCahootsMessage;
+import com.samourai.wallet.sorobanClient.SorobanInteraction;
 
 public class OnlineSorobanInteraction extends SorobanInteraction {
   private SorobanInteraction interaction;

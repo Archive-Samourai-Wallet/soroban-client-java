@@ -1,6 +1,5 @@
 package com.samourai.soroban.client.wallet.sender;
 
-import com.samourai.soroban.cahoots.CahootsContext;
 import com.samourai.soroban.client.OnlineSorobanInteraction;
 import com.samourai.soroban.client.SorobanService;
 import com.samourai.soroban.client.cahoots.OnlineCahootsMessage;
@@ -10,6 +9,7 @@ import com.samourai.soroban.client.meeting.SorobanResponseMessage;
 import com.samourai.soroban.client.wallet.SorobanWallet;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.cahoots.Cahoots;
+import com.samourai.wallet.cahoots.CahootsContext;
 import com.samourai.wallet.cahoots.CahootsType;
 import com.samourai.wallet.cahoots.CahootsWallet;
 import io.reactivex.Single;

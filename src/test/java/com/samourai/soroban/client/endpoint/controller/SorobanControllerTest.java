@@ -1,13 +1,13 @@
 package com.samourai.soroban.client.endpoint.controller;
 
 import com.samourai.soroban.client.AbstractTest;
-import com.samourai.soroban.client.SorobanPayloadable;
 import com.samourai.soroban.client.endpoint.meta.typed.SorobanEndpointTyped;
 import com.samourai.soroban.client.endpoint.meta.typed.SorobanItemTyped;
 import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMeta;
 import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaNonce;
 import com.samourai.soroban.client.rpc.RpcMode;
 import com.samourai.soroban.client.rpc.TestPayload;
+import com.samourai.wallet.sorobanClient.SorobanPayloadable;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

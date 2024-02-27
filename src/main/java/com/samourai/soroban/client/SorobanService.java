@@ -1,12 +1,16 @@
 package com.samourai.soroban.client;
 
-import com.samourai.soroban.cahoots.CahootsContext;
 import com.samourai.soroban.client.dialog.RpcDialog;
 import com.samourai.soroban.client.protocol.SorobanProtocolMeeting;
 import com.samourai.soroban.client.rpc.RpcClientService;
 import com.samourai.wallet.bip47.BIP47UtilGeneric;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
+import com.samourai.wallet.cahoots.CahootsContext;
 import com.samourai.wallet.cahoots.CahootsWallet;
+import com.samourai.wallet.sorobanClient.SorobanInteraction;
+import com.samourai.wallet.sorobanClient.SorobanMessage;
+import com.samourai.wallet.sorobanClient.SorobanMessageService;
+import com.samourai.wallet.sorobanClient.SorobanReply;
 import com.samourai.wallet.util.AsyncUtil;
 import io.reactivex.Observable;
 import io.reactivex.functions.Consumer;

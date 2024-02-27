@@ -1,7 +1,7 @@
 package com.samourai.soroban.client.rpc;
 
-import com.samourai.http.client.IHttpClient;
 import com.samourai.wallet.bipFormat.BIP_FORMAT;
+import com.samourai.wallet.httpClient.IHttpClient;
 import com.samourai.wallet.util.AsyncUtil;
 import com.samourai.wallet.util.MessageSignUtilGeneric;
 import io.reactivex.Completable;

@@ -4,9 +4,9 @@ import com.samourai.soroban.client.endpoint.meta.SorobanMetadata;
 import com.samourai.soroban.client.exception.SorobanException;
 import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
+import com.samourai.wallet.constants.WhirlpoolNetwork;
 import com.samourai.wallet.util.MessageSignUtilGeneric;
 import com.samourai.wallet.util.Pair;
-import com.samourai.whirlpool.client.wallet.beans.WhirlpoolNetwork;
 
 /** Metadata: auth */
 public class SorobanWrapperMetaAuthWithSamouraiSender extends AbstractSorobanWrapperMetaAuth {

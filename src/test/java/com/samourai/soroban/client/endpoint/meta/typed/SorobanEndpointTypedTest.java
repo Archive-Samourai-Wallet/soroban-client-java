@@ -1,7 +1,6 @@
 package com.samourai.soroban.client.endpoint.meta.typed;
 
 import com.samourai.soroban.client.AbstractTest;
-import com.samourai.soroban.client.SorobanPayloadable;
 import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaFilterSender;
 import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaSender;
 import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaSignWithSender;
@@ -12,6 +11,7 @@ import com.samourai.soroban.client.rpc.TestPayload;
 import com.samourai.soroban.client.rpc.TestResponsePayload;
 import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
+import com.samourai.wallet.sorobanClient.SorobanPayloadable;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiPredicate;

@@ -1,8 +1,5 @@
 package com.samourai.soroban.client.wallet;
 
-import com.samourai.soroban.cahoots.CahootsContext;
-import com.samourai.soroban.cahoots.Stonewallx2Context;
-import com.samourai.soroban.cahoots.TypeInteraction;
 import com.samourai.soroban.client.AbstractTest;
 import com.samourai.soroban.client.OnlineSorobanInteraction;
 import com.samourai.soroban.client.meeting.SorobanRequestMessage;
@@ -12,9 +9,8 @@ import com.samourai.soroban.client.wallet.counterparty.SorobanCounterpartyListen
 import com.samourai.soroban.client.wallet.sender.CahootsSorobanInitiatorListener;
 import com.samourai.soroban.client.wallet.sender.SorobanInitiatorListener;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
-import com.samourai.wallet.cahoots.Cahoots;
-import com.samourai.wallet.cahoots.CahootsTestUtil;
-import com.samourai.wallet.cahoots.CahootsType;
+import com.samourai.wallet.cahoots.*;
+import com.samourai.wallet.cahoots.stonewallx2.Stonewallx2Context;
 import org.apache.commons.lang3.mutable.Mutable;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.junit.jupiter.api.Assertions;

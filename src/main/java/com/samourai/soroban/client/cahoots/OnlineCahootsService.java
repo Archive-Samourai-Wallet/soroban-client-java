@@ -1,13 +1,13 @@
 package com.samourai.soroban.client.cahoots;
 
-import com.samourai.soroban.cahoots.CahootsContext;
-import com.samourai.soroban.cahoots.ManualCahootsMessage;
-import com.samourai.soroban.cahoots.ManualCahootsService;
-import com.samourai.soroban.client.SorobanInteraction;
-import com.samourai.soroban.client.SorobanReply;
+import com.samourai.wallet.cahoots.CahootsContext;
+import com.samourai.wallet.cahoots.manual.ManualCahootsMessage;
+import com.samourai.wallet.cahoots.manual.ManualCahootsService;
 import com.samourai.wallet.cahoots.multi.MultiCahootsService;
 import com.samourai.wallet.cahoots.stonewallx2.Stonewallx2Service;
 import com.samourai.wallet.cahoots.stowaway.StowawayService;
+import com.samourai.wallet.sorobanClient.SorobanInteraction;
+import com.samourai.wallet.sorobanClient.SorobanReply;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

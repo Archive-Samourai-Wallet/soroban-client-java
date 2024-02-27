@@ -1,11 +1,11 @@
 package com.samourai.soroban.client.dialog;
 
 import com.google.common.base.Charsets;
-import com.samourai.soroban.client.SorobanPayloadable;
 import com.samourai.soroban.client.exception.SorobanException;
 import com.samourai.soroban.client.meeting.SorobanMessageWithSender;
 import com.samourai.soroban.client.rpc.RpcSession;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
+import com.samourai.wallet.sorobanClient.SorobanPayloadable;
 import io.reactivex.Completable;
 import java.security.MessageDigest;
 import org.bouncycastle.util.encoders.Hex;

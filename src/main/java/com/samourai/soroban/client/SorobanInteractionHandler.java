@@ -1,5 +1,6 @@
 package com.samourai.soroban.client;
 
+import com.samourai.wallet.sorobanClient.SorobanMessage;
 import io.reactivex.functions.Consumer;
 import io.reactivex.schedulers.Schedulers;
 import io.reactivex.subjects.BehaviorSubject;

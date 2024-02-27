@@ -1,5 +1,6 @@
 package com.samourai.soroban.client;
 
+import com.samourai.wallet.sorobanClient.SorobanPayloadable;
 import com.samourai.wallet.util.JSONUtils;
 
 public class AbstractSorobanPayloadable implements SorobanPayloadable {

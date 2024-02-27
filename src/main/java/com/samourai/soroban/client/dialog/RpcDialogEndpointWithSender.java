@@ -1,6 +1,5 @@
 package com.samourai.soroban.client.dialog;
 
-import com.samourai.soroban.client.SorobanPayloadable;
 import com.samourai.soroban.client.endpoint.AbstractSorobanEndpoint;
 import com.samourai.soroban.client.endpoint.SorobanEndpoint;
 import com.samourai.soroban.client.endpoint.meta.SorobanFilter;
@@ -9,6 +8,7 @@ import com.samourai.soroban.client.meeting.SorobanMessageWithSender;
 import com.samourai.soroban.client.rpc.RpcMode;
 import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
+import com.samourai.wallet.sorobanClient.SorobanPayloadable;
 import com.samourai.wallet.util.Pair;
 
 public class RpcDialogEndpointWithSender

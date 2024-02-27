@@ -1,10 +1,10 @@
 package com.samourai.soroban.client.pingPong;
 
-import com.samourai.soroban.cahoots.CahootsContext;
-import com.samourai.soroban.cahoots.Stonewallx2Context;
 import com.samourai.soroban.client.AbstractTest;
-import com.samourai.soroban.client.SorobanMessage;
+import com.samourai.wallet.cahoots.CahootsContext;
 import com.samourai.wallet.cahoots.CahootsType;
+import com.samourai.wallet.cahoots.stonewallx2.Stonewallx2Context;
+import com.samourai.wallet.sorobanClient.SorobanMessage;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;

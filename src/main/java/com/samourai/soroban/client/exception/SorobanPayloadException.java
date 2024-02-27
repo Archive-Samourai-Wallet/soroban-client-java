@@ -1,6 +1,6 @@
 package com.samourai.soroban.client.exception;
 
-import com.samourai.soroban.client.SorobanPayloadable;
+import com.samourai.wallet.sorobanClient.SorobanPayloadable;
 
 public abstract class SorobanPayloadException extends SorobanException {
   private SorobanPayloadable sorobanPayload;

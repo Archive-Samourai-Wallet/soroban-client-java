@@ -1,7 +1,6 @@
 package com.samourai.soroban.client.endpoint.meta.typed;
 
 import com.samourai.soroban.client.SorobanClient;
-import com.samourai.soroban.client.SorobanPayloadable;
 import com.samourai.soroban.client.endpoint.meta.AbstractSorobanEndpointMeta;
 import com.samourai.soroban.client.endpoint.meta.SorobanItemFilter;
 import com.samourai.soroban.client.endpoint.meta.SorobanMetadata;
@@ -17,6 +16,7 @@ import com.samourai.soroban.protocol.payload.AckResponse;
 import com.samourai.soroban.protocol.payload.SorobanErrorMessage;
 import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
+import com.samourai.wallet.sorobanClient.SorobanPayloadable;
 import com.samourai.wallet.util.CallbackWithArg;
 import com.samourai.wallet.util.Pair;
 import io.reactivex.Completable;
