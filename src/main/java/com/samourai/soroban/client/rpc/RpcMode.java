@@ -5,16 +5,16 @@ package com.samourai.soroban.client.rpc;
 public enum RpcMode {
   NORMAL(
       "normal", 180000, // 3min
-      60000, // 30s
+      60000, // 1min
       15000), // 15s
   SHORT(
       "short", 60000, // 1min
       20000, // 20s
-      5000),
-  SHORT_FAST(
-      "short", 60000, // 1min
-      20000, // 20s
-      2000),
+      5000), // 5s
+  FAST(
+      "fast", 15, // 15s
+      5000, // 5s
+      3000), // 3s
   ; // 2s
 
   private String value;

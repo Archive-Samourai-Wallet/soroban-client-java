@@ -59,7 +59,8 @@ public class SorobanWrapperMetaSender implements SorobanWrapperMeta {
                 p -> p,
                 // keep last payload with highest nonce
                 mergeLastByNonce))
-        .values().stream();
+        .values()
+        .stream();
   }
 
   public static <I extends SorobanItem> Predicate<I> filterBySender(PaymentCode... senders) {

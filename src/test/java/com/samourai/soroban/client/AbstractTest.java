@@ -1,6 +1,6 @@
 package com.samourai.soroban.client;
 
-import com.samourai.http.client.JavaHttpClient;
+import com.samourai.http.client.JettyHttpClient;
 import com.samourai.soroban.client.endpoint.SorobanApp;
 import com.samourai.soroban.client.endpoint.SorobanEndpoint;
 import com.samourai.soroban.client.meeting.SorobanMeetingService;
@@ -22,6 +22,7 @@ import com.samourai.wallet.bipFormat.BipFormatSupplier;
 import com.samourai.wallet.bipWallet.WalletSupplier;
 import com.samourai.wallet.bipWallet.WalletSupplierImpl;
 import com.samourai.wallet.cahoots.CahootsWallet;
+import com.samourai.wallet.cahoots.CahootsWalletImpl;
 import com.samourai.wallet.chain.ChainSupplier;
 import com.samourai.wallet.client.indexHandler.MemoryIndexHandlerSupplier;
 import com.samourai.wallet.constants.WhirlpoolNetwork;
@@ -34,6 +35,7 @@ import com.samourai.wallet.httpClient.IHttpClient;
 import com.samourai.wallet.httpClient.IHttpClientService;
 import com.samourai.wallet.send.provider.MockUtxoProvider;
 import com.samourai.wallet.send.provider.SimpleCahootsUtxoProvider;
+import com.samourai.wallet.sorobanClient.RpcWallet;
 import com.samourai.wallet.util.AsyncUtil;
 import com.samourai.wallet.util.MessageSignUtilGeneric;
 import java.security.Provider;
@@ -76,13 +78,16 @@ public abstract class AbstractTest {
       HD_WalletFactoryGeneric.getInstance();
   protected static final AsyncUtil asyncUtil = AsyncUtil.getInstance();
 
-  protected JavaHttpClient httpClient = new JavaHttpClient(TIMEOUT_MS);
+  protected JettyHttpClient httpClient = new JettyHttpClient(TIMEOUT_MS, null, "soroban-test");
   protected IHttpClientService httpClientService =
       new IHttpClientService() {
         @Override
         public IHttpClient getHttpClient(HttpUsage httpUsage) {
           return httpClient;
         }
+
+        @Override
+        public void changeIdentity() {}
 
         @Override
         public void stop() {}
@@ -144,10 +149,9 @@ public abstract class AbstractTest {
             bipFormatSupplier, new MemoryIndexHandlerSupplier(), bip84WalletSender);
     utxoProviderInitiator = new MockUtxoProvider(params, walletSupplierSender);
     cahootsWalletInitiator =
-        new CahootsWallet(
-            walletSupplierSender,
+        new CahootsWalletImpl(
             chainSupplier,
-            BIP_FORMAT.PROVIDER,
+            walletSupplierSender,
             new SimpleCahootsUtxoProvider(utxoProviderInitiator));
     sorobanWalletInitiator = sorobanWalletService.getSorobanWalletInitiator(cahootsWalletInitiator);
 
@@ -158,10 +162,9 @@ public abstract class AbstractTest {
             bipFormatSupplier, new MemoryIndexHandlerSupplier(), bip84WalletCounterparty);
     utxoProviderCounterparty = new MockUtxoProvider(params, walletSupplierCounterparty);
     cahootsWalletCounterparty =
-        new CahootsWallet(
-            walletSupplierCounterparty,
+        new CahootsWalletImpl(
             chainSupplier,
-            BIP_FORMAT.PROVIDER,
+            walletSupplierCounterparty,
             new SimpleCahootsUtxoProvider(utxoProviderCounterparty));
     sorobanWalletCounterparty =
         sorobanWalletService.getSorobanWalletCounterparty(cahootsWalletCounterparty);

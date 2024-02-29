@@ -77,7 +77,8 @@ public class SorobanItemFilter<I extends SorobanItem> implements SorobanFilter<I
                         p -> p,
                         // keep last payload with highest nonce
                         mergeLastByNonce))
-                .values().stream());
+                .values()
+                .stream());
     return this;
   }
 

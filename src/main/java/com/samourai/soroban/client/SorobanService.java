@@ -307,4 +307,8 @@ public class SorobanService {
   public RpcClientService getRpcClientService() {
     return rpcClientService;
   }
+
+  public NetworkParameters getParams() {
+    return params;
+  }
 }

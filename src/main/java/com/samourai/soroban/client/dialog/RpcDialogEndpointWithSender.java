@@ -18,7 +18,7 @@ public class RpcDialogEndpointWithSender
         PaymentCode,
         SorobanFilter<SorobanMessageWithSender>> {
   public RpcDialogEndpointWithSender(String dir) {
-    super(dir, RpcMode.SHORT_FAST, new SorobanWrapperString[] {});
+    super(dir, RpcMode.FAST, new SorobanWrapperString[] {});
   }
 
   @Override

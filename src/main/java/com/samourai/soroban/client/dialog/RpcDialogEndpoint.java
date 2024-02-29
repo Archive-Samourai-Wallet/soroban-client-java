@@ -14,7 +14,7 @@ public class RpcDialogEndpoint
     extends AbstractSorobanEndpoint<
         RpcDialogItem, SorobanPayloadable, Void, SorobanFilter<RpcDialogItem>> {
   public RpcDialogEndpoint(String dir) {
-    super(dir, RpcMode.SHORT_FAST, new SorobanWrapperString[] {});
+    super(dir, RpcMode.FAST, new SorobanWrapperString[] {});
   }
 
   @Override

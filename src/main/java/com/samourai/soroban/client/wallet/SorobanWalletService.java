@@ -14,6 +14,7 @@ import com.samourai.wallet.cahoots.manual.ManualCahootsService;
 import com.samourai.wallet.cahoots.multi.MultiCahootsService;
 import com.samourai.wallet.cahoots.stonewallx2.Stonewallx2Service;
 import com.samourai.wallet.cahoots.stowaway.StowawayService;
+import com.samourai.wallet.util.ExtLibJConfig;
 import org.bitcoinj.core.NetworkParameters;
 
 public class SorobanWalletService {
@@ -40,6 +41,14 @@ public class SorobanWalletService {
     this.sorobanMeetingService = new SorobanMeetingService();
     this.manualCahootsService =
         new ManualCahootsService(stowawayService, stonewallx2Service, multiCahootsService);
+  }
+
+  public SorobanWalletService(ExtLibJConfig extLibJConfig, RpcClientService rpcClientService) {
+    this(
+        extLibJConfig.getBip47Util(),
+        extLibJConfig.getBipFormatSupplier(),
+        extLibJConfig.getWhirlpoolNetwork().getParams(),
+        rpcClientService);
   }
 
   public SorobanWalletInitiator getSorobanWalletInitiator(CahootsWallet cahootsWallet) {

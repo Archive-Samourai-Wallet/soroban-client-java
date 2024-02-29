@@ -11,6 +11,7 @@ import com.samourai.wallet.hd.HD_WalletFactoryGeneric;
 import com.samourai.wallet.httpClient.HttpUsage;
 import com.samourai.wallet.httpClient.IHttpClient;
 import com.samourai.wallet.httpClient.IHttpClientService;
+import com.samourai.wallet.util.ExtLibJConfig;
 import org.bitcoinj.core.NetworkParameters;
 
 public class RpcClientService {
@@ -33,6 +34,15 @@ public class RpcClientService {
     this.onion = onion;
     this.params = params;
     this.testModeBIP47Account = null;
+  }
+
+  public RpcClientService(ExtLibJConfig extLibJConfig) {
+    this(
+        extLibJConfig.getHttpClientService(),
+        extLibJConfig.getCryptoUtil(),
+        extLibJConfig.getBip47Util(),
+        extLibJConfig.isOnion(),
+        extLibJConfig.getWhirlpoolNetwork().getParams());
   }
 
   public RpcWalletImpl getRpcWallet(BIP47Account bip47Account) {

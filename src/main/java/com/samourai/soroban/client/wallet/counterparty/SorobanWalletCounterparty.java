@@ -71,7 +71,7 @@ public class SorobanWalletCounterparty extends SorobanWallet {
   }
 
   public Single<SorobanResponseMessage> sendMeetingResponse(
-      SorobanRequestMessage cahootsRequest, boolean accept) throws Exception {
+      SorobanRequestMessage cahootsRequest, boolean accept) {
     return sorobanMeetingService.sendMeetingResponse(rpcSession, cahootsRequest, accept);
   }
 

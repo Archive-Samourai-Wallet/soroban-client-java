@@ -30,7 +30,7 @@ public class SorobanWalletInitiator extends SorobanWallet {
   }
 
   public Single<SorobanResponseMessage> meet(
-      CahootsType cahootsType, PaymentCode paymentCodeCounterparty) throws Exception {
+      CahootsType cahootsType, PaymentCode paymentCodeCounterparty) {
     // send request
     return sorobanMeetingService
         .sendMeetingRequest(rpcSession, paymentCodeCounterparty, cahootsType)
@@ -42,7 +42,7 @@ public class SorobanWalletInitiator extends SorobanWallet {
   }
 
   public Single<Cahoots> meetAndInitiate(
-      CahootsContext cahootsContext, PaymentCode paymentCodeCounterparty) throws Exception {
+      CahootsContext cahootsContext, PaymentCode paymentCodeCounterparty) {
     SorobanInitiatorListener listener = new CahootsSorobanInitiatorListener();
     return meetAndInitiate(cahootsContext, paymentCodeCounterparty, listener);
   }
@@ -50,8 +50,7 @@ public class SorobanWalletInitiator extends SorobanWallet {
   public Single<Cahoots> meetAndInitiate(
       CahootsContext cahootsContext,
       PaymentCode paymentCodeCounterparty,
-      SorobanInitiatorListener listener)
-      throws Exception {
+      SorobanInitiatorListener listener) {
     // meet
     return meet(cahootsContext.getCahootsType(), paymentCodeCounterparty)
         .flatMap(
