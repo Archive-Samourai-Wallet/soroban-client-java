@@ -1,10 +1,10 @@
 package com.samourai.soroban.client.protocol;
 
-import com.samourai.soroban.client.RpcWallet;
 import com.samourai.wallet.bip47.BIP47UtilGeneric;
 import com.samourai.wallet.bip47.rpc.BIP47Account;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.segwit.SegwitAddress;
+import com.samourai.wallet.sorobanClient.RpcWallet;
 import org.bitcoinj.core.NetworkParameters;
 
 public class SorobanProtocolMeeting {

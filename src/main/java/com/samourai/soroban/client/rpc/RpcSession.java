@@ -1,12 +1,12 @@
 package com.samourai.soroban.client.rpc;
 
-import com.samourai.soroban.client.RpcWallet;
 import com.samourai.soroban.client.SorobanClient;
-import com.samourai.soroban.client.SorobanServerDex;
 import com.samourai.soroban.client.dialog.RpcDialog;
 import com.samourai.soroban.client.exception.SorobanErrorMessageException;
 import com.samourai.wallet.api.backend.beans.HttpException;
 import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
+import com.samourai.wallet.sorobanClient.RpcWallet;
+import com.samourai.wallet.sorobanClient.SorobanServerDex;
 import com.samourai.wallet.util.AsyncUtil;
 import com.samourai.wallet.util.CallbackWithArg;
 import com.samourai.wallet.util.RandomUtil;

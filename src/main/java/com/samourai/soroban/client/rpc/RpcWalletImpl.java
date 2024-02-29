@@ -1,9 +1,9 @@
 package com.samourai.soroban.client.rpc;
 
-import com.samourai.soroban.client.RpcWallet;
 import com.samourai.wallet.bip47.BIP47UtilGeneric;
 import com.samourai.wallet.bip47.rpc.*;
 import com.samourai.wallet.crypto.CryptoUtil;
+import com.samourai.wallet.sorobanClient.RpcWallet;
 
 public class RpcWalletImpl implements RpcWallet {
   private BIP47Account bip47Account;

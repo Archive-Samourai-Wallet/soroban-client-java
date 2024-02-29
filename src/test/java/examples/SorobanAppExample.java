@@ -14,12 +14,11 @@ import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.constants.WhirlpoolNetwork;
 import com.samourai.wallet.util.AsyncUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.lang.invoke.MethodHandles;
 import java.util.List;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class SorobanAppExample {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
