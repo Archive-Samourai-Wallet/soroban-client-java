@@ -258,7 +258,6 @@ public class SorobanEndpointTypedTest extends AbstractTest {
 
   @Test
   public void waitNext() throws Exception {
-    endpoint.setAutoRemove(true);
     TestPayload payload = new TestPayload("HELLO WORLD");
 
     // send request

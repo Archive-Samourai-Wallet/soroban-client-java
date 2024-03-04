@@ -31,7 +31,6 @@ public class RpcDialog {
   private RpcDialogEndpointWithSender computeEndpointWithSender(PaymentCode encryptTo) {
     RpcDialogEndpointWithSender endpoint =
         new RpcDialogEndpointWithSender(nextDirectory).setEncryptTo(encryptTo);
-    endpoint.setAutoRemove(true);
     return endpoint;
   }
 
@@ -40,7 +39,6 @@ public class RpcDialog {
         new RpcDialogEndpoint(nextDirectory)
             .setEncryptTo(paymentCodePartner)
             .setDecryptFrom(paymentCodePartner);
-    endpoint.setAutoRemove(true);
     return endpoint;
   }
 

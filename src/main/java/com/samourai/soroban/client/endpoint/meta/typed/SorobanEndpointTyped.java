@@ -24,6 +24,7 @@ import io.reactivex.Single;
 import java.lang.invoke.MethodHandles;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -177,6 +178,47 @@ public class SorobanEndpointTyped
       Consumer<SorobanItemFilter<SorobanItemTyped>> filterBuilder) {
     return doGetListObjects(
         sorobanClient, type, filterBuilder, i -> Pair.of(i.read(type), i.getMetadata()));
+  }
+
+  // FIND ANY
+  public <T> Single<Optional<T>> findAnyObject(SorobanClient sorobanClient, Class<T> type) {
+    return findAnyObject(sorobanClient, type, null);
+  }
+
+  public <T> Single<Optional<T>> findAnyObject(
+      SorobanClient sorobanClient,
+      Class<T> type,
+      Consumer<SorobanItemFilter<SorobanItemTyped>> filterBuilderOrNull) {
+    return findAny(sorobanClient, filterBuilderOrNull)
+        .map(
+   h         sorobanItemTyped -> {
+              if (!sorobanItemTyped.isPresent()) {
+                return Optional.empty();
+              }
+              return sorobanItemTyped.get().readOn(type);
+            });
+  }
+
+  public <T> Single<Optional<Pair<T, SorobanMetadata>>> findAnyObjectWithMetadata(
+      SorobanClient sorobanClient, Class<T> type) {
+    return findAnyObjectWithMetadata(sorobanClient, type, null);
+  }
+
+  public <T> Single<Optional<Pair<T, SorobanMetadata>>> findAnyObjectWithMetadata(
+      SorobanClient sorobanClient,
+      Class<T> type,
+      Consumer<SorobanItemFilter<SorobanItemTyped>> filterBuilderOrNull) {
+    return findAny(sorobanClient, filterBuilderOrNull)
+        .map(
+            sorobanItemTyped -> {
+              if (!sorobanItemTyped.isPresent()) {
+                return Optional.empty();
+              }
+              return sorobanItemTyped
+                  .get()
+                  .readOn(type)
+                  .map(o -> Pair.of(o, sorobanItemTyped.get().getMetadata()));
+            });
   }
 
   // WAIT FIRST

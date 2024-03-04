@@ -250,8 +250,6 @@ public abstract class AbstractTest {
       S responsePayload,
       BiPredicate<S, I> equals)
       throws Exception {
-    endpointInitiator.setAutoRemove(true);
-    endpointCounterparty.setAutoRemove(true);
 
     // send payload
     I request =
@@ -307,8 +305,6 @@ public abstract class AbstractTest {
       S payload,
       BiPredicate<S, I> equals)
       throws Exception {
-    endpointInitiator.setAutoRemove(true);
-    endpointCounterparty.setAutoRemove(true);
 
     // send payload
     asyncUtil.blockingGet(
@@ -362,8 +358,6 @@ public abstract class AbstractTest {
       SorobanEndpoint<I, S, ?> endpointCounterparty,
       S[] payloads)
       throws Exception {
-    endpointInitiator.setAutoRemove(true);
-    endpointCounterparty.setAutoRemove(true);
 
     // send payloads
     rpcSessionInitiator.withSorobanClient(

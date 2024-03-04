@@ -65,7 +65,7 @@ public class SorobanMetadataImpl implements SorobanMetadata {
       str += " typePayload=" + type;
     }
     if (nonce != null) {
-      str += " nonce=" + type;
+      str += " nonce=" + nonce;
     }
     return str;
   }

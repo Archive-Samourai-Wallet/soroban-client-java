@@ -38,75 +38,34 @@ public abstract class SorobanControllerTyped
   }
 
   @Override
-  protected String computeUniqueId(SorobanItemTyped message) {
-    return message.getUniqueId();
-  }
-
-  @Override
-  protected Long computeNonce(SorobanItemTyped request) {
-    return request.getMetaNonce();
-  }
-
-  @Override
-  protected void onRequestNew(SorobanItemTyped request, String key) throws Exception {
-    SorobanPayloadable reply = computeReplyOnRequestNew(request, key);
+  protected void onRequest(SorobanItemTyped request) throws Exception {
+    if (log.isDebugEnabled()) {
+      log.debug(
+          "(<) "
+              + request.getClass().getSimpleName()
+              + " "
+              + endpoint.getDir()
+              + " sender="
+              + request.getMetaSender());
+    }
+    SorobanPayloadable reply = computeReply(request);
     if (reply != null) {
-      if (log.isDebugEnabled()) {
-        log.debug("NEW REPLY " + reply.getClass().getSimpleName() + " => " + request.getType());
-      }
       sendReply(request, reply);
-    } else {
-      if (log.isDebugEnabled()) {
-        log.debug("NO REPLY => " + request.getType());
-      }
     }
   }
 
-  @Override
-  protected void onRequestExisting(SorobanItemTyped request, String key) throws Exception {
-    super.onRequestExisting(request, key);
-    SorobanPayloadable reply = computeReplyOnRequestExisting(request, key);
-    if (reply != null) {
-      if (log.isDebugEnabled()) {
-        log.debug("REPLY (existing) " + reply.getClass().getSimpleName());
-      }
-      sendReply(request, reply);
-    } else {
-      if (log.isDebugEnabled()) {
-        log.debug("NO REPLY (existing) for " + request.getType());
-      }
-    }
-  }
-
-  @Override
-  protected void onRequestIgnored(SorobanItemTyped request, String key) throws Exception {
-    super.onRequestIgnored(request, key);
-    SorobanPayloadable reply = computeReplyOnRequestIgnored(request, key);
-    if (reply != null) {
-      if (log.isDebugEnabled()) {
-        log.debug(
-            "REPLY (ignored) " + reply.getClass().getSimpleName() + " => " + request.getType());
-      }
-      sendReply(request, reply);
-    } else {
-      if (log.isDebugEnabled()) {
-        log.debug("NO REPLY (ignored) for " + request.getType());
-      }
-    }
-  }
-
-  protected abstract SorobanPayloadable computeReplyOnRequestExisting(
-      SorobanItemTyped request, String key) throws Exception;
-
-  protected SorobanPayloadable computeReplyOnRequestIgnored(SorobanItemTyped request, String key)
-      throws Exception {
-    return null;
-  }
-
-  protected abstract SorobanPayloadable computeReplyOnRequestNew(
-      SorobanItemTyped request, String key) throws Exception;
+  protected abstract SorobanPayloadable computeReply(SorobanItemTyped request) throws Exception;
 
   protected void sendReply(SorobanItemTyped request, SorobanPayloadable response) throws Exception {
+    if (log.isDebugEnabled()) {
+      log.debug(
+          "(>) "
+              + response.getClass().getSimpleName()
+              + " "
+              + endpoint.getDir()
+              + " sender="
+              + request.getMetaSender());
+    }
     // reply to request
     PaymentCode paymentCodePartner = request.getMetaSender();
     if (paymentCodePartner == null) {

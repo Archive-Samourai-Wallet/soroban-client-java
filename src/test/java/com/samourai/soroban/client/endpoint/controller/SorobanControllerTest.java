@@ -27,14 +27,7 @@ public class SorobanControllerTest extends AbstractTest {
     return new SorobanControllerTyped(0, "testController", rpcSessionCounterparty, endpoint) {
 
       @Override
-      protected SorobanPayloadable computeReplyOnRequestNew(SorobanItemTyped request, String key)
-          throws Exception {
-        return null;
-      }
-
-      @Override
-      protected SorobanPayloadable computeReplyOnRequestExisting(
-          SorobanItemTyped request, String key) throws Exception {
+      protected SorobanPayloadable computeReply(SorobanItemTyped request) throws Exception {
         return null;
       }
     };
@@ -67,11 +60,7 @@ public class SorobanControllerTest extends AbstractTest {
     // run controller: process 2/2 messages
     controller.runOrchestrator();
     // duplicate payloads were filtered by Soroban
-    Assertions.assertEquals(2, controller.getNbMessages());
-    Assertions.assertEquals(2, controller.getNbProcesseds());
-    Assertions.assertEquals(0, controller.getNbExistings());
-    Assertions.assertEquals(2, controller.getProcessedById().size());
-    Assertions.assertEquals(0, controller.getNbIgnored());
+    Assertions.assertEquals(2, controller.getNbProcessed());
 
     // send more payloads
     TestPayload initiator1New = new TestPayload("initiator1");
@@ -89,11 +78,7 @@ public class SorobanControllerTest extends AbstractTest {
 
     // run controller: process 1/3 messages
     controller.runOrchestrator();
-    Assertions.assertEquals(3, controller.getNbMessages());
-    Assertions.assertEquals(1, controller.getNbProcesseds());
-    Assertions.assertEquals(2, controller.getNbExistings());
-    Assertions.assertEquals(3, controller.getProcessedById().size());
-    Assertions.assertEquals(0, controller.getNbIgnored());
+    Assertions.assertEquals(1, controller.getNbProcessed());
   }
 
   @Test
@@ -127,11 +112,7 @@ public class SorobanControllerTest extends AbstractTest {
     // run controller: process 2/4 messages
     controller.runOrchestrator();
     // we received all payloads (thanks to the nonce)
-    Assertions.assertEquals(2, controller.getNbMessages());
-    Assertions.assertEquals(2, controller.getNbProcesseds());
-    Assertions.assertEquals(0, controller.getNbExistings());
-    Assertions.assertEquals(2, controller.getProcessedById().size());
-    Assertions.assertEquals(0, controller.getNbIgnored());
+    Assertions.assertEquals(2, controller.getNbProcessed());
 
     // send more payloads: process 1/3 messages
     TestPayload initiator1New = new TestPayload("initiator1");
@@ -149,10 +130,6 @@ public class SorobanControllerTest extends AbstractTest {
 
     // run controller
     controller.runOrchestrator();
-    Assertions.assertEquals(3, controller.getNbMessages());
-    Assertions.assertEquals(1, controller.getNbProcesseds());
-    Assertions.assertEquals(2, controller.getNbExistings());
-    Assertions.assertEquals(3, controller.getProcessedById().size());
-    Assertions.assertEquals(0, controller.getNbIgnored());
+    Assertions.assertEquals(1, controller.getNbProcessed());
   }
 }

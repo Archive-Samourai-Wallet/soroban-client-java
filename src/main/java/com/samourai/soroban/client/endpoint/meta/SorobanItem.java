@@ -5,6 +5,9 @@ import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaSende
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 
 public class SorobanItem extends AbstractSorobanItem<SorobanMetadata, AbstractSorobanEndpointMeta> {
+  private String uniqueId;
+  private Long nonce;
+  private PaymentCode sender;
 
   public SorobanItem(
       String payload,
@@ -23,14 +26,23 @@ public class SorobanItem extends AbstractSorobanItem<SorobanMetadata, AbstractSo
   }
 
   public String getUniqueId() {
-    return getEndpoint().computeUniqueId(this);
+    if (uniqueId == null) {
+      uniqueId = getEndpoint().computeUniqueId(this);
+    }
+    return uniqueId;
   }
 
   public PaymentCode getMetaSender() {
-    return SorobanWrapperMetaSender.getSender(getMetadata());
+    if (sender == null) {
+      sender = SorobanWrapperMetaSender.getSender(getMetadata());
+    }
+    return sender;
   }
 
   public Long getMetaNonce() {
-    return SorobanWrapperMetaNonce.getNonce(getMetadata());
+    if (nonce == null) {
+      nonce = SorobanWrapperMetaNonce.getNonce(getMetadata());
+    }
+    return nonce;
   }
 }

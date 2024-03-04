@@ -15,7 +15,7 @@ import java.lang.invoke.MethodHandles;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-import org.apache.commons.lang3.ArrayUtils;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,21 +27,23 @@ public abstract class AbstractSorobanEndpoint<I, S, M, F extends SorobanFilter<I
   private String dir;
   private RpcMode rpcMode;
   private List<SorobanWrapperString> wrappers;
-  private boolean autoRemove;
   private PaymentCode encryptTo; // may be null
   private PaymentCode decryptFrom; // may be null
   private int pollingFrequencyMs;
   private int resendFrequencyWhenNoReplyMs;
 
+  private boolean
+      noReplay; // prevent reading the same message twice: same requestId(/nonce when available)
+
   public AbstractSorobanEndpoint(String dir, RpcMode rpcMode, SorobanWrapperString[] wrappers) {
     this.dir = dir;
     this.rpcMode = rpcMode;
     this.wrappers = Arrays.asList(wrappers);
-    this.autoRemove = false;
     this.encryptTo = null;
     this.decryptFrom = null;
     this.pollingFrequencyMs = rpcMode.getPollingFrequencyMs();
     this.resendFrequencyWhenNoReplyMs = rpcMode.getResendFrequencyWhenNoReplyMs();
+    this.noReplay = true;
   }
 
   protected abstract SorobanEndpoint newEndpointReply(I request, Bip47Encrypter encrypter);
@@ -49,7 +51,6 @@ public abstract class AbstractSorobanEndpoint<I, S, M, F extends SorobanFilter<I
   @Override
   public SorobanEndpoint getEndpointReply(I request, Bip47Encrypter encrypter) {
     SorobanEndpoint endpointReply = newEndpointReply(request, encrypter);
-    endpointReply.setAutoRemove(true);
 
     // preserve config
     endpointReply.setPollingFrequencyMs(pollingFrequencyMs);
@@ -69,19 +70,11 @@ public abstract class AbstractSorobanEndpoint<I, S, M, F extends SorobanFilter<I
 
   protected abstract F newFilterBuilder();
 
-  protected F createFilter(Consumer<F> filterBuilder) {
+  protected F createFilter(Consumer<F> f) {
     F filter = newFilterBuilder();
-    filterBuilder.accept(filter);
+    f.accept(filter);
     return filter;
   }
-
-  /*protected List<I> applyFilter(Consumer<F> filterBuilderOrNull, List<I> list) {
-    if (filterBuilderOrNull == null) {
-      return list;
-    }
-    F filter = createFilter(filterBuilderOrNull);
-    return filter.applyFilter(list.stream()).collect(Collectors.toList());
-  }*/
 
   protected Pair<String, M> encryptOnSend(
       Bip47Encrypter encrypter, Pair<String, M> entry, Object initialPayload) throws Exception {
@@ -241,17 +234,17 @@ public abstract class AbstractSorobanEndpoint<I, S, M, F extends SorobanFilter<I
   }
 
   public Single<Optional<I>> findAny(SorobanClient sorobanClient, Consumer<F> filterBuilderOrNull) {
-    if (filterBuilderOrNull != null) {
-      // list all payloads to apply sort criterias
-      return getList(sorobanClient, filterBuilderOrNull)
-          .map(
-              list ->
-                  list.isEmpty()
-                      ? Optional.empty()
-                      :
-                      // TODO take last item
-                      Optional.of(list.get(list.size() - 1)));
-    }
+    // if (filterBuilderOrNull != null) {
+    // list all payloads to apply sort criterias
+    return getList(sorobanClient, filterBuilderOrNull)
+        .map(
+            list ->
+                list.isEmpty()
+                    ? Optional.empty()
+                    :
+                    // TODO take last item
+                    Optional.of(list.get(list.size() - 1)));
+    /*}
 
     // optimized by stopping on first payload
     Bip47Encrypter encrypter = sorobanClient.getEncrypter();
@@ -271,7 +264,7 @@ public abstract class AbstractSorobanEndpoint<I, S, M, F extends SorobanFilter<I
                 }
               }
               return Optional.empty();
-            });
+            });*/
   }
 
   @Override
@@ -288,28 +281,25 @@ public abstract class AbstractSorobanEndpoint<I, S, M, F extends SorobanFilter<I
         timeoutMs);
   }
 
-  @Override
-  public Single<List<I>> getList(SorobanClient sorobanClient) {
+  public Single<List<I>> doGetList(SorobanClient sorobanClient) {
     Bip47Encrypter encrypter = sorobanClient.getEncrypter();
     return sorobanClient
         .getRpcClient()
         .directoryValues(getDir())
-        .map(entries -> readList(encrypter, entries, sorobanClient));
+        .map(entries -> readList(encrypter, entries));
   }
 
-  protected List<I> readList(
-      Bip47Encrypter encrypter, String[] entries, SorobanClient sorobanClient) {
-    List<I> items = readItems(encrypter, entries, sorobanClient);
+  protected List<I> readList(Bip47Encrypter encrypter, String[] entries) {
+    List<I> items = readItems(encrypter, entries);
     return new LinkedList<>(items);
   }
 
-  protected List<I> readItems(
-      Bip47Encrypter encrypter, String[] entries, SorobanClient sorobanClient) {
+  protected List<I> readItems(Bip47Encrypter encrypter, String[] entries) {
     return Arrays.stream(entries)
         .map(
             entry -> {
               try {
-                return readItem(encrypter, entry, sorobanClient);
+                return readItem(encrypter, entry);
               } catch (Exception e) {
                 return null; // skip invalid payload
               }
@@ -322,15 +312,14 @@ public abstract class AbstractSorobanEndpoint<I, S, M, F extends SorobanFilter<I
     return "payload:" + entry.getLeft() + ", metadata:" + entry.getRight();
   }
 
-  protected I readItem(Bip47Encrypter encrypter, String rawEntry, SorobanClient sorobanClient)
-      throws Exception {
+  protected I readItem(Bip47Encrypter encrypter, String rawEntry) throws Exception {
     try {
       // apply wrappers
       Pair<String, M> entry = rawToEntry(rawEntry);
       String rawPayload = entry.getLeft();
       Pair<String, M> readEntry = applyWrappersOnReceive(encrypter, entry);
       I item = newEntry(readEntry, rawEntry);
-      if (log.isDebugEnabled()) {
+      if (log.isTraceEnabled()) {
         boolean encrypted = !readEntry.getLeft().equals(rawPayload);
         String debug =
             "<= READ sorobanDir="
@@ -342,11 +331,7 @@ public abstract class AbstractSorobanEndpoint<I, S, M, F extends SorobanFilter<I
         if (log.isTraceEnabled()) {
           debug += ", rawEntry=" + rawEntry;
         }
-        log.debug(debug);
-      }
-      if (autoRemove) {
-        // delete in background
-        removeRaw(sorobanClient, rawEntry).subscribe();
+        log.trace(debug);
       }
       return item;
     } catch (Exception e) {
@@ -362,38 +347,57 @@ public abstract class AbstractSorobanEndpoint<I, S, M, F extends SorobanFilter<I
   }
 
   @Override
+  public Single<List<I>> getList(SorobanClient sorobanClient) {
+    return getList(sorobanClient, null);
+  }
+
+  @Override
   public Single<List<I>> getList(SorobanClient sorobanClient, Consumer<F> filterBuilderOrNull) {
-    Single<List<I>> list = getList(sorobanClient);
+    Single<List<I>> list = doGetList(sorobanClient);
 
     // filter
-    F filter = createFilter(filterBuilderOrNull);
-    if (filterBuilderOrNull != null) {
-      list =
-          list.map(
-              l -> {
-                List<I> filteredList = filter.applyFilter(l.stream()).collect(Collectors.toList());
-                if (log.isDebugEnabled()) {
-                  log.debug(
-                      "<= LIST("
-                          + l.size()
-                          + " -> "
-                          + filteredList.size()
-                          + ") sorobanDir="
-                          + getDir());
+    F filter = filterBuilderOrNull != null ? createFilter(filterBuilderOrNull) : null;
+
+    list =
+        list.map(
+            l -> {
+              Stream<I> stream = l.stream();
+              if (filter != null) {
+                stream = filter.applyFilter(l.stream());
+              }
+              if (noReplay) {
+                stream =
+                    applyFilterNoReplay(stream)
+                        .map(
+                            i -> {
+                              onReadNoReplay(i);
+                              return i;
+                            });
+              }
+              List<I> filteredList = stream.collect(Collectors.toList());
+              if (log.isDebugEnabled() && l.size() > 0 || log.isTraceEnabled()) {
+                log.debug(
+                    "<= LIST("
+                        + l.size()
+                        + " -> "
+                        + filteredList.size()
+                        + ") sorobanDir="
+                        + getDir());
+                for (I item : filteredList) {
+                  log.debug(" * " + item);
                 }
-                return filteredList;
-              });
-    } else {
-      list =
-          list.map(
-              l -> {
-                if (log.isDebugEnabled()) {
-                  log.debug("<= LIST(" + l.size() + ") sorobanDir=" + getDir());
-                }
-                return l;
-              });
-    }
+              }
+              return filteredList;
+            });
     return list;
+  }
+
+  protected Stream<I> applyFilterNoReplay(Stream<I> stream) {
+    return stream; // override
+  }
+
+  protected void onReadNoReplay(I item) {
+    // override
   }
 
   protected RpcMode getRpcMode() {
@@ -430,11 +434,6 @@ public abstract class AbstractSorobanEndpoint<I, S, M, F extends SorobanFilter<I
     return dir;
   }
 
-  @Override
-  public void setAutoRemove(boolean autoRemove) {
-    this.autoRemove = autoRemove;
-  }
-
   public PaymentCode getEncryptTo() {
     return encryptTo;
   }
@@ -462,6 +461,15 @@ public abstract class AbstractSorobanEndpoint<I, S, M, F extends SorobanFilter<I
 
   protected List<SorobanWrapperString> getWrappers() {
     return wrappers;
+  }
+
+  public boolean isNoReplay() {
+    return noReplay;
+  }
+
+  @Override
+  public void setNoReplay(boolean noReplay) {
+    this.noReplay = noReplay;
   }
 
   @Override

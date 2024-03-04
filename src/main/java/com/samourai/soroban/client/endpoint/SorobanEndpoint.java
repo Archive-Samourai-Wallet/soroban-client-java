@@ -34,7 +34,7 @@ public interface SorobanEndpoint<I, S, F extends SorobanFilter<I>> {
 
   SorobanEndpoint getEndpointReply(I request, Bip47Encrypter encrypter);
 
-  void setAutoRemove(boolean autoRemove);
+  void setNoReplay(boolean noReplay);
 
   int getExpirationMs();
 

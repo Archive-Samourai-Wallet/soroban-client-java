@@ -59,7 +59,6 @@ public class SorobanEndpointRaw
     SorobanEndpointRaw endpoint =
         new SorobanEndpointRaw(getDir(), RpcMode.SHORT, new SorobanWrapperString[] {});
     endpoint.setEncryptReply(this, request, encrypter);
-    endpoint.setAutoRemove(true);
     return endpoint;
   }
 

@@ -4,6 +4,7 @@ import com.samourai.soroban.client.SorobanClient;
 import com.samourai.soroban.client.endpoint.AbstractSorobanEndpoint;
 import com.samourai.soroban.client.endpoint.SorobanEndpoint;
 import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMeta;
+import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaNonce;
 import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaSender;
 import com.samourai.soroban.client.endpoint.meta.wrapper.SorobanWrapperMetaType;
 import com.samourai.soroban.client.endpoint.wrapper.SorobanWrapper;
@@ -18,14 +19,12 @@ import com.samourai.wallet.util.Pair;
 import com.samourai.wallet.util.Util;
 import io.reactivex.Single;
 import java.lang.invoke.MethodHandles;
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -40,9 +39,12 @@ public abstract class AbstractSorobanEndpointMeta<I extends SorobanItem, S>
   private List<SorobanWrapperMeta> wrappersMeta;
   private boolean decryptFromSender;
 
+  private Map<String, Long> lastNonceByUniqueId; // TODO expiration
+  private Set<String> lastUniqueIds; // TODO expiration
+  private boolean useNonce;
+
   protected AbstractSorobanEndpointMeta(String dir, RpcMode rpcMode, SorobanWrapper[] wrappersAll) {
-    super(dir, rpcMode, findWrappersString(wrappersAll));
-    this.wrappersMeta = findWrappersMeta(wrappersAll);
+    this(dir, rpcMode, findWrappersString(wrappersAll), findWrappersMeta(wrappersAll));
   }
 
   protected AbstractSorobanEndpointMeta(
@@ -52,6 +54,10 @@ public abstract class AbstractSorobanEndpointMeta<I extends SorobanItem, S>
       List<SorobanWrapperMeta> wrappersMeta) {
     super(dir, rpcMode, wrappersString);
     this.wrappersMeta = wrappersMeta;
+    this.lastUniqueIds = new LinkedHashSet<>();
+    this.lastNonceByUniqueId = new LinkedHashMap<>();
+    this.useNonce =
+        wrappersMeta.stream().filter(w -> w instanceof SorobanWrapperMetaNonce).count() > 0;
   }
 
   protected static List<SorobanWrapperMeta> findWrappersMeta(SorobanWrapper[] wrappers) {
@@ -204,6 +210,58 @@ public abstract class AbstractSorobanEndpointMeta<I extends SorobanItem, S>
     return new SorobanItemFilter<>();
   }
 
+  @Override
+  protected SorobanItemFilter<I> createFilter(Consumer<SorobanItemFilter<I>> f) {
+    SorobanItemFilter<I> filter = super.createFilter(f);
+    return filter;
+  }
+
+  @Override
+  protected Stream<I> applyFilterNoReplay(Stream<I> stream) {
+    if (isNoReplay()) {
+      if (useNonce) {
+        // filter per uniqueId with greater nonce
+        return stream.filter(
+            sorobanItem -> {
+              String uniqueId = sorobanItem.getUniqueId();
+              Long nonce = sorobanItem.getMetaNonce();
+              Long lastNonce = lastNonceByUniqueId.get(uniqueId);
+              return lastNonce == null || nonce == null || sorobanItem.getMetaNonce() > lastNonce;
+            });
+      } else {
+        // filter per uniqueId
+        return stream.filter(i -> !lastUniqueIds.contains(i.getUniqueId()));
+      }
+    }
+    return stream;
+  }
+
+  @Override
+  protected void onReadNoReplay(I item) {
+    if (isNoReplay()) {
+      if (useNonce) {
+        // save last nonce per uniqueId
+        Long nonce = item.getMetaNonce();
+        if (nonce != null) {
+          Long lastNonce = lastNonceByUniqueId.get(item.getUniqueId());
+          if (lastNonce != null && lastNonce >= nonce) {
+            log.error(
+                "NONCE REPLAY! "
+                    + item
+                    + " lastNonce="
+                    + lastNonce
+                    + " lastNonceByUniqueId="
+                    + lastNonceByUniqueId); // TODO
+          }
+          lastNonceByUniqueId.put(item.getUniqueId(), nonce);
+        }
+      } else {
+        // save last uniqueId
+        lastUniqueIds.add(item.getUniqueId());
+      }
+    }
+  }
+
   // WAIT REPLY
 
   public I loopWaitReply(RpcSession rpcSession, I request) throws Exception {
@@ -233,8 +291,8 @@ public abstract class AbstractSorobanEndpointMeta<I extends SorobanItem, S>
     Bip47Encrypter encrypter = rpcSession.getRpcWallet().getBip47Encrypter();
     SorobanEndpoint endpointReply = getEndpointReply(request, encrypter);
     try {
-      if (log.isDebugEnabled()) {
-        log.debug(
+      if (log.isTraceEnabled()) {
+        log.trace(
             "waitReply("
                 + timeoutMs
                 + " at "
