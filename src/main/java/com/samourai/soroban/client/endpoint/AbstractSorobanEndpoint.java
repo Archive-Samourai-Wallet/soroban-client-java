@@ -26,6 +26,7 @@ public abstract class AbstractSorobanEndpoint<I, S, M, F extends SorobanFilter<I
 
   private String dir;
   private RpcMode rpcMode;
+  private RpcMode replyRpcMode;
   private List<SorobanWrapperString> wrappers;
   private PaymentCode encryptTo; // may be null
   private PaymentCode decryptFrom; // may be null
@@ -38,6 +39,7 @@ public abstract class AbstractSorobanEndpoint<I, S, M, F extends SorobanFilter<I
   public AbstractSorobanEndpoint(String dir, RpcMode rpcMode, SorobanWrapperString[] wrappers) {
     this.dir = dir;
     this.rpcMode = rpcMode;
+    this.replyRpcMode = RpcMode.FAST;
     this.wrappers = Arrays.asList(wrappers);
     this.encryptTo = null;
     this.decryptFrom = null;
@@ -402,6 +404,14 @@ public abstract class AbstractSorobanEndpoint<I, S, M, F extends SorobanFilter<I
 
   protected RpcMode getRpcMode() {
     return rpcMode;
+  }
+
+  public RpcMode getReplyRpcMode() {
+    return replyRpcMode;
+  }
+
+  public void setReplyRpcMode(RpcMode replyRpcMode) {
+    this.replyRpcMode = replyRpcMode;
   }
 
   @Override

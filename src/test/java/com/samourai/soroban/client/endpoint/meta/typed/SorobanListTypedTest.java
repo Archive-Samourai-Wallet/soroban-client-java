@@ -65,12 +65,15 @@ public class SorobanListTypedTest extends AbstractTest {
           return null;
         });
     waitSorobanDelay();
+  }
 
+  @Test
+  public void getList_unfiltered() throws Exception {
     // get all payloads
     List<SorobanItemTyped> list =
-        asyncUtil.blockingGet(
-            rpcSessionCounterparty.withSorobanClient(
-                sorobanClient -> endpoint.getList(sorobanClient)));
+            asyncUtil.blockingGet(
+                    rpcSessionCounterparty.withSorobanClient(
+                            sorobanClient -> endpoint.getList(sorobanClient)));
     Assertions.assertEquals(9, list.size());
   }
 

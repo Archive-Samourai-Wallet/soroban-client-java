@@ -78,7 +78,7 @@ public class SorobanControllerTest extends AbstractTest {
 
     // run controller: process 1/3 messages
     controller.runOrchestrator();
-    Assertions.assertEquals(1, controller.getNbProcessed());
+    Assertions.assertEquals(3, controller.getNbProcessed());
   }
 
   @Test
@@ -130,6 +130,6 @@ public class SorobanControllerTest extends AbstractTest {
 
     // run controller
     controller.runOrchestrator();
-    Assertions.assertEquals(1, controller.getNbProcessed());
+    Assertions.assertEquals(5, controller.getNbProcessed());
   }
 }

@@ -47,7 +47,7 @@ public class SorobanWalletService {
     this(
         extLibJConfig.getBip47Util(),
         extLibJConfig.getBipFormatSupplier(),
-        extLibJConfig.getWhirlpoolNetwork().getParams(),
+        extLibJConfig.getSamouraiNetwork().getParams(),
         rpcClientService);
   }
 

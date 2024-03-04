@@ -87,7 +87,7 @@ public class SorobanEndpointMetaStringTest extends AbstractTest {
             RpcMode.SHORT,
             new SorobanWrapper[] {
               new SorobanWrapperMetaSender(),
-              new SorobanWrapperMetaAuthWithSamouraiSender(whirlpoolNetwork, auth)
+              new SorobanWrapperMetaAuthWithSamouraiSender(samouraiNetwork, auth)
             });
 
     SorobanEndpointMetaString endpointClient =
@@ -96,7 +96,7 @@ public class SorobanEndpointMetaStringTest extends AbstractTest {
             RpcMode.SHORT,
             new SorobanWrapper[] {
               new SorobanWrapperMetaSender(),
-              new SorobanWrapperMetaAuthWithSamouraiSender(whirlpoolNetwork)
+              new SorobanWrapperMetaAuthWithSamouraiSender(samouraiNetwork)
             });
 
     doTestEndpointReply(endpointCoordinator, endpointClient, payload, responsePayload, equals);
@@ -113,14 +113,14 @@ public class SorobanEndpointMetaStringTest extends AbstractTest {
             app.getDir("TEST"),
             RpcMode.SHORT,
             new SorobanWrapper[] {
-              new SorobanWrapperMetaAuthWithSamouraiSender(whirlpoolNetwork, auth)
+              new SorobanWrapperMetaAuthWithSamouraiSender(samouraiNetwork, auth)
             });
 
     SorobanEndpointMetaString endpointClient =
         new SorobanEndpointMetaString(
             app.getDir("TEST"),
             RpcMode.SHORT,
-            new SorobanWrapper[] {new SorobanWrapperMetaAuthWithSamouraiSender(whirlpoolNetwork)});
+            new SorobanWrapper[] {new SorobanWrapperMetaAuthWithSamouraiSender(samouraiNetwork)});
 
     doTestEndpointSkippedPayload(endpointCoordinator, endpointClient, payload);
   }

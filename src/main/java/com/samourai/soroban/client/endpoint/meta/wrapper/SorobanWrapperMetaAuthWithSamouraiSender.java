@@ -4,7 +4,7 @@ import com.samourai.soroban.client.endpoint.meta.SorobanMetadata;
 import com.samourai.soroban.client.exception.SorobanException;
 import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
-import com.samourai.wallet.constants.WhirlpoolNetwork;
+import com.samourai.wallet.constants.SamouraiNetwork;
 import com.samourai.wallet.util.MessageSignUtilGeneric;
 import com.samourai.wallet.util.Pair;
 
@@ -13,18 +13,18 @@ public class SorobanWrapperMetaAuthWithSamouraiSender extends AbstractSorobanWra
   private static final MessageSignUtilGeneric messageSignUtil =
       MessageSignUtilGeneric.getInstance();
 
-  private WhirlpoolNetwork whirlpoolNetwork;
+  private SamouraiNetwork samouraiNetwork;
 
   // for coordinator
   public SorobanWrapperMetaAuthWithSamouraiSender(
-      WhirlpoolNetwork whirlpoolNetwork, String senderSignedBySigningAddress) {
+      SamouraiNetwork samouraiNetwork, String senderSignedBySigningAddress) {
     super(senderSignedBySigningAddress);
-    this.whirlpoolNetwork = whirlpoolNetwork;
+    this.samouraiNetwork = samouraiNetwork;
   }
 
   // for client
-  public SorobanWrapperMetaAuthWithSamouraiSender(WhirlpoolNetwork whirlpoolNetwork) {
-    this(whirlpoolNetwork, null);
+  public SorobanWrapperMetaAuthWithSamouraiSender(SamouraiNetwork samouraiNetwork) {
+    this(samouraiNetwork, null);
   }
 
   @Override
@@ -38,9 +38,9 @@ public class SorobanWrapperMetaAuthWithSamouraiSender extends AbstractSorobanWra
     }
 
     // validate auth as sender signed by signingAddress
-    String samouraiAddress = whirlpoolNetwork.getSigningAddress();
+    String samouraiAddress = samouraiNetwork.getSigningAddress();
     if (!messageSignUtil.verifySignedMessage(
-        samouraiAddress, sender.toString(), auth, whirlpoolNetwork.getParams())) {
+        samouraiAddress, sender.toString(), auth, samouraiNetwork.getParams())) {
       throw new SorobanException("Invalid metadata.auth against metadata.sender");
     }
   }

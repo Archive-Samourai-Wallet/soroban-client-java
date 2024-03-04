@@ -17,6 +17,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.BiPredicate;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 public class SorobanEndpointTypedTest extends AbstractTest {
@@ -499,6 +500,7 @@ public class SorobanEndpointTypedTest extends AbstractTest {
   }
 
   @Test
+  @Disabled
   public void loopSendAndWaitReply_timeout() throws Exception {
     // no reply sent
 

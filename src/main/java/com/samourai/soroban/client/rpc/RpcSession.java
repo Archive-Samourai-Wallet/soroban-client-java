@@ -102,7 +102,7 @@ public class RpcSession {
             "RPC failed: attempt " + attempts + "/" + nbServers + ", sorobanUrl=" + sorobanUrl);
       } catch (Throwable e) {
         if (log.isDebugEnabled()) {
-          if (!(e instanceof TimeoutException)) {
+          if (!(e instanceof TimeoutException) && !(e instanceof InterruptedException)) {
             if (e instanceof SorobanErrorMessageException) {
               log.warn("SorobanErrorMessage=" + e.getMessage() + ", sorobanUrl=" + sorobanUrl);
             } else {
@@ -129,7 +129,7 @@ public class RpcSession {
         throw e;
       } */ catch (Throwable e) {
       if (log.isDebugEnabled()) {
-        if (!(e instanceof TimeoutException)) {
+        if (!(e instanceof TimeoutException) && !(e instanceof InterruptedException)) {
           if (e instanceof SorobanErrorMessageException) {
             log.warn("SorobanErrorMessage=" + e.getMessage() + ", sorobanUrl=" + sorobanUrlForced);
           } else {

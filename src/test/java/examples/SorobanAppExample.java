@@ -12,7 +12,7 @@ import com.samourai.soroban.client.rpc.*;
 import com.samourai.wallet.bip47.rpc.BIP47Account;
 import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
-import com.samourai.wallet.constants.WhirlpoolNetwork;
+import com.samourai.wallet.constants.SamouraiNetwork;
 import com.samourai.wallet.util.AsyncUtil;
 import java.lang.invoke.MethodHandles;
 import java.util.List;
@@ -26,7 +26,7 @@ public class SorobanAppExample {
   private static final RpcClientService rpcClientService = null; // TODO provide impl
 
   // new Soroban app
-  private SorobanApp app = new SorobanApp(WhirlpoolNetwork.TESTNET, "EXAMPLE", "1.0");
+  private SorobanApp app = new SorobanApp(SamouraiNetwork.TESTNET, "EXAMPLE", "1.0");
 
   // new communication channel
   private SorobanEndpointTyped endpoint =

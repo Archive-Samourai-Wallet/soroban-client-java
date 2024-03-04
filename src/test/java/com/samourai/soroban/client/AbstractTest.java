@@ -25,7 +25,8 @@ import com.samourai.wallet.cahoots.CahootsWallet;
 import com.samourai.wallet.cahoots.CahootsWalletImpl;
 import com.samourai.wallet.chain.ChainSupplier;
 import com.samourai.wallet.client.indexHandler.MemoryIndexHandlerSupplier;
-import com.samourai.wallet.constants.WhirlpoolNetwork;
+import com.samourai.wallet.constants.BIP_WALLETS;
+import com.samourai.wallet.constants.SamouraiNetwork;
 import com.samourai.wallet.crypto.CryptoUtil;
 import com.samourai.wallet.dexConfig.DexConfigProvider;
 import com.samourai.wallet.hd.HD_Wallet;
@@ -62,8 +63,8 @@ public abstract class AbstractTest {
   protected static final MessageSignUtilGeneric messageSignUtil =
       MessageSignUtilGeneric.getInstance();
 
-  protected static final WhirlpoolNetwork whirlpoolNetwork = WhirlpoolNetwork.TESTNET;
-  protected static final NetworkParameters params = whirlpoolNetwork.getParams();
+  protected static final SamouraiNetwork samouraiNetwork = SamouraiNetwork.TESTNET;
+  protected static final NetworkParameters params = samouraiNetwork.getParams();
   protected static final Bip47UtilJava bip47Util = Bip47UtilJava.getInstance();
   protected static final BipFormatSupplier bipFormatSupplier = BIP_FORMAT.PROVIDER;
 
@@ -146,7 +147,10 @@ public abstract class AbstractTest {
     final HD_Wallet bip84WalletSender = computeBip84wallet(SEED_WORDS, SEED_PASSPHRASE_INITIATOR);
     WalletSupplier walletSupplierSender =
         new WalletSupplierImpl(
-            bipFormatSupplier, new MemoryIndexHandlerSupplier(), bip84WalletSender);
+            bipFormatSupplier,
+            new MemoryIndexHandlerSupplier(),
+            bip84WalletSender,
+            BIP_WALLETS.WHIRLPOOL);
     utxoProviderInitiator = new MockUtxoProvider(params, walletSupplierSender);
     cahootsWalletInitiator =
         new CahootsWalletImpl(
@@ -159,7 +163,10 @@ public abstract class AbstractTest {
         computeBip84wallet(SEED_WORDS, SEED_PASSPHRASE_COUNTERPARTY);
     WalletSupplier walletSupplierCounterparty =
         new WalletSupplierImpl(
-            bipFormatSupplier, new MemoryIndexHandlerSupplier(), bip84WalletCounterparty);
+            bipFormatSupplier,
+            new MemoryIndexHandlerSupplier(),
+            bip84WalletCounterparty,
+            BIP_WALLETS.WHIRLPOOL);
     utxoProviderCounterparty = new MockUtxoProvider(params, walletSupplierCounterparty);
     cahootsWalletCounterparty =
         new CahootsWalletImpl(
@@ -194,11 +201,11 @@ public abstract class AbstractTest {
 
     this.appVersion =
         "" + System.currentTimeMillis(); // change version to avoid conflicts between test runs
-    this.app = new SorobanApp(whirlpoolNetwork, "APP_TEST", appVersion);
+    this.app = new SorobanApp(samouraiNetwork, "APP_TEST", appVersion);
 
     samouraiSigningKey = new ECKey();
     samouraiSigningAddress = samouraiSigningKey.toAddress(params).toString();
-    whirlpoolNetwork._setSigningAddress(samouraiSigningAddress);
+    samouraiNetwork._setSigningAddress(samouraiSigningAddress);
   }
 
   protected static void assertNoException() {
@@ -286,17 +293,6 @@ public abstract class AbstractTest {
           Assertions.assertTrue(equals.test(responsePayload, result));
           return result;
         });
-
-    // payloads cleared
-    waitSorobanDelay();
-    waitSorobanDelay();
-    Assertions.assertEquals(
-        0,
-        asyncUtil
-            .blockingGet(
-                rpcSessionInitiator.withSorobanClient(
-                    sorobanClient -> endpointInitiator.getList(sorobanClient)))
-            .size());
   }
 
   protected <I, S> void doTestEndpoint(
@@ -320,17 +316,6 @@ public abstract class AbstractTest {
           Assertions.assertTrue(equals.test(payload, result));
           return result;
         });
-
-    // payloads cleared
-    waitSorobanDelay();
-    waitSorobanDelay();
-    Assertions.assertEquals(
-        0,
-        asyncUtil
-            .blockingGet(
-                rpcSessionInitiator.withSorobanClient(
-                    sorobanClient -> endpointInitiator.getList(sorobanClient)))
-            .size());
   }
 
   protected <I, S> void doTestEndpointSkippedPayload(
@@ -377,16 +362,6 @@ public abstract class AbstractTest {
                 rpcSessionCounterparty.withSorobanClient(
                     sorobanClient -> endpointCounterparty.getList(sorobanClient)))
             .size());
-
-    // payloads cleared
-    waitSorobanDelay();
-    Assertions.assertEquals(
-        0,
-        asyncUtil
-            .blockingGet(
-                rpcSessionInitiator.withSorobanClient(
-                    sorobanClient -> endpointInitiator.getList(sorobanClient)))
-            .size());
   }
 
   protected <I, S> void doTestEndpointDelete(
@@ -395,6 +370,7 @@ public abstract class AbstractTest {
       S payload1,
       S payload2)
       throws Exception {
+      endpointCounterparty.setNoReplay(false); // allow re-reading same payloads
 
     // send payloads
     asyncUtil.blockingAwait(

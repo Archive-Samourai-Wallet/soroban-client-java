@@ -29,7 +29,8 @@ public class SorobanEndpointMetaString extends AbstractSorobanEndpointMeta<Sorob
   @Override
   public SorobanEndpointMetaString newEndpointReply(SorobanItem request, Bip47Encrypter encrypter) {
     SorobanEndpointMetaString endpoint =
-        new SorobanEndpointMetaString(getDirReply(request), RpcMode.SHORT, new SorobanWrapper[] {});
+        new SorobanEndpointMetaString(
+            getDirReply(request), getReplyRpcMode(), new SorobanWrapper[] {});
     return endpoint;
   }
 

@@ -118,7 +118,7 @@ public class SorobanEndpointTyped
     String dirReply = getDirReply(request);
     Class[] replyTypes = computeReplyTypes(replyTypesAllowedOrNull);
     SorobanEndpointTyped endpoint =
-        new SorobanEndpointTyped(dirReply, RpcMode.SHORT, new SorobanWrapper[] {}, replyTypes);
+        new SorobanEndpointTyped(dirReply, getReplyRpcMode(), new SorobanWrapper[] {}, replyTypes);
     endpoint.setEncryptReply(this, request, encrypter);
     return endpoint;
   }
@@ -191,7 +191,7 @@ public class SorobanEndpointTyped
       Consumer<SorobanItemFilter<SorobanItemTyped>> filterBuilderOrNull) {
     return findAny(sorobanClient, filterBuilderOrNull)
         .map(
-   h         sorobanItemTyped -> {
+            sorobanItemTyped -> {
               if (!sorobanItemTyped.isPresent()) {
                 return Optional.empty();
               }

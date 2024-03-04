@@ -42,7 +42,7 @@ public class RpcClientService {
         extLibJConfig.getCryptoUtil(),
         extLibJConfig.getBip47Util(),
         extLibJConfig.isOnion(),
-        extLibJConfig.getWhirlpoolNetwork().getParams());
+        extLibJConfig.getSamouraiNetwork().getParams());
   }
 
   public RpcWalletImpl getRpcWallet(BIP47Account bip47Account) {

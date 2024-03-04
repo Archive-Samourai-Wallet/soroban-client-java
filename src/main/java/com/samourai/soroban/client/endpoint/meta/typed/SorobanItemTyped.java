@@ -83,7 +83,9 @@ public class SorobanItemTyped extends SorobanItem {
   public Optional<SorobanErrorMessage> readOnError() throws Exception {
     Optional<SorobanErrorMessage> optError = readOn(SorobanErrorMessage.class);
     if (optError.isPresent()) {
-      log.warn("SorobanError: " + optError.get());
+      if (log.isDebugEnabled()) {
+        log.warn("SorobanError: " + optError.get());
+      }
       return Optional.of(optError.get());
     }
     return Optional.empty();

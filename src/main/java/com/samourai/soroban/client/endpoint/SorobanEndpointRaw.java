@@ -57,7 +57,7 @@ public class SorobanEndpointRaw
   @Override
   public SorobanEndpoint newEndpointReply(String request, Bip47Encrypter encrypter) {
     SorobanEndpointRaw endpoint =
-        new SorobanEndpointRaw(getDir(), RpcMode.SHORT, new SorobanWrapperString[] {});
+        new SorobanEndpointRaw(getDir(), getReplyRpcMode(), new SorobanWrapperString[] {});
     endpoint.setEncryptReply(this, request, encrypter);
     return endpoint;
   }
