@@ -370,7 +370,7 @@ public abstract class AbstractTest {
       S payload1,
       S payload2)
       throws Exception {
-      endpointCounterparty.setNoReplay(false); // allow re-reading same payloads
+    endpointCounterparty.setNoReplay(false); // allow re-reading same payloads
 
     // send payloads
     asyncUtil.blockingAwait(
