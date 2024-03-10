@@ -95,36 +95,37 @@ public class SorobanWalletCounterparty extends SorobanWallet {
             });
   }
 
-  public Single<Cahoots> acceptAndCounterparty(
+  public Cahoots acceptAndCounterparty(
       SorobanRequestMessage cahootsRequest, SorobanCounterpartyListener listener) throws Exception {
     // accept request
-    return sendMeetingResponse(cahootsRequest, true)
-        .flatMap(
-            response -> {
-              log.info("Soroban request accepted => starting Cahoots... " + cahootsRequest);
+    asyncUtil.blockingGet(sendMeetingResponse(cahootsRequest, true));
+    log.info("Soroban request accepted => starting Cahoots... " + cahootsRequest);
 
-              // start Cahoots
-              CahootsContext cahootsContext =
-                  listener.newCounterpartyContext(cahootsWallet, cahootsRequest);
-              PaymentCode paymentCodeSender = cahootsRequest.getSender();
-              Consumer<OnlineCahootsMessage> onProgress =
-                  sorobanMessage -> listener.progress(sorobanMessage);
-              return counterparty(cahootsContext, paymentCodeSender, onProgress);
-            });
+    // start Cahoots
+    CahootsContext cahootsContext = listener.newCounterpartyContext(cahootsWallet, cahootsRequest);
+    PaymentCode paymentCodeSender = cahootsRequest.getSender();
+    Consumer<OnlineCahootsMessage> onProgress = sorobanMessage -> listener.progress(sorobanMessage);
+    return counterparty(cahootsContext, paymentCodeSender, onProgress);
   }
 
-  public Single<Cahoots> counterparty(
+  public Cahoots counterparty(
       CahootsContext cahootsContext,
       PaymentCode paymentCodeSender,
       Consumer<OnlineCahootsMessage> onProgress)
       throws Exception {
-    return sorobanService
-        .counterparty(cahootsContext, onlineCahootsService, paymentCodeSender, timeoutDialogMs)
-        // notify on progress
-        .map(sorobanMessage -> (OnlineCahootsMessage) sorobanMessage)
-        .doOnNext(onProgress)
-        // return Cahoots on success
-        .lastOrError()
-        .map(onlineCahootsMessage -> onlineCahootsMessage.getCahoots());
+    return asyncUtil.blockingGet(
+        sorobanService
+            .counterparty(
+                cahootsContext,
+                rpcSession,
+                onlineCahootsService,
+                paymentCodeSender,
+                timeoutDialogMs)
+            // notify on progress
+            .map(sorobanMessage -> (OnlineCahootsMessage) sorobanMessage)
+            .doOnNext(onProgress)
+            // return Cahoots on success
+            .lastOrError()
+            .map(onlineCahootsMessage -> onlineCahootsMessage.getCahoots()));
   }
 }

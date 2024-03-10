@@ -20,7 +20,7 @@ public class SorobanAppMeetingTest extends AbstractTest {
   public void getMeeetingAddressReceive() throws Exception {
     String addressReceive =
         sorobanProtocol.getMeeetingAddressReceive(
-            rpcWalletInitiator,
+            rpcWalletInitiator.getBip47Account(),
             cahootsWalletCounterparty.getBip47Account().getPaymentCode(),
             params,
             bip47Util);
@@ -31,7 +31,7 @@ public class SorobanAppMeetingTest extends AbstractTest {
   public void getMeeetingAddressSend() throws Exception {
     String addressSend =
         sorobanProtocol.getMeeetingAddressSend(
-            rpcWalletCounterparty,
+            rpcWalletCounterparty.getBip47Account(),
             cahootsWalletInitiator.getBip47Account().getPaymentCode(),
             params,
             bip47Util);

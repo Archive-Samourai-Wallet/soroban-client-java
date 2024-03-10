@@ -56,6 +56,7 @@ public class PingPongServiceTest extends AbstractTest {
                     asyncUtil.blockingLast(
                         sorobanService.initiator(
                             cahootsContext,
+                            rpcSessionInitiator,
                             pingPongService,
                             paymentCodeCounterparty,
                             TIMEOUT_MS,
@@ -82,7 +83,11 @@ public class PingPongServiceTest extends AbstractTest {
                 SorobanMessage lastMessage =
                     asyncUtil.blockingLast(
                         sorobanService.counterparty(
-                            cahootsContext, pingPongService, paymentCodeInitiator, TIMEOUT_MS));
+                            cahootsContext,
+                            rpcSessionInitiator,
+                            pingPongService,
+                            paymentCodeInitiator,
+                            TIMEOUT_MS));
                 Assertions.assertEquals(lastPayload, lastMessage.toPayload());
               } catch (Exception e) {
                 setException(e);

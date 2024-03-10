@@ -81,9 +81,6 @@ public class SorobanMeetingService {
     final RpcDialog dialog = rpcSession.createRpcDialog(request.toPayload());
     String payload = dialog.receive(paymentCodePartner, timeoutMs);
     SorobanResponseMessage response = SorobanResponseMessage.parse(payload);
-    if (log.isDebugEnabled()) {
-      log.debug(info + "meeting response received: " + response);
-    }
     return response;
   }
 }

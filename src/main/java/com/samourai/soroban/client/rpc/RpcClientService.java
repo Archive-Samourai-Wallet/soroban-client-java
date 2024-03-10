@@ -1,10 +1,8 @@
 package com.samourai.soroban.client.rpc;
 
-import com.samourai.soroban.client.dialog.RpcDialog;
 import com.samourai.wallet.bip47.BIP47UtilGeneric;
 import com.samourai.wallet.bip47.rpc.BIP47Account;
 import com.samourai.wallet.bip47.rpc.BIP47Wallet;
-import com.samourai.wallet.cahoots.CahootsWallet;
 import com.samourai.wallet.crypto.CryptoUtil;
 import com.samourai.wallet.hd.HD_Wallet;
 import com.samourai.wallet.hd.HD_WalletFactoryGeneric;
@@ -47,13 +45,6 @@ public class RpcClientService {
 
   public RpcWalletImpl getRpcWallet(BIP47Account bip47Account) {
     return new RpcWalletImpl(bip47Account, cryptoUtil, bip47Util, this);
-  }
-
-  public RpcDialog createRpcDialog(CahootsWallet cahootsWallet, String directory)
-      throws Exception { // TODO
-    return getRpcWallet(cahootsWallet.getBip47Account())
-        .createRpcSession()
-        .createRpcDialog(directory);
   }
 
   public RpcWalletImpl generateRpcWallet() {

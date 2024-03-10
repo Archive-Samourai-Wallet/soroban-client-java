@@ -17,7 +17,6 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.BiPredicate;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 public class SorobanEndpointTypedTest extends AbstractTest {
@@ -500,17 +499,14 @@ public class SorobanEndpointTypedTest extends AbstractTest {
   }
 
   @Test
-  @Disabled
   public void loopSendAndWaitReply_timeout() throws Exception {
-    // no reply sent
-
-    // should timeout after 10s
-    endpoint.setPollingFrequencyMs(20000); // TODO
-    endpoint.setResendFrequencyWhenNoReplyMs(20000); // TODO
+    // no reply sent, should timeout after 2s
+    endpoint.setPollingFrequencyMs(60000);
+    endpoint.setResendFrequencyWhenNoReplyMs(60000);
     TestPayload payload = new TestPayload("HELLO WORLD");
     Assertions.assertThrows(
         TimeoutException.class,
-        () -> endpoint.loopSendAndWaitReply(rpcSessionInitiator, payload, 600000));
+        () -> endpoint.loopSendAndWaitReply(rpcSessionInitiator, payload, 2000));
   }
 
   @Test

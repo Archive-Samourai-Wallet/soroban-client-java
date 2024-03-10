@@ -405,25 +405,14 @@ public abstract class AbstractSorobanEndpointMeta<I extends SorobanItem, S>
   // endpoint.resendFrequencyWhenNoReply
 
   public I loopSendAndWaitReply(RpcSession rpcSession, S request, int timeoutMs) throws Exception {
-    return loopSendUntil(
-        rpcSession,
-        request,
-        timeoutMs,
-        req ->
-            // wait reply
-            loopWaitReply(rpcSession, req, getResendFrequencyWhenNoReplyMs(), null));
+    return loopSendAndWaitReply(rpcSession, request, timeoutMs, null);
   }
 
   public I loopSendAndWaitReply(
       RpcSession rpcSession, S request, int timeoutMs, Consumer<SorobanItemFilter<I>> filter)
       throws Exception {
-    return loopSendUntil(
-        rpcSession,
-        request,
-        timeoutMs,
-        req ->
-            // wait reply
-            loopWaitReply(rpcSession, req, getResendFrequencyWhenNoReplyMs(), filter));
+    return loopSendAndWaitReply(
+        rpcSession, request, timeoutMs, filter, getResendFrequencyWhenNoReplyMs());
   }
 
   private I loopSendAndWaitReply(
@@ -433,13 +422,14 @@ public abstract class AbstractSorobanEndpointMeta<I extends SorobanItem, S>
       Consumer<SorobanItemFilter<I>> filter,
       Integer sendFrequencyMs)
       throws Exception {
+    int sendFrequencyMsCapped = Math.min(timeoutMs, sendFrequencyMs);
     return loopSendUntil(
         rpcSession,
         request,
         timeoutMs,
         req ->
             // wait reply
-            loopWaitReply(rpcSession, req, sendFrequencyMs, filter));
+            loopWaitReply(rpcSession, req, sendFrequencyMsCapped, filter));
   }
 
   public AbstractSorobanEndpointMeta<I, S> setDecryptFromSender() {

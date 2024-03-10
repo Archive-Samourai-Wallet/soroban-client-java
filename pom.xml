@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.samourai.code.wallet</groupId>
     <artifactId>soroban-client-java</artifactId>
-    <version>1.0.0-beta3</version>
+    <version>1.0.0-beta4-SNAPSHOT</version>
     <properties>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
@@ -12,7 +12,7 @@
         <dependency>
             <groupId>io.samourai.code.wallet</groupId>
             <artifactId>extlibj</artifactId>
-            <version>1.0.0-dexwp-beta3</version>
+            <version>1.0.0-beta4</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -117,7 +117,7 @@
         </repository>
     </repositories>
     <scm>
-        <connection>scm:git:git@code.samourai.io:wallet/soroban-client-java.git</connection>
+        <connection>scm:git:https://code.samourai.io/whirlpool/soroban-client-java.git</connection>
         <tag>1.0.0-beta3</tag>
     </scm>
 </project>

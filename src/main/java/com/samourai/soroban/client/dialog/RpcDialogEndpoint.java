@@ -15,6 +15,7 @@ public class RpcDialogEndpoint
         RpcDialogItem, SorobanPayloadable, Void, SorobanFilter<RpcDialogItem>> {
   public RpcDialogEndpoint(String dir) {
     super(dir, RpcMode.FAST, new SorobanWrapperString[] {});
+    setAutoRemove(true); // preserve existing behavior
   }
 
   @Override

@@ -66,12 +66,20 @@ public class RpcClient {
     body.put("id", 1);
     body.put("params", Arrays.asList(params));
 
+    if (log.isTraceEnabled()) {
+      log.trace("call: -> " + method + " " + url + " " + params);
+    }
+
     Single<Map<String, Object>> result =
         httpClient
             .postJson(url, Map.class, headers, body)
             .map(
                 rpcOpt -> {
                   Map<String, Object> rpc = rpcOpt.get();
+
+                  if (log.isTraceEnabled()) {
+                    log.trace("call: <- " + rpc);
+                  }
 
                   // check error
                   String error = (String) rpc.get("error");

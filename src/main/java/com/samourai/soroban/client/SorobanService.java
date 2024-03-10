@@ -3,11 +3,15 @@ package com.samourai.soroban.client;
 import com.samourai.soroban.client.dialog.RpcDialog;
 import com.samourai.soroban.client.protocol.SorobanProtocolMeeting;
 import com.samourai.soroban.client.rpc.RpcClientService;
+import com.samourai.soroban.client.rpc.RpcSession;
 import com.samourai.wallet.bip47.BIP47UtilGeneric;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.cahoots.CahootsContext;
 import com.samourai.wallet.cahoots.CahootsWallet;
-import com.samourai.wallet.sorobanClient.*;
+import com.samourai.wallet.sorobanClient.SorobanInteraction;
+import com.samourai.wallet.sorobanClient.SorobanMessage;
+import com.samourai.wallet.sorobanClient.SorobanMessageService;
+import com.samourai.wallet.sorobanClient.SorobanReply;
 import com.samourai.wallet.util.AsyncUtil;
 import io.reactivex.Observable;
 import io.reactivex.functions.Consumer;
@@ -39,6 +43,7 @@ public class SorobanService {
 
   public Observable<SorobanMessage> initiator(
       final CahootsContext cahootsContext,
+      RpcSession rpcSession,
       final SorobanMessageService messageService,
       final PaymentCode paymentCodeCounterParty,
       final int timeoutMs,
@@ -54,12 +59,13 @@ public class SorobanService {
             () -> {
               RpcDialog dialogOrNull = null;
               try {
-                RpcWallet rpcWallet =
-                    rpcClientService.getRpcWallet(cahootsWallet.getBip47Account());
                 String initialDirectory =
                     sorobanProtocol.getMeeetingAddressSend(
-                        rpcWallet, paymentCodeCounterParty, params, bip47Util);
-                dialogOrNull = rpcClientService.createRpcDialog(cahootsWallet, initialDirectory);
+                        cahootsWallet.getBip47Account(),
+                        paymentCodeCounterParty,
+                        params,
+                        bip47Util);
+                dialogOrNull = rpcSession.createRpcDialog(initialDirectory);
                 final RpcDialog dialog = dialogOrNull;
                 closeDialogOnError(onMessage, dialog, paymentCodeCounterParty, interactionHandler);
                 dialog(
@@ -85,6 +91,7 @@ public class SorobanService {
 
   public Observable<SorobanMessage> counterparty(
       final CahootsContext cahootsContext,
+      RpcSession rpcSession,
       final SorobanMessageService messageService,
       final PaymentCode paymentCodeInitiator,
       final int timeoutMs)
@@ -97,12 +104,10 @@ public class SorobanService {
             () -> {
               RpcDialog dialogOrNull = null;
               try {
-                RpcWallet rpcWallet =
-                    rpcClientService.getRpcWallet(cahootsWallet.getBip47Account());
                 String initialDirectory =
                     sorobanProtocol.getMeeetingAddressReceive(
-                        rpcWallet, paymentCodeInitiator, params, bip47Util);
-                dialogOrNull = rpcClientService.createRpcDialog(cahootsWallet, initialDirectory);
+                        cahootsWallet.getBip47Account(), paymentCodeInitiator, params, bip47Util);
+                dialogOrNull = rpcSession.createRpcDialog(initialDirectory);
                 final RpcDialog dialog = dialogOrNull;
                 closeDialogOnError(onMessage, dialog, paymentCodeInitiator, null);
 

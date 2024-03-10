@@ -5,6 +5,8 @@ import com.samourai.soroban.client.dialog.RpcDialog;
 import com.samourai.soroban.client.exception.SorobanErrorMessageException;
 import com.samourai.wallet.api.backend.beans.HttpException;
 import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
+import com.samourai.wallet.dexConfig.DexConfigProvider;
+import com.samourai.wallet.dexConfig.SamouraiConfig;
 import com.samourai.wallet.sorobanClient.RpcWallet;
 import com.samourai.wallet.sorobanClient.SorobanServerDex;
 import com.samourai.wallet.util.AsyncUtil;
@@ -12,10 +14,7 @@ import com.samourai.wallet.util.CallbackWithArg;
 import com.samourai.wallet.util.RandomUtil;
 import com.samourai.wallet.util.urlStatus.UpStatusPool;
 import io.reactivex.Single;
-import java.util.Collection;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeoutException;
 import org.bitcoinj.core.ECKey;
@@ -32,6 +31,7 @@ public class RpcSession {
   private ECKey authenticationKey;
   private RpcWallet rpcWallet;
   private boolean done;
+  private Collection<String> sorobanUrlsForced;
 
   public RpcSession(RpcSession rpcSession) {
     this(rpcSession.rpcClientService, rpcSession.rpcWallet);
@@ -41,6 +41,7 @@ public class RpcSession {
     this.rpcClientService = rpcClientService;
     this.rpcWallet = rpcWallet;
     this.done = false;
+    this.sorobanUrlsForced = null;
   }
 
   public void setAuthenticationKey(ECKey authenticationKey) {
@@ -53,6 +54,9 @@ public class RpcSession {
   }
 
   public Collection<String> getSorobanUrlsUp(boolean onion) {
+    if (sorobanUrlsForced != null) {
+      return sorobanUrlsForced;
+    }
     NetworkParameters params = rpcClientService.getParams();
     Collection<String> sorobanUrls = SorobanServerDex.get(params).getSorobanUrls(onion);
     Collection<String> sorobanUrlsUp = upStatusPool.filterNotDown(sorobanUrls);
@@ -208,17 +212,21 @@ public class RpcSession {
       long timeoutMs)
       throws Exception {
 
-    /*if (log.isDebugEnabled()) {
-      log.debug("START_LOOP_RPC_SESSION at " + pollingFrequencyMs + " frequency");
-    }*/
+    if (log.isTraceEnabled()) {
+      log.trace("START_LOOP_RPC_SESSION at " + pollingFrequencyMs + " frequency");
+    }
 
     // fetch value
     Callable<Optional<R>> loop =
         () -> {
-          /*if (log.isDebugEnabled()) {
-            log.debug("CYCLE_LOOP_RPC_SESSION at " + pollingFrequencyMs + " frequency");
-          }*/
-          return withSorobanClient(sorobanClient -> fetchValue.apply(sorobanClient));
+          if (log.isTraceEnabled()) {
+            log.trace("CYCLE_LOOP_RPC_SESSION at " + pollingFrequencyMs + " frequency");
+          }
+          Optional<R> result = withSorobanClient(sorobanClient -> fetchValue.apply(sorobanClient));
+          if (log.isTraceEnabled()) {
+            log.trace("CYCLE_LOOP_RPC_SESSION <- " + result);
+          }
+          return result;
         };
 
     // run loop until value found
@@ -231,5 +239,33 @@ public class RpcSession {
 
   public boolean isDone() {
     return done;
+  }
+
+  public void setSorobanUrlsForced(Collection<String> sorobanUrlsForced) {
+    this.sorobanUrlsForced = sorobanUrlsForced;
+  }
+
+  public void setSorobanUrlsForcedV0(boolean testnet) {
+    // use non-dex soroban
+    Collection<String> sorobanUrlsV0 =
+        computeSorobanUrlsForcedV0(testnet, rpcClientService.isOnion());
+    setSorobanUrlsForced(sorobanUrlsV0);
+  }
+
+  private static Collection<String> computeSorobanUrlsForcedV0(boolean testnet, boolean onion) {
+    SamouraiConfig samouraiConfig = DexConfigProvider.getInstance().getSamouraiConfig();
+    String url;
+    if (testnet) {
+      url =
+          onion
+              ? samouraiConfig.getSorobanServerTestnetOnion()
+              : samouraiConfig.getSorobanServerTestnetClear();
+    } else {
+      url =
+          onion
+              ? samouraiConfig.getSorobanServerMainnetOnion()
+              : samouraiConfig.getSorobanServerMainnetClear();
+    }
+    return Arrays.asList(url);
   }
 }

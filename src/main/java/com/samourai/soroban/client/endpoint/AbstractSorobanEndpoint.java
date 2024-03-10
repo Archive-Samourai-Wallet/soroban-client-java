@@ -35,6 +35,7 @@ public abstract class AbstractSorobanEndpoint<I, S, M, F extends SorobanFilter<I
 
   private boolean
       noReplay; // prevent reading the same message twice: same requestId(/nonce when available)
+  private boolean autoRemove;
 
   public AbstractSorobanEndpoint(String dir, RpcMode rpcMode, SorobanWrapperString[] wrappers) {
     this.dir = dir;
@@ -46,6 +47,7 @@ public abstract class AbstractSorobanEndpoint<I, S, M, F extends SorobanFilter<I
     this.pollingFrequencyMs = rpcMode.getPollingFrequencyMs();
     this.resendFrequencyWhenNoReplyMs = rpcMode.getResendFrequencyWhenNoReplyMs();
     this.noReplay = true;
+    this.autoRemove = false;
   }
 
   protected abstract SorobanEndpoint newEndpointReply(I request, Bip47Encrypter encrypter);
@@ -186,6 +188,7 @@ public abstract class AbstractSorobanEndpoint<I, S, M, F extends SorobanFilter<I
       String clearPayload = entry.getLeft();
       Pair<String, M> entryWithMetadata = Pair.of(entry.getLeft(), entry.getRight());
       entryWithMetadata = applyWrappersOnSend(encrypter, entryWithMetadata, initialPayload);
+      String unencryptedPayload = entryWithMetadata.getLeft();
       String rawEntry = entryToRaw(entryWithMetadata);
 
       // result must include clear payload and full metadata, to use it with getEndpointReply()
@@ -195,24 +198,28 @@ public abstract class AbstractSorobanEndpoint<I, S, M, F extends SorobanFilter<I
 
       // send String
       String dir = getDir();
-      if (log.isDebugEnabled()) {
-        boolean encrypted = !clearPayload.equals(entryWithMetadata.getLeft());
-        String debug =
-            "=> ADD sorobanDir="
-                + dir
-                + " "
-                + logEntry(entryClearPayloadWithMetadata)
-                + "\n, encrypted="
-                + encrypted;
-        if (log.isTraceEnabled()) {
-          debug += ", rawEntry=" + rawEntry;
-        }
-        log.debug(debug);
-      }
       return sorobanClient
           .getRpcClient()
           .directoryAdd(dir, rawEntry, rpcMode)
-          .toSingle(() -> result);
+          .toSingle(
+              () -> {
+                // log into toSingle() to void false-logging when not subscribed
+                if (log.isDebugEnabled()) {
+                  boolean encrypted = !clearPayload.equals(unencryptedPayload);
+                  String debug =
+                      "=> ADD sorobanDir="
+                          + dir
+                          + " "
+                          + logEntry(entryClearPayloadWithMetadata)
+                          + "\n, encrypted="
+                          + encrypted;
+                  if (log.isTraceEnabled()) {
+                    debug += ", rawEntry=" + rawEntry;
+                  }
+                  log.debug(debug);
+                }
+                return result;
+              });
     } catch (Exception e) {
       log.error("sendSingle() failed", e);
       return Single.error(e);
@@ -288,20 +295,22 @@ public abstract class AbstractSorobanEndpoint<I, S, M, F extends SorobanFilter<I
     return sorobanClient
         .getRpcClient()
         .directoryValues(getDir())
-        .map(entries -> readList(encrypter, entries));
+        .map(entries -> readList(encrypter, entries, sorobanClient));
   }
 
-  protected List<I> readList(Bip47Encrypter encrypter, String[] entries) {
-    List<I> items = readItems(encrypter, entries);
+  protected List<I> readList(
+      Bip47Encrypter encrypter, String[] entries, SorobanClient sorobanClient) {
+    List<I> items = readItems(encrypter, entries, sorobanClient);
     return new LinkedList<>(items);
   }
 
-  protected List<I> readItems(Bip47Encrypter encrypter, String[] entries) {
+  protected List<I> readItems(
+      Bip47Encrypter encrypter, String[] entries, SorobanClient sorobanClient) {
     return Arrays.stream(entries)
         .map(
             entry -> {
               try {
-                return readItem(encrypter, entry);
+                return readItem(encrypter, entry, sorobanClient);
               } catch (Exception e) {
                 return null; // skip invalid payload
               }
@@ -314,7 +323,8 @@ public abstract class AbstractSorobanEndpoint<I, S, M, F extends SorobanFilter<I
     return "payload:" + entry.getLeft() + ", metadata:" + entry.getRight();
   }
 
-  protected I readItem(Bip47Encrypter encrypter, String rawEntry) throws Exception {
+  protected I readItem(Bip47Encrypter encrypter, String rawEntry, SorobanClient sorobanClient)
+      throws Exception {
     try {
       // apply wrappers
       Pair<String, M> entry = rawToEntry(rawEntry);
@@ -334,6 +344,10 @@ public abstract class AbstractSorobanEndpoint<I, S, M, F extends SorobanFilter<I
           debug += ", rawEntry=" + rawEntry;
         }
         log.trace(debug);
+      }
+      if (autoRemove) {
+        // delete in background
+        removeRaw(sorobanClient, rawEntry).subscribe();
       }
       return item;
     } catch (Exception e) {
@@ -480,6 +494,10 @@ public abstract class AbstractSorobanEndpoint<I, S, M, F extends SorobanFilter<I
   @Override
   public void setNoReplay(boolean noReplay) {
     this.noReplay = noReplay;
+  }
+
+  public void setAutoRemove(boolean autoRemove) {
+    this.autoRemove = autoRemove;
   }
 
   @Override
