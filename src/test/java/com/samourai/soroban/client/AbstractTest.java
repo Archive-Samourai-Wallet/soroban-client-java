@@ -79,7 +79,7 @@ public abstract class AbstractTest {
       HD_WalletFactoryGeneric.getInstance();
   protected static final AsyncUtil asyncUtil = AsyncUtil.getInstance();
 
-  protected JettyHttpClient httpClient = new JettyHttpClient(TIMEOUT_MS, null, "soroban-test");
+  protected JettyHttpClient httpClient = new JettyHttpClient(TIMEOUT_MS, null, "soroban-test", null);
   protected IHttpClientService httpClientService =
       new IHttpClientService() {
         @Override

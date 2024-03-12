@@ -7,6 +7,7 @@ import com.samourai.wallet.api.backend.beans.HttpException;
 import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
 import com.samourai.wallet.dexConfig.DexConfigProvider;
 import com.samourai.wallet.dexConfig.SamouraiConfig;
+import com.samourai.wallet.httpClient.HttpNetworkException;
 import com.samourai.wallet.sorobanClient.RpcWallet;
 import com.samourai.wallet.sorobanClient.SorobanServerDex;
 import com.samourai.wallet.util.AsyncUtil;
@@ -75,7 +76,7 @@ public class RpcSession {
     // shuffle sorobanUrls
     List<String> sorobanUrls = new LinkedList<>(getSorobanUrlsUp());
     if (sorobanUrls.isEmpty()) {
-      throw new HttpException("RPC failed: no SorobanServerDex available");
+      throw new HttpNetworkException("RPC failed: no SorobanServerDex available");
     }
     int nbServers = sorobanUrls.size();
     RandomUtil.getInstance().shuffle(sorobanUrls);
