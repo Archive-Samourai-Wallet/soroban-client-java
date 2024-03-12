@@ -13,6 +13,7 @@ import com.samourai.wallet.sorobanClient.SorobanServerDex;
 import com.samourai.wallet.util.AsyncUtil;
 import com.samourai.wallet.util.CallbackWithArg;
 import com.samourai.wallet.util.RandomUtil;
+import com.samourai.wallet.util.ShutdownException;
 import com.samourai.wallet.util.urlStatus.UpStatusPool;
 import io.reactivex.Single;
 import java.util.*;
@@ -105,6 +106,8 @@ public class RpcSession {
         lastException = e;
         log.warn(
             "RPC failed: attempt " + attempts + "/" + nbServers + ", sorobanUrl=" + sorobanUrl);
+      } catch (ShutdownException e) {
+        throw e; // abort on shutdown without log
       } catch (Throwable e) {
         if (log.isDebugEnabled()) {
           if (!(e instanceof TimeoutException) && !(e instanceof InterruptedException)) {

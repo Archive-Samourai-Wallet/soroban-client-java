@@ -4,6 +4,7 @@ import com.samourai.wallet.bipFormat.BIP_FORMAT;
 import com.samourai.wallet.httpClient.IHttpClient;
 import com.samourai.wallet.util.AsyncUtil;
 import com.samourai.wallet.util.MessageSignUtilGeneric;
+import com.samourai.wallet.util.ShutdownException;
 import io.reactivex.Completable;
 import io.reactivex.Single;
 import java.io.IOException;
@@ -53,7 +54,7 @@ public class RpcClient {
 
   private Single<Map<String, Object>> call(String method, Map<String, Object> params) {
     if (!started) {
-      return Single.error(new IOException("RpcClient stopped"));
+      return Single.error(new ShutdownException("RpcClient stopped"));
     }
 
     Map<String, String> headers = new HashMap<>();

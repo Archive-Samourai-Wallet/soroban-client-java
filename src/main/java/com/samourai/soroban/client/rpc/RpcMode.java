@@ -12,7 +12,7 @@ public enum RpcMode {
       30000, // 30s
       5000), // 5s
   FAST(
-      "fast", 15, // 15s
+      "fast", 15000, // 15s
       7000, // 7s
       3000), // 3s
   ; // 2s
