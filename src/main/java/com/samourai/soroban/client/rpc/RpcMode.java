@@ -12,7 +12,7 @@ public enum RpcMode {
       30000, // 30s
       5000), // 5s
   FAST(
-      "fast", 15000, // 15s
+      "fast", 25000, // 25s (Soroban real expiry: 15s, limit increased for Tor/mobile handling)
       7000, // 7s
       3000), // 3s
   ; // 2s
