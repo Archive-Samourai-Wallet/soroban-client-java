@@ -404,6 +404,15 @@ public abstract class AbstractSorobanEndpointMeta<I extends SorobanItem, S>
   // loop {send, then wait reply at endpoint.pollingFrequency} at
   // endpoint.resendFrequencyWhenNoReply
 
+  public I loopSendAndWaitReply(RpcSession rpcSession, S request) throws Exception {
+    return loopSendAndWaitReply(rpcSession, request, getDefaultLoopTimeoutMs(), null);
+  }
+
+  public I loopSendAndWaitReply(
+      RpcSession rpcSession, S request, Consumer<SorobanItemFilter<I>> filter) throws Exception {
+    return loopSendAndWaitReply(rpcSession, request, getDefaultLoopTimeoutMs(), filter);
+  }
+
   public I loopSendAndWaitReply(RpcSession rpcSession, S request, int timeoutMs) throws Exception {
     return loopSendAndWaitReply(rpcSession, request, timeoutMs, null);
   }

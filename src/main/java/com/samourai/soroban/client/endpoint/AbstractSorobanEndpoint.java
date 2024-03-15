@@ -433,6 +433,10 @@ public abstract class AbstractSorobanEndpoint<I, S, M, F extends SorobanFilter<I
     return rpcMode.getExpirationMs();
   }
 
+  protected int getDefaultLoopTimeoutMs() {
+    return 2 * getExpirationMs();
+  }
+
   @Override
   public int getPollingFrequencyMs() {
     return pollingFrequencyMs;

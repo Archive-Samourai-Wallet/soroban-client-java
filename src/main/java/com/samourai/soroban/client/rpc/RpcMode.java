@@ -12,7 +12,7 @@ public enum RpcMode {
       30000, // 30s
       5000), // 5s
   FAST(
-      "fast", 25000, // 25s (Soroban real expiry: 15s, limit increased for Tor/mobile handling)
+      "fast", 20000, // 20s (Soroban real expiry: 15s, limit increased for Tor/mobile handling)
       7000, // 7s
       3000), // 3s
   ; // 2s
@@ -20,7 +20,7 @@ public enum RpcMode {
   private String value;
 
   // Soroban messages expiration
-  // used for: default endpoint.waitReply() timeout, default sorobanController.expiration
+  // used for: default endpoint.waitReply() timeout, default sorobanController.expiration, default loopTimeoutMs(x2)
   private int expirationMs;
 
   // used for: endpoint.loopSendUntil() sending frequency
