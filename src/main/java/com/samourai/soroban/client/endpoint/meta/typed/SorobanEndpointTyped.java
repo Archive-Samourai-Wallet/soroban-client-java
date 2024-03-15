@@ -387,6 +387,21 @@ public class SorobanEndpointTyped
   // endpoint.resendFrequencyWhenNoReply
 
   public <T> T loopSendAndWaitReplyObject(
+      RpcSession rpcSession, SorobanPayloadable request, Class<T> replyType) throws Exception {
+    return loopSendAndWaitReplyObject(rpcSession, request, replyType, getDefaultLoopTimeoutMs());
+  }
+
+  public <T> T loopSendAndWaitReplyObject(
+      RpcSession rpcSession,
+      SorobanPayloadable request,
+      Class<T> replyType,
+      Consumer<SorobanItemFilter<SorobanItemTyped>> filter)
+      throws Exception {
+    return loopSendAndWaitReplyObject(
+        rpcSession, request, replyType, getDefaultLoopTimeoutMs(), filter);
+  }
+
+  public <T> T loopSendAndWaitReplyObject(
       RpcSession rpcSession, SorobanPayloadable request, Class<T> replyType, int timeoutMs)
       throws Exception {
     return loopSendAndWaitReplyObject(
