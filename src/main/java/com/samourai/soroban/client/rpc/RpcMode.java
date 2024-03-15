@@ -20,7 +20,8 @@ public enum RpcMode {
   private String value;
 
   // Soroban messages expiration
-  // used for: default endpoint.waitReply() timeout, default sorobanController.expiration, default loopTimeoutMs(x2)
+  // used for: default endpoint.waitReply() timeout, default sorobanController.expiration, default
+  // loopTimeoutMs(x2)
   private int expirationMs;
 
   // used for: endpoint.loopSendUntil() sending frequency
