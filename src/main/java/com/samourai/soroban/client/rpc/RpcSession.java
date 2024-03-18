@@ -227,8 +227,10 @@ public class RpcSession {
             log.trace("CYCLE_LOOP_RPC_SESSION at " + pollingFrequencyMs + " frequency");
           }
           Optional<R> result = withSorobanClient(sorobanClient -> fetchValue.apply(sorobanClient));
-          if (log.isTraceEnabled()) {
-            log.trace("CYCLE_LOOP_RPC_SESSION <- " + result);
+          if (result.isPresent()) {
+            if (log.isTraceEnabled()) {
+              log.trace("CYCLE_LOOP_RPC_SESSION -> result=" + result.get());
+            }
           }
           return result;
         };

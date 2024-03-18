@@ -1,6 +1,7 @@
 package com.samourai.soroban.client;
 
 import com.samourai.http.client.JettyHttpClient;
+import com.samourai.http.client.JettyHttpClientService;
 import com.samourai.soroban.client.endpoint.SorobanApp;
 import com.samourai.soroban.client.endpoint.SorobanEndpoint;
 import com.samourai.soroban.client.meeting.SorobanMeetingService;
@@ -32,7 +33,6 @@ import com.samourai.wallet.dexConfig.DexConfigProvider;
 import com.samourai.wallet.hd.HD_Wallet;
 import com.samourai.wallet.hd.HD_WalletFactoryGeneric;
 import com.samourai.wallet.httpClient.HttpUsage;
-import com.samourai.wallet.httpClient.IHttpClient;
 import com.samourai.wallet.httpClient.IHttpClientService;
 import com.samourai.wallet.send.provider.MockUtxoProvider;
 import com.samourai.wallet.send.provider.SimpleCahootsUtxoProvider;
@@ -78,22 +78,9 @@ public abstract class AbstractTest {
   protected static final HD_WalletFactoryGeneric hdWalletFactory =
       HD_WalletFactoryGeneric.getInstance();
   protected static final AsyncUtil asyncUtil = AsyncUtil.getInstance();
-
+  protected IHttpClientService httpClientService = new JettyHttpClientService();
   protected JettyHttpClient httpClient =
-      new JettyHttpClient(TIMEOUT_MS, null, "soroban-test", null);
-  protected IHttpClientService httpClientService =
-      new IHttpClientService() {
-        @Override
-        public IHttpClient getHttpClient(HttpUsage httpUsage) {
-          return httpClient;
-        }
-
-        @Override
-        public void changeIdentity() {}
-
-        @Override
-        public void stop() {}
-      };
+      (JettyHttpClient) httpClientService.getHttpClient(HttpUsage.BACKEND);
   protected CryptoUtil cryptoUtil = CryptoUtil.getInstance(PROVIDER_JAVA);
   protected RpcClientService rpcClientService =
       new RpcClientService(httpClientService, cryptoUtil, bip47Util, false, params);

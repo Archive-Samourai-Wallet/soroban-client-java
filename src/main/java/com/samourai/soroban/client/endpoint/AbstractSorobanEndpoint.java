@@ -247,12 +247,17 @@ public abstract class AbstractSorobanEndpoint<I, S, M, F extends SorobanFilter<I
     // list all payloads to apply sort criterias
     return getList(sorobanClient, filterBuilderOrNull)
         .map(
-            list ->
-                list.isEmpty()
-                    ? Optional.empty()
-                    :
-                    // TODO take last item
-                    Optional.of(list.get(list.size() - 1)));
+            list -> {
+              if (list.isEmpty()) {
+                // no value found
+                return Optional.empty();
+              }
+              I lastItem = list.get(list.size() - 1);
+              if (log.isTraceEnabled()) {
+                log.trace("findAny sorobanDir=" + getDir() + " -> result=" + lastItem);
+              }
+              return Optional.of(lastItem);
+            });
     /*}
 
     // optimized by stopping on first payload

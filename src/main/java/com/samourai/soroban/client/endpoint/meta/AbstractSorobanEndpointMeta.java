@@ -17,7 +17,6 @@ import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.util.CallbackWithArg;
 import com.samourai.wallet.util.Pair;
 import com.samourai.wallet.util.Util;
-import io.reactivex.Single;
 import java.lang.invoke.MethodHandles;
 import java.util.*;
 import java.util.concurrent.TimeoutException;
@@ -318,31 +317,35 @@ public abstract class AbstractSorobanEndpointMeta<I extends SorobanItem, S>
 
   // send, then wait during replyTimeoutMs (default=endpoint.expirationMs) at endpoint.polling
   // frequency
-  public Single<I> sendAndWaitReply(RpcSession rpcSession, S request) {
+  public I sendAndWaitReply(RpcSession rpcSession, S request) throws Exception {
     return sendAndWaitReply(rpcSession, request, null, null);
   }
 
-  public Single<I> sendAndWaitReply(RpcSession rpcSession, S request, Integer replyTimeoutMs) {
+  public I sendAndWaitReply(RpcSession rpcSession, S request, Integer replyTimeoutMs)
+      throws Exception {
     return sendAndWaitReply(rpcSession, request, replyTimeoutMs, null);
   }
 
   // send, then wait during replyTimeoutMs (default=endpoint.expirationMs) at endpoint.polling
   // frequency
-  public Single<I> sendAndWaitReply(
-      RpcSession rpcSession, S request, Consumer<SorobanItemFilter<I>> filter) {
+  public I sendAndWaitReply(RpcSession rpcSession, S request, Consumer<SorobanItemFilter<I>> filter)
+      throws Exception {
     return sendAndWaitReply(rpcSession, request, null, filter);
   }
 
-  public Single<I> sendAndWaitReply(
+  public I sendAndWaitReply(
       RpcSession rpcSession,
       S request,
       Integer replyTimeoutMs,
-      Consumer<SorobanItemFilter<I>> filter) {
+      Consumer<SorobanItemFilter<I>> filter)
+      throws Exception {
     // send request
-    return rpcSession
-        .withSorobanClientSingle(sorobanClient -> sendSingle(sorobanClient, request))
-        // wait reply
-        .map(req -> loopWaitReply(rpcSession, req, replyTimeoutMs, filter));
+    I req =
+        asyncUtil.blockingGet(
+            rpcSession.withSorobanClientSingle(
+                sorobanClient -> sendSingle(sorobanClient, request)));
+    // wait reply
+    return loopWaitReply(rpcSession, req, replyTimeoutMs, filter);
   }
 
   // LOOP SEND UNTIL REPLY

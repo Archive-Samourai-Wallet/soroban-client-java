@@ -334,13 +334,14 @@ public class SorobanEndpointTyped
 
   // SEND AND WAIT REPLY
 
-  public <T> Single<T> sendAndWaitReplyObject(
-      RpcSession rpcSession, SorobanPayloadable request, Class<T> type) {
+  public <T> T sendAndWaitReplyObject(
+      RpcSession rpcSession, SorobanPayloadable request, Class<T> type) throws Exception {
     return sendAndWaitReplyObject(rpcSession, request, type, null, null);
   }
 
-  public <T> Single<T> sendAndWaitReplyObject(
-      RpcSession rpcSession, SorobanPayloadable request, Class<T> type, Integer replyTimeoutMs) {
+  public <T> T sendAndWaitReplyObject(
+      RpcSession rpcSession, SorobanPayloadable request, Class<T> type, Integer replyTimeoutMs)
+      throws Exception {
     return sendAndWaitReplyObject(rpcSession, request, type, replyTimeoutMs, null);
   }
 
@@ -350,35 +351,39 @@ public class SorobanEndpointTyped
 
   // send request, then wait during replyTimeoutMs (default=endpoint.expirationMs) at
   // endpoint.polling frequency
-  private <T> Single<T> sendAndWaitReplyObject(
+  private <T> T sendAndWaitReplyObject(
       RpcSession rpcSession,
       SorobanPayloadable request,
       Class<T> type,
       Integer replyTimeoutMs,
-      Consumer<SorobanItemFilter<SorobanItemTyped>> filter) {
+      Consumer<SorobanItemFilter<SorobanItemTyped>> filter)
+      throws Exception {
     // send request
-    return rpcSession
-        .withSorobanClientSingle(sorobanClient -> sendSingle(sorobanClient, request))
-        // wait reply
-        .map(req -> waitReplyObject(rpcSession, req, type, replyTimeoutMs, filter));
+    SorobanItemTyped req =
+        asyncUtil.blockingGet(
+            rpcSession.withSorobanClientSingle(
+                sorobanClient -> sendSingle(sorobanClient, request)));
+    // wait reply
+    return waitReplyObject(rpcSession, req, type, replyTimeoutMs, filter);
   }
 
-  public Completable sendAndWaitReplyAck(RpcSession rpcSession, SorobanPayloadable request) {
-    return sendAndWaitReplyAck(rpcSession, request, null, null);
+  public void sendAndWaitReplyAck(RpcSession rpcSession, SorobanPayloadable request)
+      throws Exception {
+    sendAndWaitReplyAck(rpcSession, request, null, null);
   }
 
-  public Completable sendAndWaitReplyAck(
-      RpcSession rpcSession, SorobanPayloadable request, Integer replyTimeoutMs) {
-    return sendAndWaitReplyAck(rpcSession, request, replyTimeoutMs, null);
+  public void sendAndWaitReplyAck(
+      RpcSession rpcSession, SorobanPayloadable request, Integer replyTimeoutMs) throws Exception {
+    sendAndWaitReplyAck(rpcSession, request, replyTimeoutMs, null);
   }
 
-  private Completable sendAndWaitReplyAck(
+  private void sendAndWaitReplyAck(
       RpcSession rpcSession,
       SorobanPayloadable request,
       Integer replyTimeoutMs,
-      Consumer<SorobanItemFilter<SorobanItemTyped>> filter) {
-    return Completable.fromSingle(
-        sendAndWaitReplyObject(rpcSession, request, AckResponse.class, replyTimeoutMs, filter));
+      Consumer<SorobanItemFilter<SorobanItemTyped>> filter)
+      throws Exception {
+    sendAndWaitReplyObject(rpcSession, request, AckResponse.class, replyTimeoutMs, filter);
   }
 
   // LOOP SEND AND WAIT REPLY
