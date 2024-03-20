@@ -19,6 +19,7 @@ import io.reactivex.Single;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeoutException;
+import org.apache.commons.lang3.RandomUtils;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.slf4j.Logger;
@@ -216,20 +217,21 @@ public class RpcSession {
       long timeoutMs)
       throws Exception {
 
+    int id = RandomUtils.nextInt();
     if (log.isTraceEnabled()) {
-      log.trace("START_LOOP_RPC_SESSION at " + pollingFrequencyMs + " frequency");
+      log.trace("LOOP_RPC " + id + " START at " + pollingFrequencyMs + " frequency");
     }
 
     // fetch value
     Callable<Optional<R>> loop =
         () -> {
           if (log.isTraceEnabled()) {
-            log.trace("CYCLE_LOOP_RPC_SESSION at " + pollingFrequencyMs + " frequency");
+            log.trace("LOOP_RPC " + id + " cycle");
           }
           Optional<R> result = withSorobanClient(sorobanClient -> fetchValue.apply(sorobanClient));
           if (result.isPresent()) {
             if (log.isTraceEnabled()) {
-              log.trace("CYCLE_LOOP_RPC_SESSION -> result=" + result.get());
+              log.trace("LOOP_RPC " + id + " SUCCESS -> result=" + result.get());
             }
           }
           return result;

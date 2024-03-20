@@ -467,7 +467,6 @@ public class SorobanEndpointTypedTest extends AbstractTest {
                 SorobanItemTyped request = endpoint.loopWaitAny(rpcSessionCounterparty, 20000);
 
                 waitSorobanDelay();
-                waitSorobanDelay();
 
                 // send response
                 Bip47Encrypter encrypter =
@@ -489,12 +488,10 @@ public class SorobanEndpointTypedTest extends AbstractTest {
         .start();
 
     SorobanEndpointTyped endpointInitiator = new SorobanEndpointTyped(endpoint);
-    endpointInitiator.setPollingFrequencyMs(30000); // TODO
-    endpointInitiator.setResendFrequencyWhenNoReplyMs(30000); // TODO
     TestPayload payload = new TestPayload("HELLO WORLD");
     TestResponsePayload response =
         endpointInitiator.loopSendAndWaitReplyObject(
-            rpcSessionInitiator, payload, TestResponsePayload.class, 60000);
+            rpcSessionInitiator, payload, TestResponsePayload.class, 40000);
     Assertions.assertEquals("HELLO WORLD RESPONSE", response.getResponseMessage());
   }
 
