@@ -1,41 +1,43 @@
 package com.samourai.soroban.client.rpc;
 
-import com.samourai.http.client.IHttpClient;
-import com.samourai.soroban.client.SorobanServer;
+import com.samourai.wallet.bipFormat.BIP_FORMAT;
+import com.samourai.wallet.httpClient.IHttpClient;
 import com.samourai.wallet.util.AsyncUtil;
+import com.samourai.wallet.util.MessageSignUtilGeneric;
+import com.samourai.wallet.util.ShutdownException;
+import io.reactivex.Completable;
 import io.reactivex.Single;
 import java.io.IOException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
+import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class RpcClient {
-  private Logger log;
-  private static final int WAIT_RETRY_DELAY_MS = 1000;
-  private static final String ENDPOINT_RPC = "/rpc";
+  private static final Logger log = LoggerFactory.getLogger(RpcClient.class.getName());
+  public static final String ENDPOINT_RPC = "/rpc";
 
   private final IHttpClient httpClient;
   private final String url;
+  private NetworkParameters params;
   private boolean started;
+  private ECKey authenticationKey;
 
-  public RpcClient(String info, IHttpClient httpClient, NetworkParameters params, boolean onion) {
-    this(info, httpClient, SorobanServer.get(params).getServerUrl(onion) + ENDPOINT_RPC);
-  }
-
-  protected RpcClient(String info, IHttpClient httpClient, String url) {
-    this.log = LoggerFactory.getLogger(RpcClient.class.getName() + info);
+  protected RpcClient(IHttpClient httpClient, String url, NetworkParameters params) {
     this.httpClient = httpClient;
     this.url = url;
+    this.params = params;
     this.started = true;
+    this.authenticationKey = null;
   }
 
-  public static String shortDirectory(String directory) {
-    return directory.substring(0, Math.min(directory.length(), 5));
+  public void setAuthenticationKey(ECKey authenticationKey) {
+    this.authenticationKey = authenticationKey;
   }
 
   public String getUrl() {
@@ -50,21 +52,24 @@ public class RpcClient {
     this.started = false;
   }
 
-  private Single<Map<String, Object>> call(String method, HashMap<String, Object> params)
-      throws IOException {
+  private Single<Map<String, Object>> call(String method, Map<String, Object> params) {
     if (!started) {
-      throw new IOException("RpcClient stopped");
+      return Single.error(new ShutdownException("RpcClient stopped"));
     }
 
-    Map<String, String> headers = new HashMap<String, String>();
+    Map<String, String> headers = new HashMap<>();
     headers.put("content-type", "application/json");
     headers.put("User-Agent", "HotJava/1.1.2 FCS");
 
-    HashMap<String, Object> body = new HashMap<String, Object>();
+    Map<String, Object> body = new HashMap<>();
     body.put("method", method);
     body.put("jsonrpc", "2.0");
     body.put("id", 1);
     body.put("params", Arrays.asList(params));
+
+    if (log.isTraceEnabled()) {
+      log.trace("call: -> " + method + " " + url + " " + params);
+    }
 
     Single<Map<String, Object>> result =
         httpClient
@@ -72,6 +77,10 @@ public class RpcClient {
             .map(
                 rpcOpt -> {
                   Map<String, Object> rpc = rpcOpt.get();
+
+                  if (log.isTraceEnabled()) {
+                    log.trace("call: <- " + rpc);
+                  }
 
                   // check error
                   String error = (String) rpc.get("error");
@@ -84,7 +93,7 @@ public class RpcClient {
                   if (result1 != null) {
                     String status = result1.get("Status");
                     if (status != null && !status.equals("success")) {
-                      throw new IOException("invalid status: " + status);
+                      throw new IOException("RPC call failed: status=" + status);
                     }
                   }
                   return rpc;
@@ -92,21 +101,21 @@ public class RpcClient {
     return result;
   }
 
-  public Single<String[]> directoryValues(String name) throws IOException {
-    if (log.isDebugEnabled()) {
-      log.debug("get " + shortDirectory(name));
-    }
-    HashMap<String, Object> params = new HashMap<String, Object>();
-    params.put("Name", name);
-    params.put("Entries", new String[0]);
-
+  public Single<String[]> directoryValues(String name) {
+    Map<String, Object> params = computeParams(name);
     return call("directory.List", params)
         .map(
             rpc -> {
               Map<?, ?> result = (Map<?, ?>) rpc.get("result");
               ArrayList<?> src = (ArrayList<?>) result.get("Entries");
+              if (src == null) {
+                throw new PermissionDeniedRpcException();
+              }
               String[] dest = new String[src.size()];
               System.arraycopy(src.toArray(), 0, dest, 0, src.size());
+              if (log.isDebugEnabled()) {
+                log.debug("<= list(" + src.size() + ") sorobanDir=" + name + ", sorobanUrl=" + url);
+              }
               return dest;
             });
   }
@@ -126,75 +135,72 @@ public class RpcClient {
             });
   }
 
-  public Single<String> directoryValueWait(final String name, final long timeoutMs)
-      throws IOException {
-    if (log.isDebugEnabled()) {
-      log.debug("wait " + shortDirectory(name) + "... ");
+  public Completable directoryAdd(String name, String entry, RpcMode rpcMode) {
+    if (log.isTraceEnabled()) {
+      log.trace("=> add sorobanDir=" + name + ", sorobanUrl=" + url + " => " + entry);
+    } else if (log.isDebugEnabled()) {
+      log.debug("=> add sorobanDir=" + name + ", sorobanUrl=" + url);
     }
-    long timeStart = System.currentTimeMillis();
-    return directoryValue(name)
-        .retry(
-            error -> {
-              try {
-                // wait for retry delay
-                AsyncUtil.getInstance()
-                    .blockingGet(Single.timer(WAIT_RETRY_DELAY_MS, TimeUnit.MILLISECONDS));
-              } catch (Exception e) {
-                // ok
-              }
-              if (!started) {
-                if (log.isDebugEnabled()) {
-                  log.debug("exit");
-                }
-                return false; // exit
-              }
-              long elapsedTime = System.currentTimeMillis() - timeStart;
-              if (log.isTraceEnabled()) {
-                log.trace(
-                    "Waiting for "
-                        + shortDirectory(name)
-                        + "... "
-                        + elapsedTime
-                        + "/"
-                        + timeoutMs
-                        + "ms");
-              }
-              return true; // retry
-            })
-        .timeout(timeoutMs, TimeUnit.MILLISECONDS);
+    Map<String, Object> params = computeParams(name, entry);
+    params.put("Mode", rpcMode.getValue());
+    return Completable.fromSingle(call("directory.Add", params));
   }
 
-  public Single directoryAdd(String name, String entry, String mode) throws IOException {
+  public Completable directoryRemove(String name, String entry) {
     if (log.isDebugEnabled()) {
-      log.debug("add " + shortDirectory(name) + ": " + entry);
+      log.debug("=> remove sorobanDir=" + name + ": " + entry + ", sorobanUrl=" + url);
     }
-    HashMap<String, Object> params = new HashMap<String, Object>();
+    Map<String, Object> params = computeParams(name, entry);
+    return Completable.fromSingle(call("directory.Remove", params));
+  }
 
+  public Completable directoryRemoveAll(String name) {
+    return Completable.fromSingle(
+        directoryValues(name)
+            .map(
+                entries -> {
+                  Arrays.stream(entries)
+                      .forEach(
+                          entry -> {
+                            try {
+                              AsyncUtil.getInstance().blockingAwait(directoryRemove(name, entry));
+                            } catch (Exception e) {
+                            }
+                          });
+                  return entries;
+                }));
+  }
+
+  protected Map<String, Object> computeParams(String name, String entryOrNull) {
+    Map<String, Object> params = new HashMap<>();
     params.put("Name", name);
-    params.put("Entry", entry);
-    params.put("Mode", mode);
-
-    return call("directory.Add", params);
-  }
-
-  public Single<Map<String, Object>> directoryRemove(String name, String entry) throws IOException {
-    if (log.isDebugEnabled()) {
-      log.debug("--" + shortDirectory(name) + ": " + entry);
+    if (entryOrNull != null) {
+      params.put("Entry", entryOrNull);
     }
-    HashMap<String, Object> params = new HashMap<String, Object>();
-    params.put("Name", name);
-    params.put("Entry", entry);
-
-    return call("directory.Remove", params);
+    if (authenticationKey != null) {
+      // authenticate
+      String signatureAddress = BIP_FORMAT.LEGACY.getToAddress(authenticationKey, this.params);
+      long timestamp = Instant.now().toEpochMilli() * 1000000;
+      String signedMessage =
+          name + "." + timestamp + (entryOrNull != null ? "." + entryOrNull : "");
+      if (log.isTraceEnabled()) {
+        log.trace("signatureAddress=" + signatureAddress + ", signedMessage=" + signedMessage);
+      }
+      params.put("Algorithm", "testnet3");
+      params.put("PublicKey", signatureAddress);
+      params.put("Timestamp", timestamp);
+      String signature =
+          MessageSignUtilGeneric.getInstance().signMessage(authenticationKey, signedMessage);
+      params.put("Signature", signature);
+    }
+    return params;
   }
 
-  public Single<String> directoryValueWaitAndRemove(final String name, final long timeoutMs)
-      throws Exception {
-    return directoryValueWait(name, timeoutMs)
-        .map(
-            value -> {
-              directoryRemove(name, value).subscribe();
-              return value;
-            });
+  protected Map<String, Object> computeParams(String name) {
+    return computeParams(name, null);
+  }
+
+  public NetworkParameters getParams() {
+    return params;
   }
 }

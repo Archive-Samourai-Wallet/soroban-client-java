@@ -1,10 +1,8 @@
 package com.samourai.soroban.client.wallet;
 
-import com.samourai.soroban.cahoots.CahootsContext;
-import com.samourai.soroban.cahoots.Stonewallx2Context;
-import com.samourai.soroban.cahoots.TypeInteraction;
 import com.samourai.soroban.client.AbstractTest;
 import com.samourai.soroban.client.OnlineSorobanInteraction;
+import com.samourai.soroban.client.cahoots.OnlineCahootsMessage;
 import com.samourai.soroban.client.meeting.SorobanRequestMessage;
 import com.samourai.soroban.client.meeting.SorobanResponseMessage;
 import com.samourai.soroban.client.wallet.counterparty.CahootsSorobanCounterpartyListener;
@@ -12,9 +10,11 @@ import com.samourai.soroban.client.wallet.counterparty.SorobanCounterpartyListen
 import com.samourai.soroban.client.wallet.sender.CahootsSorobanInitiatorListener;
 import com.samourai.soroban.client.wallet.sender.SorobanInitiatorListener;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
-import com.samourai.wallet.cahoots.Cahoots;
-import com.samourai.wallet.cahoots.CahootsTestUtil;
-import com.samourai.wallet.cahoots.CahootsType;
+import com.samourai.wallet.cahoots.*;
+import com.samourai.wallet.cahoots.multi.MultiCahootsContext;
+import com.samourai.wallet.cahoots.stonewallx2.Stonewallx2Context;
+import com.samourai.wallet.xmanagerClient.XManagerClient;
+import io.reactivex.functions.Consumer;
 import org.apache.commons.lang3.mutable.Mutable;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.junit.jupiter.api.Assertions;
@@ -56,8 +56,7 @@ public class SorobanWalletTest extends AbstractTest {
         new Thread(
             () -> {
               try {
-                SorobanRequestMessage request =
-                    asyncUtil.blockingGet(sorobanWalletCounterparty.receiveMeetingRequest());
+                SorobanRequestMessage request = sorobanWalletCounterparty.receiveMeetingRequest();
                 Assertions.assertEquals(cahootsType, request.getType());
                 asyncUtil.blockingGet(sorobanWalletCounterparty.decline(request));
               } catch (Exception e) {
@@ -69,6 +68,49 @@ public class SorobanWalletTest extends AbstractTest {
     assertNoException();
     threadInitiator.join();
     threadCounterparty.join();
+
+    assertNoException();
+  }
+
+  @Disabled
+  @Test
+  public void multiCahootsCounterparty() throws Exception {
+    Assertions.assertEquals(
+        "PM8TJh3hjRfeTYN5XK7xvUvjpLRXcHorVATQu98T6rbzhuedhB3nhiw1D5jraA7N1QiGqyZRkvw5hWSKpGkoEL5kxZcygnULriJ3qDgzrTGB6s2AYQch",
+        paymentCodeCounterparty);
+
+    int account = 0;
+    XManagerClient xManagerClient = new XManagerClient(httpClient, true, false);
+    SorobanCounterpartyListener listener =
+        new CahootsSorobanCounterpartyListener(account) {
+          @Override
+          public void onRequest(SorobanRequestMessage request) {
+            try {
+              // accept request
+              asyncUtil.blockingGet(sorobanWalletCounterparty.sendMeetingResponse(request, true));
+              log.info("Soroban request accepted => starting Cahoots... " + request);
+
+              // start Cahoots
+              CahootsContext cahootsContext =
+                  MultiCahootsContext.newCounterparty(
+                      cahootsWalletCounterparty, account, xManagerClient);
+              PaymentCode paymentCodeSender = request.getSender();
+              Consumer<OnlineCahootsMessage> onProgress =
+                  sorobanMessage -> this.progress(sorobanMessage);
+              sorobanWalletCounterparty.counterparty(cahootsContext, paymentCodeSender, onProgress);
+            } catch (Exception e) {
+              setException(e);
+            }
+            sorobanWalletCounterparty.stopListening();
+          }
+        };
+    sorobanWalletCounterparty.startListening(listener);
+    while (sorobanWalletCounterparty.isListening()) {
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException e) {
+      }
+    }
 
     assertNoException();
   }
@@ -238,9 +280,8 @@ public class SorobanWalletTest extends AbstractTest {
             }
           }
         };
-    return asyncUtil.blockingGet(
-        sorobanWalletInitiator.meetAndInitiate(
-            cahootsContext, paymentCodeCounterparty, initiatorListener));
+    return sorobanWalletInitiator.meetAndInitiate(
+        cahootsContext, paymentCodeCounterparty, initiatorListener);
   }
 
   private Cahoots runCounterparty(boolean ACCEPT, int account) throws Exception {
@@ -252,9 +293,7 @@ public class SorobanWalletTest extends AbstractTest {
           public void onRequest(SorobanRequestMessage request) {
             try {
               if (ACCEPT) {
-                Cahoots cahoots =
-                    asyncUtil.blockingGet(
-                        sorobanWalletCounterparty.acceptAndCounterparty(request, this));
+                Cahoots cahoots = sorobanWalletCounterparty.acceptAndCounterparty(request, this);
                 cahootsMutable.setValue(cahoots);
               } else {
                 asyncUtil.blockingGet(sorobanWalletCounterparty.decline(request));

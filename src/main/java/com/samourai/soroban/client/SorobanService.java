@@ -1,16 +1,19 @@
 package com.samourai.soroban.client;
 
-import com.samourai.soroban.cahoots.CahootsContext;
 import com.samourai.soroban.client.dialog.RpcDialog;
-import com.samourai.soroban.client.rpc.RpcService;
+import com.samourai.soroban.client.protocol.SorobanProtocolMeeting;
+import com.samourai.soroban.client.rpc.RpcClientService;
+import com.samourai.soroban.client.rpc.RpcSession;
 import com.samourai.wallet.bip47.BIP47UtilGeneric;
-import com.samourai.wallet.bip47.rpc.BIP47Wallet;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
+import com.samourai.wallet.cahoots.CahootsContext;
 import com.samourai.wallet.cahoots.CahootsWallet;
-import com.samourai.wallet.segwit.SegwitAddress;
+import com.samourai.wallet.sorobanClient.SorobanInteraction;
+import com.samourai.wallet.sorobanClient.SorobanMessage;
+import com.samourai.wallet.sorobanClient.SorobanMessageService;
+import com.samourai.wallet.sorobanClient.SorobanReply;
 import com.samourai.wallet.util.AsyncUtil;
 import io.reactivex.Observable;
-import io.reactivex.Single;
 import io.reactivex.functions.Consumer;
 import io.reactivex.subjects.BehaviorSubject;
 import io.reactivex.subjects.Subject;
@@ -24,20 +27,26 @@ public class SorobanService {
 
   private BIP47UtilGeneric bip47Util;
   private NetworkParameters params;
-  private RpcService rpcService;
+  private RpcClientService rpcClientService;
+  private SorobanProtocolMeeting sorobanProtocol;
 
   public SorobanService(
-      BIP47UtilGeneric bip47Util, NetworkParameters params, RpcService rpcService) {
+      BIP47UtilGeneric bip47Util,
+      NetworkParameters params,
+      RpcClientService rpcClientService,
+      SorobanProtocolMeeting sorobanProtocol) {
     this.bip47Util = bip47Util;
     this.params = params;
-    this.rpcService = rpcService;
+    this.rpcClientService = rpcClientService;
+    this.sorobanProtocol = sorobanProtocol;
   }
 
   public Observable<SorobanMessage> initiator(
       final CahootsContext cahootsContext,
+      RpcSession rpcSession,
       final SorobanMessageService messageService,
       final PaymentCode paymentCodeCounterParty,
-      final long timeoutMs,
+      final int timeoutMs,
       final SorobanMessage message,
       Consumer<OnlineSorobanInteraction> onInteraction)
       throws Exception {
@@ -51,9 +60,12 @@ public class SorobanService {
               RpcDialog dialogOrNull = null;
               try {
                 String initialDirectory =
-                    getMeeetingAddressSend(cahootsWallet, paymentCodeCounterParty, params)
-                        .getBech32AsString();
-                dialogOrNull = rpcService.createRpcDialog(cahootsWallet, info, initialDirectory);
+                    sorobanProtocol.getMeeetingAddressSend(
+                        cahootsWallet.getBip47Account(),
+                        paymentCodeCounterParty,
+                        params,
+                        bip47Util);
+                dialogOrNull = rpcSession.createRpcDialog(initialDirectory);
                 final RpcDialog dialog = dialogOrNull;
                 closeDialogOnError(onMessage, dialog, paymentCodeCounterParty, interactionHandler);
                 dialog(
@@ -79,9 +91,10 @@ public class SorobanService {
 
   public Observable<SorobanMessage> counterparty(
       final CahootsContext cahootsContext,
+      RpcSession rpcSession,
       final SorobanMessageService messageService,
       final PaymentCode paymentCodeInitiator,
-      final long timeoutMs)
+      final int timeoutMs)
       throws Exception {
     final BehaviorSubject onMessage = BehaviorSubject.create();
     CahootsWallet cahootsWallet = cahootsContext.getCahootsWallet();
@@ -92,15 +105,14 @@ public class SorobanService {
               RpcDialog dialogOrNull = null;
               try {
                 String initialDirectory =
-                    getMeeetingAddressReceive(cahootsWallet, paymentCodeInitiator, params)
-                        .getBech32AsString();
-                dialogOrNull = rpcService.createRpcDialog(cahootsWallet, info, initialDirectory);
+                    sorobanProtocol.getMeeetingAddressReceive(
+                        cahootsWallet.getBip47Account(), paymentCodeInitiator, params, bip47Util);
+                dialogOrNull = rpcSession.createRpcDialog(initialDirectory);
                 final RpcDialog dialog = dialogOrNull;
                 closeDialogOnError(onMessage, dialog, paymentCodeInitiator, null);
 
                 SorobanMessage message =
-                    asyncUtil.blockingGet(
-                        receive(messageService, dialog, paymentCodeInitiator, timeoutMs));
+                    receive(messageService, dialog, paymentCodeInitiator, timeoutMs);
                 onMessage.onNext(message);
                 if (log.isDebugEnabled()) {
                   log.debug(info + "#(0) <= " + message.toString());
@@ -160,7 +172,7 @@ public class SorobanService {
       SorobanMessageService messageService,
       RpcDialog dialog,
       PaymentCode paymentCodePartner,
-      long timeoutMs,
+      int timeoutMs,
       SorobanMessage message,
       String info,
       Subject<SorobanMessage> onMessage,
@@ -175,7 +187,7 @@ public class SorobanService {
       if (onMessage != null) {
         onMessage.onNext(message);
       }
-      asyncUtil.blockingGet(dialog.send(message, paymentCodePartner));
+      asyncUtil.blockingAwait(dialog.send(message, paymentCodePartner));
 
       if (message.isDone()) {
         // done
@@ -186,8 +198,7 @@ public class SorobanService {
       }
 
       // receive response
-      message =
-          asyncUtil.blockingGet(receive(messageService, dialog, paymentCodePartner, timeoutMs));
+      message = receive(messageService, dialog, paymentCodePartner, timeoutMs);
       if (onMessage != null) {
         onMessage.onNext(message);
       }
@@ -246,19 +257,15 @@ public class SorobanService {
     return onlineInteraction;
   }
 
-  private Single<SorobanMessage> receive(
+  private SorobanMessage receive(
       final SorobanMessageService messageService,
       RpcDialog dialog,
       PaymentCode paymentCodePartner,
-      long timeoutMs)
+      int timeoutMs)
       throws Exception {
-    return dialog
-        .receive(paymentCodePartner, timeoutMs)
-        .map(
-            payload -> {
-              SorobanMessage response = messageService.parse(payload);
-              return response;
-            });
+    String payload = dialog.receive(paymentCodePartner, timeoutMs);
+    SorobanMessage response = messageService.parse(payload);
+    return response;
   }
 
   private void closeDialogOnError(
@@ -292,7 +299,7 @@ public class SorobanService {
     if (dialog != null) {
       // send error before closing dialog
       try {
-        asyncUtil.blockingGet(dialog.sendError(error, paymentCodePartner));
+        asyncUtil.blockingAwait(dialog.sendError(error, paymentCodePartner));
       } catch (Exception e) {
       }
       dialog.close();
@@ -302,31 +309,11 @@ public class SorobanService {
     onMessage.onComplete();
   }
 
-  private SegwitAddress getMeeetingAddressReceive(
-      CahootsWallet cahootsWallet, PaymentCode paymentCodeCounterparty, NetworkParameters params)
-      throws Exception {
-    BIP47Wallet bip47Wallet = cahootsWallet.getBip47Wallet();
-    int bip47Account = cahootsWallet.getBip47Account().getId();
-    SegwitAddress receiveAddress =
-        bip47Util
-            .getReceiveAddress(bip47Wallet, bip47Account, paymentCodeCounterparty, 0, params)
-            .getSegwitAddressReceive();
-    return receiveAddress;
+  public RpcClientService getRpcClientService() {
+    return rpcClientService;
   }
 
-  private SegwitAddress getMeeetingAddressSend(
-      CahootsWallet cahootsWallet, PaymentCode paymentCodeInitiator, NetworkParameters params)
-      throws Exception {
-    BIP47Wallet bip47Wallet = cahootsWallet.getBip47Wallet();
-    int bip47Account = cahootsWallet.getBip47Account().getId();
-    SegwitAddress sendAddress =
-        bip47Util
-            .getSendAddress(bip47Wallet, bip47Account, paymentCodeInitiator, 0, params)
-            .getSegwitAddressSend();
-    return sendAddress;
-  }
-
-  public RpcService getRpcService() {
-    return rpcService;
+  public NetworkParameters getParams() {
+    return params;
   }
 }

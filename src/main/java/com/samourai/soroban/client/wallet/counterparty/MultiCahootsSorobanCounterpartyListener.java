@@ -1,11 +1,11 @@
 package com.samourai.soroban.client.wallet.counterparty;
 
-import com.samourai.soroban.cahoots.CahootsContext;
 import com.samourai.soroban.client.meeting.SorobanRequestMessage;
+import com.samourai.wallet.cahoots.CahootsContext;
 import com.samourai.wallet.cahoots.CahootsType;
 import com.samourai.wallet.cahoots.CahootsWallet;
 import com.samourai.wallet.cahoots.multi.MultiCahootsContext;
-import com.samourai.xmanager.client.XManagerClient;
+import com.samourai.wallet.xmanagerClient.XManagerClient;
 import java.lang.invoke.MethodHandles;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

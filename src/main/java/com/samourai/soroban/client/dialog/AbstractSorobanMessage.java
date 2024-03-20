@@ -1,11 +1,10 @@
 package com.samourai.soroban.client.dialog;
 
-import com.samourai.soroban.client.SorobanMessage;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.samourai.soroban.client.AbstractSorobanPayloadable;
+import com.samourai.wallet.sorobanClient.SorobanMessage;
 
-public abstract class AbstractSorobanMessage implements SorobanMessage {
-  private static final Logger log = LoggerFactory.getLogger(AbstractSorobanMessage.class);
+public abstract class AbstractSorobanMessage extends AbstractSorobanPayloadable
+    implements SorobanMessage {
 
   private boolean done;
 

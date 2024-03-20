@@ -1,7 +1,7 @@
 package com.samourai.soroban.client.cahoots;
 
-import com.samourai.soroban.cahoots.ManualCahootsMessage;
 import com.samourai.wallet.cahoots.Cahoots;
+import com.samourai.wallet.cahoots.manual.ManualCahootsMessage;
 import org.json.JSONObject;
 
 public class OnlineCahootsMessage extends ManualCahootsMessage {

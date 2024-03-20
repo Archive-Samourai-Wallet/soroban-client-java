@@ -1,4 +1,4 @@
-package com.samourai.soroban.client.dialog;
+package com.samourai.soroban.client.exception;
 
 public class SorobanException extends Exception {
 

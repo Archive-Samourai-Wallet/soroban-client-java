@@ -2,12 +2,13 @@ package com.samourai.soroban.client.pingPong;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.samourai.soroban.client.SorobanInteraction;
-import com.samourai.soroban.client.SorobanMessage;
+import com.samourai.soroban.client.AbstractSorobanPayloadable;
+import com.samourai.wallet.sorobanClient.SorobanInteraction;
+import com.samourai.wallet.sorobanClient.SorobanMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class PingPongMessage implements SorobanMessage {
+public class PingPongMessage extends AbstractSorobanPayloadable implements SorobanMessage {
   private static final Logger log = LoggerFactory.getLogger(PingPongMessage.class);
 
   private static final ObjectMapper objectMapper = new ObjectMapper();

@@ -1,20 +1,20 @@
 package com.samourai.soroban.client.wallet.counterparty;
 
-import com.samourai.soroban.cahoots.CahootsContext;
 import com.samourai.soroban.client.SorobanService;
 import com.samourai.soroban.client.cahoots.OnlineCahootsMessage;
 import com.samourai.soroban.client.cahoots.OnlineCahootsService;
 import com.samourai.soroban.client.meeting.SorobanMeetingService;
 import com.samourai.soroban.client.meeting.SorobanRequestMessage;
 import com.samourai.soroban.client.meeting.SorobanResponseMessage;
+import com.samourai.soroban.client.rpc.NoValueRpcException;
 import com.samourai.soroban.client.wallet.SorobanWallet;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.cahoots.Cahoots;
+import com.samourai.wallet.cahoots.CahootsContext;
 import com.samourai.wallet.cahoots.CahootsWallet;
 import io.reactivex.Single;
 import io.reactivex.functions.Consumer;
 import java.lang.invoke.MethodHandles;
-import java.util.concurrent.TimeoutException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,10 +42,10 @@ public class SorobanWalletCounterparty extends SorobanWallet {
               while (listening) {
                 log.info("Listening for Soroban requests...");
                 try {
-                  SorobanRequestMessage request = asyncUtil.blockingGet(receiveMeetingRequest());
+                  SorobanRequestMessage request = receiveMeetingRequest();
                   log.info("New Soroban request: " + request);
                   listener.onRequest(request);
-                } catch (TimeoutException e) {
+                } catch (NoValueRpcException e) {
                   // ignore
                 } catch (Exception e) {
                   log.error("Failed listening for Soroban requests", e);
@@ -66,13 +66,13 @@ public class SorobanWalletCounterparty extends SorobanWallet {
     return listening;
   }
 
-  public Single<SorobanRequestMessage> receiveMeetingRequest() throws Exception {
-    return sorobanMeetingService.receiveMeetingRequest(cahootsWallet, timeoutMeetingMs);
+  public SorobanRequestMessage receiveMeetingRequest() throws Exception {
+    return sorobanMeetingService.receiveMeetingRequest(rpcSession, getTimeoutMeetingMs());
   }
 
   public Single<SorobanResponseMessage> sendMeetingResponse(
-      SorobanRequestMessage cahootsRequest, boolean accept) throws Exception {
-    return sorobanMeetingService.sendMeetingResponse(cahootsWallet, cahootsRequest, accept);
+      SorobanRequestMessage cahootsRequest, boolean accept) {
+    return sorobanMeetingService.sendMeetingResponse(rpcSession, cahootsRequest, accept);
   }
 
   public Single<SorobanResponseMessage> decline(SorobanRequestMessage cahootsRequest)
@@ -95,36 +95,37 @@ public class SorobanWalletCounterparty extends SorobanWallet {
             });
   }
 
-  public Single<Cahoots> acceptAndCounterparty(
+  public Cahoots acceptAndCounterparty(
       SorobanRequestMessage cahootsRequest, SorobanCounterpartyListener listener) throws Exception {
     // accept request
-    return sendMeetingResponse(cahootsRequest, true)
-        .flatMap(
-            response -> {
-              log.info("Soroban request accepted => starting Cahoots... " + cahootsRequest);
+    asyncUtil.blockingGet(sendMeetingResponse(cahootsRequest, true));
+    log.info("Soroban request accepted => starting Cahoots... " + cahootsRequest);
 
-              // start Cahoots
-              CahootsContext cahootsContext =
-                  listener.newCounterpartyContext(cahootsWallet, cahootsRequest);
-              PaymentCode paymentCodeSender = new PaymentCode(cahootsRequest.getSender());
-              Consumer<OnlineCahootsMessage> onProgress =
-                  sorobanMessage -> listener.progress(sorobanMessage);
-              return counterparty(cahootsContext, paymentCodeSender, onProgress);
-            });
+    // start Cahoots
+    CahootsContext cahootsContext = listener.newCounterpartyContext(cahootsWallet, cahootsRequest);
+    PaymentCode paymentCodeSender = cahootsRequest.getSender();
+    Consumer<OnlineCahootsMessage> onProgress = sorobanMessage -> listener.progress(sorobanMessage);
+    return counterparty(cahootsContext, paymentCodeSender, onProgress);
   }
 
-  public Single<Cahoots> counterparty(
+  public Cahoots counterparty(
       CahootsContext cahootsContext,
       PaymentCode paymentCodeSender,
       Consumer<OnlineCahootsMessage> onProgress)
       throws Exception {
-    return sorobanService
-        .counterparty(cahootsContext, onlineCahootsService, paymentCodeSender, timeoutDialogMs)
-        // notify on progress
-        .map(sorobanMessage -> (OnlineCahootsMessage) sorobanMessage)
-        .doOnNext(onProgress)
-        // return Cahoots on success
-        .lastOrError()
-        .map(onlineCahootsMessage -> onlineCahootsMessage.getCahoots());
+    return asyncUtil.blockingGet(
+        sorobanService
+            .counterparty(
+                cahootsContext,
+                rpcSession,
+                onlineCahootsService,
+                paymentCodeSender,
+                timeoutDialogMs)
+            // notify on progress
+            .map(sorobanMessage -> (OnlineCahootsMessage) sorobanMessage)
+            .doOnNext(onProgress)
+            // return Cahoots on success
+            .lastOrError()
+            .map(onlineCahootsMessage -> onlineCahootsMessage.getCahoots()));
   }
 }

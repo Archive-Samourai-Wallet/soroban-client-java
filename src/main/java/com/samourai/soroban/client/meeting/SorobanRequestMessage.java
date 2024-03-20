@@ -1,35 +1,32 @@
 package com.samourai.soroban.client.meeting;
 
 import com.samourai.soroban.client.dialog.AbstractSorobanMessage;
+import com.samourai.wallet.bip47.rpc.PaymentCode;
 import com.samourai.wallet.cahoots.CahootsType;
 import org.json.JSONObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class SorobanRequestMessage extends AbstractSorobanMessage {
-  private static final Logger log = LoggerFactory.getLogger(SorobanRequestMessage.class);
-
   private CahootsType type;
-  private String sender;
+  private PaymentCode sender;
 
   public SorobanRequestMessage() {
-    this(null);
+    this(null, null);
   }
 
-  public SorobanRequestMessage(CahootsType type) {
+  public SorobanRequestMessage(CahootsType type, PaymentCode sender) {
     super(true);
     this.type = type;
-    this.sender = null;
+    this.sender = sender;
   }
 
-  public static SorobanRequestMessage parse(String payload) throws Exception {
+  public static SorobanRequestMessage parse(String payload, PaymentCode sender) throws Exception {
     JSONObject obj = new JSONObject(payload);
 
     if (!obj.has("type")) {
       throw new Exception("missing .type");
     }
     CahootsType type = CahootsType.find(obj.getInt("type")).get();
-    return new SorobanRequestMessage(type);
+    return new SorobanRequestMessage(type, sender);
   }
 
   @Override
@@ -49,16 +46,16 @@ public class SorobanRequestMessage extends AbstractSorobanMessage {
     return type;
   }
 
-  public String getSender() {
+  public PaymentCode getSender() {
     return sender;
   }
 
-  public void setSender(String sender) {
+  public void setSender(PaymentCode sender) {
     this.sender = sender;
   }
 
   @Override
   public String toString() {
-    return "SorobanRequestMessage{" + "type=" + type + ", sender='" + sender + '\'' + '}';
+    return "SorobanRequestMessage{" + "typePayload=" + type + ", sender=" + sender + '}';
   }
 }
