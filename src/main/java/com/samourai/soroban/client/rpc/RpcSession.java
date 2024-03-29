@@ -3,7 +3,6 @@ package com.samourai.soroban.client.rpc;
 import com.samourai.soroban.client.SorobanClient;
 import com.samourai.soroban.client.dialog.RpcDialog;
 import com.samourai.soroban.client.exception.SorobanErrorMessageException;
-import com.samourai.wallet.api.backend.beans.HttpException;
 import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
 import com.samourai.wallet.dexConfig.DexConfigProvider;
 import com.samourai.wallet.dexConfig.SamouraiConfig;
@@ -102,7 +101,7 @@ public class RpcSession {
           }
         }
         return result;
-      } catch (HttpException e) {
+      } catch (HttpNetworkException e) {
         attempts++;
         lastException = e;
         log.warn(
