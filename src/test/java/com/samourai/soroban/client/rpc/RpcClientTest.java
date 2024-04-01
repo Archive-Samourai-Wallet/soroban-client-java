@@ -3,6 +3,7 @@ package com.samourai.soroban.client.rpc;
 import com.samourai.soroban.client.AbstractTest;
 import com.samourai.wallet.hd.HD_Wallet;
 import com.samourai.wallet.hd.HD_WalletFactoryGeneric;
+import com.samourai.wallet.httpClient.HttpUsage;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.bitcoinj.core.ECKey;
@@ -53,7 +54,7 @@ public class RpcClientTest extends AbstractTest {
         int nbValues =
             asyncUtil.blockingGet(
                     rpcClientService
-                        .createRpcClient(sorobanUrl + RpcClient.ENDPOINT_RPC)
+                        .createRpcClient(sorobanUrl + RpcClient.ENDPOINT_RPC, HttpUsage.SOROBAN)
                         .directoryValues(key))
                 .length;
         messagesByServer.put(sorobanUrl, nbValues);

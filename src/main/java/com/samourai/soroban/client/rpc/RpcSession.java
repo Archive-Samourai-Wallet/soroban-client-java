@@ -7,6 +7,7 @@ import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
 import com.samourai.wallet.dexConfig.DexConfigProvider;
 import com.samourai.wallet.dexConfig.SamouraiConfig;
 import com.samourai.wallet.httpClient.HttpNetworkException;
+import com.samourai.wallet.httpClient.HttpUsage;
 import com.samourai.wallet.sorobanClient.RpcWallet;
 import com.samourai.wallet.sorobanClient.SorobanServerDex;
 import com.samourai.wallet.util.AsyncUtil;
@@ -34,6 +35,7 @@ public class RpcSession {
   private RpcWallet rpcWallet;
   private boolean done;
   private Collection<String> sorobanUrlsForced;
+  private HttpUsage httpUsage;
 
   public RpcSession(RpcSession rpcSession) {
     this(rpcSession.rpcClientService, rpcSession.rpcWallet);
@@ -44,6 +46,7 @@ public class RpcSession {
     this.rpcWallet = rpcWallet;
     this.done = false;
     this.sorobanUrlsForced = null;
+    this.httpUsage = HttpUsage.SOROBAN;
   }
 
   public void setAuthenticationKey(ECKey authenticationKey) {
@@ -157,7 +160,7 @@ public class RpcSession {
       throws Exception {
     return withRpcSorobanUrl(
         sorobanUrl -> {
-          RpcClient rpcClient = rpcClientService.createRpcClient(sorobanUrl);
+          RpcClient rpcClient = rpcClientService.createRpcClient(sorobanUrl, httpUsage);
           if (authenticationKey != null) {
             rpcClient.setAuthenticationKey(authenticationKey);
           }
@@ -274,5 +277,9 @@ public class RpcSession {
               : samouraiConfig.getSorobanServerMainnetClear();
     }
     return Arrays.asList(url);
+  }
+
+  public void setHttpUsage(HttpUsage httpUsage) {
+    this.httpUsage = httpUsage;
   }
 }

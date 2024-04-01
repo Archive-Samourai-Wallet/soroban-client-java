@@ -60,8 +60,8 @@ public class RpcClientService {
     return new BIP47Wallet(hdw).getAccount(0);
   }
 
-  protected RpcClient createRpcClient(String url) {
-    IHttpClient httpClient = httpClientService.getHttpClient(HttpUsage.SOROBAN);
+  protected RpcClient createRpcClient(String url, HttpUsage httpUsage) {
+    IHttpClient httpClient = httpClientService.getHttpClient(httpUsage);
     return new RpcClient(httpClient, url, params);
   }
 
