@@ -4,8 +4,6 @@ import com.samourai.http.client.JettyHttpClient;
 import com.samourai.http.client.JettyHttpClientService;
 import com.samourai.soroban.client.endpoint.SorobanApp;
 import com.samourai.soroban.client.endpoint.SorobanEndpoint;
-import com.samourai.soroban.client.meeting.SorobanMeetingService;
-import com.samourai.soroban.client.protocol.SorobanProtocolMeeting;
 import com.samourai.soroban.client.rpc.RpcClientService;
 import com.samourai.soroban.client.rpc.RpcSession;
 import com.samourai.soroban.client.rpc.RpcWalletImpl;
@@ -17,9 +15,6 @@ import com.samourai.wallet.api.backend.beans.WalletResponse;
 import com.samourai.wallet.bip47.rpc.BIP47Account;
 import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
-import com.samourai.wallet.bip47.rpc.java.Bip47UtilJava;
-import com.samourai.wallet.bipFormat.BIP_FORMAT;
-import com.samourai.wallet.bipFormat.BipFormatSupplier;
 import com.samourai.wallet.bipWallet.WalletSupplier;
 import com.samourai.wallet.bipWallet.WalletSupplierImpl;
 import com.samourai.wallet.cahoots.CahootsWallet;
@@ -28,7 +23,6 @@ import com.samourai.wallet.chain.ChainSupplier;
 import com.samourai.wallet.client.indexHandler.MemoryIndexHandlerSupplier;
 import com.samourai.wallet.constants.BIP_WALLETS;
 import com.samourai.wallet.constants.SamouraiNetwork;
-import com.samourai.wallet.crypto.CryptoUtil;
 import com.samourai.wallet.dexConfig.DexConfigProvider;
 import com.samourai.wallet.hd.HD_Wallet;
 import com.samourai.wallet.hd.HD_WalletFactoryGeneric;
@@ -38,6 +32,7 @@ import com.samourai.wallet.send.provider.MockUtxoProvider;
 import com.samourai.wallet.send.provider.SimpleCahootsUtxoProvider;
 import com.samourai.wallet.sorobanClient.RpcWallet;
 import com.samourai.wallet.util.AsyncUtil;
+import com.samourai.wallet.util.ExtLibJConfig;
 import com.samourai.wallet.util.MessageSignUtilGeneric;
 import java.security.Provider;
 import java.util.Arrays;
@@ -65,8 +60,10 @@ public abstract class AbstractTest {
 
   protected static final SamouraiNetwork samouraiNetwork = SamouraiNetwork.TESTNET;
   protected static final NetworkParameters params = samouraiNetwork.getParams();
-  protected static final Bip47UtilJava bip47Util = Bip47UtilJava.getInstance();
-  protected static final BipFormatSupplier bipFormatSupplier = BIP_FORMAT.PROVIDER;
+  protected static IHttpClientService httpClientService = new JettyHttpClientService();
+  protected static final ExtLibJConfig extLibJConfig =
+      new ExtLibJConfig(samouraiNetwork, false, PROVIDER_JAVA, httpClientService);
+  protected SorobanConfig sorobanConfig = new SorobanConfig(extLibJConfig);
 
   protected static final ChainSupplier chainSupplier =
       () -> {
@@ -78,18 +75,8 @@ public abstract class AbstractTest {
   protected static final HD_WalletFactoryGeneric hdWalletFactory =
       HD_WalletFactoryGeneric.getInstance();
   protected static final AsyncUtil asyncUtil = AsyncUtil.getInstance();
-  protected IHttpClientService httpClientService = new JettyHttpClientService();
   protected JettyHttpClient httpClient =
       (JettyHttpClient) httpClientService.getHttpClient(HttpUsage.BACKEND);
-  protected CryptoUtil cryptoUtil = CryptoUtil.getInstance(PROVIDER_JAVA);
-  protected RpcClientService rpcClientService =
-      new RpcClientService(httpClientService, cryptoUtil, bip47Util, false, params);
-  protected SorobanWalletService sorobanWalletService =
-      new SorobanWalletService(bip47Util, BIP_FORMAT.PROVIDER, params, rpcClientService);
-  protected SorobanProtocolMeeting sorobanProtocol = sorobanWalletService.getSorobanProtocol();
-  protected SorobanMeetingService sorobanMeetingService =
-      sorobanWalletService.getSorobanMeetingService();
-  protected SorobanService sorobanService = sorobanWalletService.getSorobanService();
 
   protected CahootsWallet cahootsWalletInitiator;
   protected CahootsWallet cahootsWalletCounterparty;
@@ -135,7 +122,7 @@ public abstract class AbstractTest {
     final HD_Wallet bip84WalletSender = computeBip84wallet(SEED_WORDS, SEED_PASSPHRASE_INITIATOR);
     WalletSupplier walletSupplierSender =
         new WalletSupplierImpl(
-            bipFormatSupplier,
+            extLibJConfig.getBipFormatSupplier(),
             new MemoryIndexHandlerSupplier(),
             bip84WalletSender,
             BIP_WALLETS.WHIRLPOOL);
@@ -145,13 +132,14 @@ public abstract class AbstractTest {
             chainSupplier,
             walletSupplierSender,
             new SimpleCahootsUtxoProvider(utxoProviderInitiator));
+    SorobanWalletService sorobanWalletService = sorobanConfig.getSorobanWalletService();
     sorobanWalletInitiator = sorobanWalletService.getSorobanWalletInitiator(cahootsWalletInitiator);
 
     final HD_Wallet bip84WalletCounterparty =
         computeBip84wallet(SEED_WORDS, SEED_PASSPHRASE_COUNTERPARTY);
     WalletSupplier walletSupplierCounterparty =
         new WalletSupplierImpl(
-            bipFormatSupplier,
+            extLibJConfig.getBipFormatSupplier(),
             new MemoryIndexHandlerSupplier(),
             bip84WalletCounterparty,
             BIP_WALLETS.WHIRLPOOL);
@@ -178,6 +166,7 @@ public abstract class AbstractTest {
             Arrays.asList(initialSorobanServerTestnetClearUrls.iterator().next()));
 
     this.bip47AccountInitiator = cahootsWalletInitiator.getBip47Account();
+    RpcClientService rpcClientService = sorobanConfig.getRpcClientService();
     this.rpcWalletInitiator = rpcClientService.getRpcWallet(bip47AccountInitiator);
     this.rpcSessionInitiator = ((RpcWalletImpl) rpcWalletInitiator).createRpcSession();
     this.sorobanClientInitiator = rpcSessionInitiator.withSorobanClient(sc -> sc);
@@ -189,7 +178,7 @@ public abstract class AbstractTest {
 
     this.appVersion =
         "" + System.currentTimeMillis(); // change version to avoid conflicts between test runs
-    this.app = new SorobanApp(samouraiNetwork, "APP_TEST", appVersion);
+    this.app = new SorobanApp(sorobanConfig, "APP_TEST", appVersion);
 
     samouraiSigningKey = new ECKey();
     samouraiSigningAddress = samouraiSigningKey.toAddress(params).toString();

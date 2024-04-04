@@ -148,7 +148,7 @@ public class SorobanEndpointMetaStringTest extends AbstractTest {
 
     // encrypt for another paymentCode
     PaymentCode paymentCodeTemp =
-        rpcClientService.generateRpcWallet().getBip47Account().getPaymentCode();
+        sorobanConfig.getRpcClientService().generateRpcWallet().getBip47Account().getPaymentCode();
     SorobanEndpointMetaString endpointInitiator =
         new SorobanEndpointMetaString(app.getDir("TEST"), RpcMode.SHORT, new SorobanWrapper[] {})
             .setEncryptTo(paymentCodeTemp);

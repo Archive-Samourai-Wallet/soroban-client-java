@@ -112,7 +112,7 @@ public class SorobanEndpointTypedTest extends AbstractTest {
 
     // encrypt for another paymentCode
     PaymentCode paymentCodeTemp =
-        rpcClientService.generateRpcWallet().getBip47Account().getPaymentCode();
+        sorobanConfig.getRpcClientService().generateRpcWallet().getBip47Account().getPaymentCode();
     SorobanEndpointTyped endpointInitiator =
         new SorobanEndpointTyped(
                 app.getDir("TEST"),
@@ -170,7 +170,7 @@ public class SorobanEndpointTypedTest extends AbstractTest {
   public void encryptWithSender_invalid() throws Exception {
     // encrypt for another paymentCode
     PaymentCode paymentCodeTemp =
-        rpcClientService.generateRpcWallet().getBip47Account().getPaymentCode();
+        sorobanConfig.getRpcClientService().generateRpcWallet().getBip47Account().getPaymentCode();
     SorobanEndpointTyped endpointInitiator =
         new SorobanEndpointTyped(
                 app.getDir("TEST"),

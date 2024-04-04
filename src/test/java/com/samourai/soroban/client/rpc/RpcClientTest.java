@@ -53,7 +53,8 @@ public class RpcClientTest extends AbstractTest {
         }
         int nbValues =
             asyncUtil.blockingGet(
-                    rpcClientService
+                    sorobanConfig
+                        .getRpcClientService()
                         .createRpcClient(sorobanUrl + RpcClient.ENDPOINT_RPC, HttpUsage.SOROBAN)
                         .directoryValues(key))
                 .length;

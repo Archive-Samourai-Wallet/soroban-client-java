@@ -20,8 +20,8 @@ public class SorobanConfig {
 
   public SorobanConfig(ExtLibJConfig extLibJConfig) {
     this.extLibJConfig = extLibJConfig;
-    this.rpcClientService = new RpcClientService(extLibJConfig);
-    this.sorobanWalletService = new SorobanWalletService(extLibJConfig, rpcClientService);
+    this.rpcClientService = new RpcClientService(this);
+    this.sorobanWalletService = new SorobanWalletService(this);
   }
 
   public ExtLibJConfig getExtLibJConfig() {

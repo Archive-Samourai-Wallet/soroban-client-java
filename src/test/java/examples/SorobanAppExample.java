@@ -1,5 +1,6 @@
 package examples;
 
+import com.samourai.soroban.client.SorobanConfig;
 import com.samourai.soroban.client.endpoint.SorobanApp;
 import com.samourai.soroban.client.endpoint.meta.typed.SorobanEndpointTyped;
 import com.samourai.soroban.client.endpoint.meta.typed.SorobanItemTyped;
@@ -12,7 +13,6 @@ import com.samourai.soroban.client.rpc.*;
 import com.samourai.wallet.bip47.rpc.BIP47Account;
 import com.samourai.wallet.bip47.rpc.Bip47Encrypter;
 import com.samourai.wallet.bip47.rpc.PaymentCode;
-import com.samourai.wallet.constants.SamouraiNetwork;
 import com.samourai.wallet.util.AsyncUtil;
 import java.lang.invoke.MethodHandles;
 import java.util.List;
@@ -23,10 +23,10 @@ import org.slf4j.LoggerFactory;
 public class SorobanAppExample {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
   private static final AsyncUtil asyncUtil = AsyncUtil.getInstance();
-  private static final RpcClientService rpcClientService = null; // TODO provide impl
+  private SorobanConfig sorobanConfig = null; // TODO provide impl
 
   // new Soroban app
-  private SorobanApp app = new SorobanApp(SamouraiNetwork.TESTNET, "EXAMPLE", "1.0");
+  private SorobanApp app = new SorobanApp(sorobanConfig, "EXAMPLE", "1.0");
 
   // new communication channel
   private SorobanEndpointTyped endpoint =
@@ -52,6 +52,7 @@ public class SorobanAppExample {
 
   public void client() throws Exception {
     // create new Soroban client with anonymous identity
+    RpcClientService rpcClientService = sorobanConfig.getRpcClientService();
     RpcSession rpcSession = rpcClientService.generateRpcWallet().createRpcSession();
 
     if (false) {

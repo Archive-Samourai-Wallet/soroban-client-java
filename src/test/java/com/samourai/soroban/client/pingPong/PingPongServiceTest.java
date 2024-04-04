@@ -1,6 +1,7 @@
 package com.samourai.soroban.client.pingPong;
 
 import com.samourai.soroban.client.AbstractTest;
+import com.samourai.soroban.client.SorobanService;
 import com.samourai.wallet.cahoots.CahootsContext;
 import com.samourai.wallet.cahoots.CahootsType;
 import com.samourai.wallet.cahoots.stonewallx2.Stonewallx2Context;
@@ -38,6 +39,7 @@ public class PingPongServiceTest extends AbstractTest {
 
   private void doTest(final int ITERATIONS, final String lastPayload) throws Exception {
     log.info("### doTest " + ITERATIONS);
+    SorobanService sorobanService = sorobanConfig.getSorobanWalletService().getSorobanService();
 
     // run initiator
     Thread threadInitiator =

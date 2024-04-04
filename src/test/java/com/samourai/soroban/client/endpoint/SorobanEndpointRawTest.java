@@ -50,7 +50,7 @@ public class SorobanEndpointRawTest extends AbstractTest {
 
     // encrypt for another paymentCode
     PaymentCode paymentCodeTemp =
-        rpcClientService.generateRpcWallet().getBip47Account().getPaymentCode();
+        sorobanConfig.getRpcClientService().generateRpcWallet().getBip47Account().getPaymentCode();
     SorobanEndpointRaw endpointInitiator =
         new SorobanEndpointRaw(app.getDir("TEST"), RpcMode.SHORT, new SorobanWrapperString[] {})
             .setEncryptTo(paymentCodeTemp);

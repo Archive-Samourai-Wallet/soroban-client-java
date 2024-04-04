@@ -8,6 +8,7 @@ import com.samourai.wallet.cahoots.CahootsWallet;
 import com.samourai.wallet.util.AsyncUtil;
 import com.samourai.wallet.util.FormatsUtilGeneric;
 import java.lang.invoke.MethodHandles;
+import org.bitcoinj.core.NetworkParameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,10 +36,12 @@ public abstract class SorobanWallet {
     this.cahootsWallet = cahootsWallet;
     this.rpcSession =
         sorobanService
+            .getSorobanConfig()
             .getRpcClientService()
             .getRpcWallet(cahootsWallet.getBip47Account())
             .createRpcSession();
-    boolean testnet = FormatsUtilGeneric.getInstance().isTestNet(sorobanService.getParams());
+    NetworkParameters params = sorobanService.getSorobanConfig().getRpcClientService().getParams();
+    boolean testnet = FormatsUtilGeneric.getInstance().isTestNet(params);
     this.rpcSession.setSorobanUrlsForcedV0(testnet);
   }
 

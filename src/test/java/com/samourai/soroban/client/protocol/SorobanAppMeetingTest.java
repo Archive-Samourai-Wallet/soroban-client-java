@@ -19,22 +19,24 @@ public class SorobanAppMeetingTest extends AbstractTest {
   @Test
   public void getMeeetingAddressReceive() throws Exception {
     String addressReceive =
-        sorobanProtocol.getMeeetingAddressReceive(
-            rpcWalletInitiator.getBip47Account(),
-            cahootsWalletCounterparty.getBip47Account().getPaymentCode(),
-            params,
-            bip47Util);
+        sorobanConfig
+            .getSorobanWalletService()
+            .getSorobanProtocol()
+            .getMeeetingAddressReceive(
+                rpcWalletInitiator.getBip47Account(),
+                cahootsWalletCounterparty.getBip47Account().getPaymentCode());
     Assertions.assertEquals("tb1q2s8kr83fkxc65q9axmhk0mfmqn6astjsn0fzzd", addressReceive);
   }
 
   @Test
   public void getMeeetingAddressSend() throws Exception {
     String addressSend =
-        sorobanProtocol.getMeeetingAddressSend(
-            rpcWalletCounterparty.getBip47Account(),
-            cahootsWalletInitiator.getBip47Account().getPaymentCode(),
-            params,
-            bip47Util);
+        sorobanConfig
+            .getSorobanWalletService()
+            .getSorobanProtocol()
+            .getMeeetingAddressSend(
+                rpcWalletCounterparty.getBip47Account(),
+                cahootsWalletInitiator.getBip47Account().getPaymentCode());
     Assertions.assertEquals("tb1q2s8kr83fkxc65q9axmhk0mfmqn6astjsn0fzzd", addressSend);
   }
 }

@@ -19,6 +19,8 @@ public class SorobanMeetingServiceTest extends AbstractTest {
 
   @Test
   public void meet() throws Exception {
+    SorobanMeetingService sorobanMeetingService =
+        sorobanConfig.getSorobanWalletService().getSorobanMeetingService();
     // run initiator
     Thread threadInitiator =
         new Thread(

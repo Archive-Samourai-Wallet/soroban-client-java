@@ -1,7 +1,7 @@
 package com.samourai.soroban.client.endpoint;
 
 import com.samourai.soroban.client.AbstractTest;
-import com.samourai.wallet.bip47.rpc.Bip47PartnerImpl;
+import com.samourai.wallet.bip47.rpc.Bip47Partner;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,12 +21,10 @@ public class SorobanAppTest extends AbstractTest {
 
   @Test
   public void getSharedDir() throws Exception {
-    Bip47PartnerImpl bip47PartnerInitiator =
-        new Bip47PartnerImpl(
-            bip47AccountInitiator, paymentCodeCounterparty, true, cryptoUtil, bip47Util);
-    Bip47PartnerImpl bip47PartnerCounterparty =
-        new Bip47PartnerImpl(
-            bip47AccountCounterparty, paymentCodeInitiator, false, cryptoUtil, bip47Util);
+    Bip47Partner bip47PartnerInitiator =
+        rpcWalletInitiator.getBip47Partner(paymentCodeCounterparty, true);
+    Bip47Partner bip47PartnerCounterparty =
+        rpcWalletCounterparty.getBip47Partner(paymentCodeInitiator, false);
 
     String id = "test";
     Assertions.assertEquals(
